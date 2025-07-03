@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "Lumiere",
+    "slug": "Lumiere",
+    "version": "1.0.0",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "plugins": [
+      "expo-router",
+      "react-native-bottom-tabs",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#121212",
+          "image": "./assets/splash.png",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#121212"
+          },
+          "imageWidth": 200
+        }
+      ],
+      [
+        "react-native-edge-to-edge",
+        {
+          "android": {
+            "parentTheme": "Material3.Dynamic"
+          }
+        }
+      ],
+      "./patches/withAndroidDisplayCutout",
+      "expo-sqlite"
+    ],
+    "scheme": "lumiere-scheme",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#121212"
+      },
+      "package": "com.nincloud.lumiere",
+      "edgeToEdgeEnabled": true
+    },
+    "androidStatusBar": {
+      "barStyle": "light-content"
+    },
+    "androidNavigationBar": {
+      "barStyle": "light-content"
+    },
+    "backgroundColor": "#121212",
+    "primaryColor": "#FF3B82"
+  }
+}
