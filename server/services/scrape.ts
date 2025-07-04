@@ -1,6 +1,6 @@
 import { Chapter, Novel, NovelInfo } from "@/types/novel";
 import cheerio from "cheerio";
-import { ExploreSection } from "../queries/novel";
+import { ExploreSection } from "../controllers/novel";
 import { insertTitleHtml, sanitizeHtml } from "@/lib/html";
 import { colors } from "@/lib/constants";
 
@@ -38,14 +38,12 @@ export async function scrapeNovelsExplore(
     const title = titleElement.text().trim();
     const url = titleElement.attr("href");
     const imageUrl = imageElement.attr("src");
-    const imageAlt = imageElement.attr("alt");
     const rating = ratingElement.text().trim();
 
     if (title && url) {
       novels.push({
         title,
         imageUrl,
-        imageAlt,
         rating,
       });
     }
@@ -85,14 +83,12 @@ export async function scrapeNovelsSearch(
     const title = titleElement.text().trim();
     const url = titleElement.attr("href");
     const imageUrl = imageElement.attr("src");
-    const imageAlt = imageElement.attr("alt");
     const rating = ratingElement.text().trim();
 
     if (title && url) {
       novels.push({
         title,
         imageUrl,
-        imageAlt,
         rating,
       });
     }
@@ -162,17 +158,18 @@ export async function scrapeNovelInfo(slug: string): Promise<NovelInfo | null> {
     .replace(/\s*com !$/i, "")
     .trim();
 
+  const genresArray = NI$(".m-book1 .txt .glyphicon-th-list")
+    .next(".right")
+    .find("a")
+    .map((_: number, a: cheerio.Element) => NI$(a).text().trim())
+    .get();
+
   const novelInfo = {
     title: fullTitle,
     url: novelInfoUrl,
     imageUrl: NI$(".m-book1 .pic img").attr("src") || "",
-    imageAlt: NI$(".m-book1 .pic img").attr("alt") || "",
     rating,
-    genres: NI$(".m-book1 .txt .glyphicon-th-list")
-      .next(".right")
-      .find("a")
-      .map((_: number, a: cheerio.Element) => NI$(a).text().trim())
-      .get(),
+    genres: genresArray.join(","),
     status: NI$(".m-book1 .txt .glyphicon-time").next(".right").text().trim(),
     author: NI$(".m-book1 .txt .glyphicon-user")
       .next(".right")

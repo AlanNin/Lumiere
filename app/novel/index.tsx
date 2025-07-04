@@ -3,7 +3,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
-import { novelService } from "@/server/queries/novel";
+import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import { TouchableOpacity, View } from "react-native";
@@ -31,7 +31,7 @@ export default function NovelScreen() {
 
   const { data: novelInfo, isLoading: isLoadingNovelInfo } = useQuery({
     queryKey: ["novel-info", title],
-    queryFn: () => novelService.getNovelInfo({ title: String(title) }),
+    queryFn: () => novelController.getNovelInfo({ title: String(title) }),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -85,7 +85,9 @@ export default function NovelScreen() {
           <NovelTopButtons novelUrl={novelInfo.url} />
           <NovelDescription description={novelInfo.description} />
         </View>
-        <NovelGenres genres={novelInfo.genres} />
+        <NovelGenres
+          genres={novelInfo.genres.split(",").map((g) => g.trim())}
+        />
         <Text className="text-lg font-medium text-muted_foreground px-5 -mb-2">
           {novelInfo.chapters.length} Chapters
         </Text>

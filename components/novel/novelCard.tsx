@@ -50,6 +50,7 @@ export default function NovelCard({
       onPress={handlePress}
     >
       <Image
+        alt={`Cover of ${title}`}
         source={
           imageError
             ? require("@/assets/placeholders/novel.png")

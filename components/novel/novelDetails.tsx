@@ -25,7 +25,12 @@ export default function NovelDetails({
 
   return (
     <View className="relative min-h-[276px] w-full mb-6">
-      <Image source={{ uri: imageUrl }} className="flex-1" blurRadius={1.5} />
+      <Image
+        alt={`Background of ${title}`}
+        source={{ uri: imageUrl }}
+        className="flex-1"
+        blurRadius={1.5}
+      />
       <View className="absolute inset-0 opacity-20" />
       <LinearGradient
         colors={[
@@ -39,6 +44,7 @@ export default function NovelDetails({
       />
       <View className="absolute -bottom-4 left-4 right-4 flex flex-row items-center gap-x-6">
         <Image
+          alt={`Cover of ${title}`}
           source={{ uri: imageUrl }}
           style={{ aspectRatio: 1 / 1.5 }}
           className="h-52 object-cover rounded-lg"

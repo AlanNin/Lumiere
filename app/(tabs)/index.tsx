@@ -5,9 +5,9 @@ import { FlatList, View, useWindowDimensions } from "react-native";
 import { Novel } from "@/types/novel";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import { colors } from "@/lib/constants";
-import { categories } from "@/mockData";
-import { Telescope } from "lucide-react-native";
+import { Frown, Telescope } from "lucide-react-native";
 import Quote from "@/components/statics/quote";
+import { libraryLiveQuery } from "@/server/liveQueries/library";
 
 const renderNovels = (novels: Novel[], width: number) => {
   if (novels.length === 0) {
@@ -53,15 +53,24 @@ export default function HomeScreen() {
 
   const { width } = useWindowDimensions();
 
-  const [routes] = React.useState(
-    categories.map((category) => ({
-      key: category.title,
-      title: category.title,
-    }))
+  const libraryCategories = libraryLiveQuery.getLibrary();
+
+  const sortedCategories = React.useMemo(
+    () => [...libraryCategories].sort((a, b) => a.sortOrder - b.sortOrder),
+    [libraryCategories]
   );
 
-  const renderScenes = categories.reduce((scenes, category) => {
-    scenes[category.title] = () => renderNovels(category.novels, width);
+  const routes = React.useMemo(
+    () =>
+      sortedCategories.map((category) => ({
+        key: category.label,
+        title: category.label,
+      })),
+    [sortedCategories]
+  );
+
+  const renderScenes = sortedCategories.reduce((scenes, category) => {
+    scenes[category.label] = () => renderNovels(category.novels, width);
     return scenes;
   }, {} as { [key: string]: () => React.ReactNode });
 
@@ -84,6 +93,10 @@ export default function HomeScreen() {
       scrollEnabled
     />
   );
+
+  if (routes.length === 0) {
+    return <Quote quote="No categories found." Icon={Frown} />;
+  }
 
   return (
     <View className="flex-1 bg-background">

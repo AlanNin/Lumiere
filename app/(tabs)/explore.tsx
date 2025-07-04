@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { colors } from "@/lib/constants";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ExploreSection, novelService } from "@/server/queries/novel";
+import { ExploreSection, novelController } from "@/server/controllers/novel";
 import {
   LucideIcon,
   Telescope,
@@ -169,7 +169,7 @@ export default function ExploreScreen() {
       isSearchOpen ? `search-${debouncedSearchQuery}` : selectedFilter.key,
     ],
     queryFn: ({ pageParam }) =>
-      novelService.exploreNovels({
+      novelController.exploreNovels({
         section: isSearchOpen ? "search" : selectedFilter.key,
         pageNumber: pageParam,
         searchQuery: debouncedSearchQuery,

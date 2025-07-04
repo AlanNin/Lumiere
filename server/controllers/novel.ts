@@ -1,11 +1,6 @@
 import { Explore } from "@/types/explore";
-import {
-  getExploreSection,
-  getExploreSearch,
-  getNovelInfo,
-  getNovelChapter,
-} from "../services/novel";
 import { Chapter, NovelInfo } from "@/types/novel";
+import { novelService } from "../services/novel";
 
 export type ExploreSection =
   | "popular"
@@ -13,7 +8,7 @@ export type ExploreSection =
   | "completed"
   | "search";
 
-export const novelService = {
+export const novelController = {
   async exploreNovels({
     section,
     pageNumber = 1,
@@ -27,9 +22,11 @@ export const novelService = {
       let data: Explore;
 
       if (section === "search") {
-        data = await getExploreSearch({ searchQuery: searchQuery ?? "" });
+        data = await novelService.getExploreSearch({
+          searchQuery: searchQuery ?? "",
+        });
       } else {
-        data = await getExploreSection({ section, pageNumber });
+        data = await novelService.getExploreSection({ section, pageNumber });
       }
 
       return data;
@@ -45,7 +42,7 @@ export const novelService = {
     try {
       let data: NovelInfo;
 
-      data = await getNovelInfo({ title });
+      data = await novelService.getNovelInfo({ title });
 
       return data;
     } catch (error) {
@@ -66,7 +63,7 @@ export const novelService = {
     try {
       let data: Chapter;
 
-      data = await getNovelChapter({ title, chapterNumber });
+      data = await novelService.getNovelChapter({ title, chapterNumber });
 
       return data;
     } catch (error) {

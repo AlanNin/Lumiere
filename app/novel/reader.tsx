@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { novelService } from "@/server/queries/novel";
+import { novelController } from "@/server/controllers/novel";
 import ReaderComponent from "@/components/reader";
 import Loading from "@/components/statics/loading";
 import Error from "@/components/statics/error";
@@ -36,7 +36,7 @@ export default function NovelReaderComponentScreen() {
   const { data: novelChapter, isLoading, isError } = useQuery({
     queryKey: ["novel-chapter", title, chapterNumber],
     queryFn: () =>
-      novelService.getNovelChapter({
+      novelController.getNovelChapter({
         title: String(title),
         chapterNumber: Number(chapterNumber),
       }),

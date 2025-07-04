@@ -2,6 +2,7 @@ import { Novel } from "@/types/novel";
 
 export type Category = {
   id: number;
-  title: string;
+  label: string;
+  sortOrder: number;
   novels: Novel[];
 };
