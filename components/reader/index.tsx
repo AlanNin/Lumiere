@@ -20,6 +20,9 @@ import { useConfig } from "@/providers/appConfig";
 import { ReaderStyleConfig } from "@/types/appConfig";
 import { Style } from "@/types/reader";
 import ReaderLayout from "./layout";
+import { useMutation } from "@tanstack/react-query";
+import { novelController } from "@/server/controllers/novel";
+import { invalidateQueries } from "@/providers/reactQuery";
 
 export default function ReaderComponent({
   chapter,
@@ -50,6 +53,22 @@ export default function ReaderComponent({
     const p = (scrollY / delta) * 100;
     return Number.isNaN(p) ? 0 : Math.round(p);
   })();
+  const hasInititalSeekedRef = useRef(false);
+
+  const { mutate: updateNovelChapterProgress } = useMutation({
+    mutationFn: () =>
+      novelController.updateNovelChapterProgress({
+        novelTitle: chapter.novelTitle,
+        chapterNumber: chapter.number,
+        chapterProgress: percent,
+      }),
+    onSuccess: () => {
+      invalidateQueries(
+        ["novel-info", chapter.novelTitle],
+        ["novel-chapter", chapter.novelTitle, chapter.number]
+      );
+    },
+  });
 
   const renderContent = useMemo(
     () => (
@@ -111,12 +130,12 @@ export default function ReaderComponent({
   }, []);
 
   const seekTo = useCallback(
-    (percent: number) => {
+    (percent: number, smoothScroll = false) => {
       const p = Math.max(0, Math.min(100, percent)) / 100;
       const maxOffset = Math.max(0, contentHeight - viewHeight);
       const targetY = maxOffset * p;
       if (Math.abs(targetY - scrollY) < 1) return;
-      scrollViewRef.current?.scrollTo({ y: targetY, animated: false });
+      scrollViewRef.current?.scrollTo({ y: targetY, animated: smoothScroll });
     },
     [contentHeight, viewHeight, scrollY]
   );
@@ -127,6 +146,7 @@ export default function ReaderComponent({
     return () => {
       NavigationBar.setVisibilityAsync("visible");
       StatusBar.setStatusBarHidden(false);
+      updateNovelChapterProgress();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
@@ -148,6 +168,19 @@ export default function ReaderComponent({
 
     setBars();
   }, [layoutVisible]);
+
+  useEffect(() => {
+    if (
+      !hasInititalSeekedRef.current &&
+      !!chapter.progress &&
+      chapter.progress > 0 &&
+      chapter.progress < 100 &&
+      contentHeight > viewHeight
+    ) {
+      seekTo(chapter.progress, true);
+      hasInititalSeekedRef.current = true;
+    }
+  }, [chapter.progress, contentHeight, viewHeight, seekTo]);
 
   return (
     <ReaderLayout

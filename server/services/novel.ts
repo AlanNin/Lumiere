@@ -1,5 +1,5 @@
 import { Explore } from "@/types/explore";
-import { Chapter, NovelInfo } from "@/types/novel";
+import { Chapter, DownloadChapter, NovelInfo } from "@/types/novel";
 import { ExploreSection } from "../controllers/novel";
 import {
   scrapeNovelChapter,
@@ -8,7 +8,7 @@ import {
   scrapeNovelsSearch,
 } from "./scrape";
 import { novelRepository } from "../repositories/novel";
-import { tryAndReTry } from "@/lib/retry";
+import { tryAndReTry, tryAndReTry2Params } from "@/lib/retry";
 
 export const novelService = {
   async getExploreSection({
@@ -52,7 +52,7 @@ export const novelService = {
     };
   },
 
-  async getNovelInfo({ title }: { title: string }): Promise<NovelInfo> {
+  async getNovel({ title }: { title: string }): Promise<NovelInfo> {
     try {
       const slug = title
         .trim()
@@ -86,37 +86,160 @@ export const novelService = {
   }: {
     title: string;
     chapterNumber: number;
-  }): Promise<Chapter> {
-    const slug = title
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-");
-
-    let result: Chapter | null = null;
+  }): Promise<Chapter | null> {
     try {
-      result = await scrapeNovelChapter(slug, chapterNumber);
-    } catch (err) {
-      result = null;
-    }
+      const slug = title
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-");
 
-    if (result) {
-      return result;
-    }
+      let chapter = await novelRepository.getNovelChapter(title, chapterNumber);
 
-    const fallbackSlug = `${slug}-novel`;
-    try {
-      const fallbackResult = await scrapeNovelChapter(
-        fallbackSlug,
-        chapterNumber
-      );
-      if (fallbackResult) {
-        return fallbackResult;
+      if (!chapter) {
+        return null;
       }
-    } catch (err) {
-      throw new Error(`Novel chapter not found: ${title}`);
-    }
 
-    throw new Error(`Novel chapter not found: ${title}`);
+      if (chapter.downloaded) {
+        return chapter;
+      }
+
+      const scrapedChapter = await tryAndReTry2Params<Chapter>(
+        slug,
+        chapterNumber,
+        scrapeNovelChapter
+      );
+
+      chapter.content = scrapedChapter.content;
+
+      return chapter;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async setLibraryStatus({
+    novelTitle,
+    saved,
+    categoriesId,
+  }: {
+    novelTitle: string;
+    saved: boolean;
+    categoriesId?: number[];
+  }): Promise<boolean> {
+    try {
+      return await novelRepository.setLibraryStatus({
+        title: novelTitle,
+        saved,
+        categoriesId,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async refreshNovel({ title }: { title: string }): Promise<NovelInfo> {
+    try {
+      const slug = title
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-");
+
+      const info = await tryAndReTry<NovelInfo>(slug, scrapeNovelInfo);
+      await novelRepository.refreshNovel(info);
+
+      return info;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async updateNovelChapterProgress({
+    novelTitle,
+    chapterNumber,
+    chapterProgress,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+    chapterProgress: number;
+  }): Promise<boolean> {
+    try {
+      return await novelRepository.updateNovelChapterProgress({
+        novelTitle,
+        chapterNumber,
+        chapterProgress,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async downloadNovelChapters({
+    chapters,
+  }: {
+    chapters: DownloadChapter[];
+  }): Promise<boolean> {
+    try {
+      if (chapters.length === 0) return false;
+
+      const chaptersWithContent = await Promise.all(
+        chapters.map(async ({ novelTitle, chapterNumber }) => {
+          const slug = novelTitle
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, "")
+            .replace(/\s+/g, "-");
+
+          const scrapedChapter = await tryAndReTry2Params<Chapter>(
+            slug,
+            chapterNumber,
+            scrapeNovelChapter
+          );
+
+          return {
+            novelTitle,
+            chapterNumber,
+            chapterContent: scrapedChapter.content,
+          };
+        })
+      );
+
+      return await novelRepository.downloadChapters(chaptersWithContent);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async removeDownloadedNovelChapters({
+    chapters,
+  }: {
+    chapters: DownloadChapter[];
+  }): Promise<boolean> {
+    try {
+      if (chapters.length === 0) return false;
+
+      return await novelRepository.removeDownloadedChapters(chapters);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
   },
 };

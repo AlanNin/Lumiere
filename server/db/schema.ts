@@ -31,7 +31,7 @@ export const novelCategories = sqliteTable(
 
 export const novels = sqliteTable("novels", {
   title: text().primaryKey(),
-  url: text().notNull(),
+  url: text().notNull().unique(),
   imageUrl: text("image_url").notNull(),
   description: text().notNull(),
   rating: int().notNull(),
@@ -68,7 +68,7 @@ export const novelChapters = sqliteTable(
       .$onUpdate(() => sql`CURRENT_TIMESTAMP`),
   },
   (table) => [
-    index("novel_title_chapter_number_idx").on(table.novelTitle, table.number),
+    uniqueIndex("novel_chapters_pk").on(table.novelTitle, table.number),
   ]
 );
 

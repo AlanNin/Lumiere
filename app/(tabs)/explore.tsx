@@ -23,9 +23,10 @@ import {
   Search,
 } from "lucide-react-native";
 import useDebounce from "@/hooks/useDebounce";
-import { Text } from "@/components/defaults";
 import Quote from "@/components/statics/quote";
 import Loading from "@/components/statics/loading";
+import { useKeyboard } from "@react-native-community/hooks";
+import { cn } from "@/lib/cn";
 
 type FilterOption = {
   key: ExploreSection;
@@ -46,13 +47,17 @@ function RenderNovels({
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
 }) {
+  const { keyboardShown } = useKeyboard();
+
   if (!novels || novels.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center flex flex-col gap-y-3">
-        <Text className="text-muted_foreground max-w-56 text-center tracking-widest italic">
-          No tales have wandered into this corner yet.
-        </Text>
-        <Telescope color={colors.muted_foreground} size={20} strokeWidth={1} />
+      <View
+        className={cn(
+          "items-center justify-center flex",
+          keyboardShown ? "h-[36%]" : "flex-1"
+        )}
+      >
+        <Quote quote="Archives empty. Try another search." Icon={Telescope} />
       </View>
     );
   }
@@ -119,6 +124,7 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const { keyboardShown } = useKeyboard();
 
   const filterOptions: FilterOption[] = [
     ...(isSearchOpen
@@ -222,7 +228,14 @@ export default function ExploreScreen() {
       ) : (
         <>
           {isLoadingNovels ? (
-            <Loading />
+            <View
+              className={cn(
+                "items-center justify-center flex",
+                keyboardShown ? "h-[36%]" : "flex-1"
+              )}
+            >
+              <Loading />
+            </View>
           ) : (
             <RenderNovels
               novels={novels}

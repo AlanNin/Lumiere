@@ -7,7 +7,8 @@ import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import { colors } from "@/lib/constants";
 import { Frown, Telescope } from "lucide-react-native";
 import Quote from "@/components/statics/quote";
-import { libraryLiveQuery } from "@/server/liveQueries/library";
+import { useQuery } from "@tanstack/react-query";
+import { libraryController } from "@/server/controllers/library";
 
 const renderNovels = (novels: Novel[], width: number) => {
   if (novels.length === 0) {
@@ -53,7 +54,15 @@ export default function HomeScreen() {
 
   const { width } = useWindowDimensions();
 
-  const libraryCategories = libraryLiveQuery.getLibrary();
+  const {
+    data: libraryCategories = [
+      { id: 0, label: "Default", novels: [], sortOrder: 0 },
+    ],
+    isLoading: isLoadingLibraryCategories,
+  } = useQuery({
+    queryKey: ["library"],
+    queryFn: () => libraryController.getLibrary(),
+  });
 
   const sortedCategories = React.useMemo(
     () => [...libraryCategories].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -94,13 +103,13 @@ export default function HomeScreen() {
     />
   );
 
-  if (routes.length === 0) {
-    return <Quote quote="No categories found." Icon={Frown} />;
+  if (isLoadingLibraryCategories) {
+    return;
   }
 
   return (
     <View className="flex-1 bg-background">
-      <TabHeader title="Library" />
+      <TabHeader title="Library" containerClassName="mb-1" />
       <TabView
         navigationState={{ index, routes }}
         renderScene={SceneMap(renderScenes)}

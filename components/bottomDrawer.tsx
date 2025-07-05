@@ -7,18 +7,22 @@ import {
 import { BackHandler, TouchableOpacity } from "react-native";
 import { colors } from "@/lib/constants";
 import { useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BottomDrawer = React.forwardRef<
   BottomSheetModal,
   Omit<
     {
       children: React.ReactNode;
+      paddingBottom?: number;
       onChange?: (boolean: number) => void;
       onClose?: () => void;
     },
     "ref"
   >
->(({ children, onChange, onClose }, ref) => {
+>(({ children, paddingBottom, onChange, onClose }, ref) => {
+  const insets = useSafeAreaInsets();
+
   const closeDrawer = () => {
     (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
     if (onClose) {
@@ -74,6 +78,7 @@ const BottomDrawer = React.forwardRef<
               left: 0,
               right: 0,
               bottom: 0,
+              zIndex: 20,
             }}
             activeOpacity={1}
             onPress={closeDrawer}
@@ -85,8 +90,18 @@ const BottomDrawer = React.forwardRef<
         handleIndicatorStyle={{
           backgroundColor: colors.grayscale,
         }}
+        containerStyle={{
+          zIndex: 30,
+        }}
       >
-        <BottomSheetView className="z-20">{children}</BottomSheetView>
+        <BottomSheetView
+          style={{
+            padding: 20,
+            paddingBottom: paddingBottom ? paddingBottom : insets.bottom,
+          }}
+        >
+          {children}
+        </BottomSheetView>
       </BottomSheetModal>
     </BottomSheetModalProvider>
   );

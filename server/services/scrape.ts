@@ -119,7 +119,8 @@ export async function scrapeNovelInfo(slug: string): Promise<NovelInfo | null> {
 
   const NC$ = cheerio.load(novelChaptersHtml);
 
-  const fullTitle = NI$(".m-info h3.tit").text().trim();
+  const rawTitle = NI$(".m-info h3.tit").text().trim();
+  const fullTitle = rawTitle.replace(/\.+$/, "");
   if (!fullTitle) return null;
 
   const ratingRaw = parseFloat(

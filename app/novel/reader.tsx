@@ -8,9 +8,15 @@ import Error from "@/components/statics/error";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
 
-export default function NovelReaderComponentScreen() {
+export default function NovelReaderScreen() {
   const router = useRouter();
-  const { title, chapterNumber, totalChapters } = useLocalSearchParams();
+  const {
+    title,
+    chapterNumber,
+    totalChapters,
+    downloaded,
+  } = useLocalSearchParams();
+  const isDownloaded = downloaded ? downloaded === "1" : false;
   const { top, bottom } = useSafeAreaInsets();
   const [staticInsets, setStaticInsets] = useState(() => ({
     top: 0,
@@ -33,21 +39,26 @@ export default function NovelReaderComponentScreen() {
     }
   }, [bottom]);
 
-  const { data: novelChapter, isLoading, isError } = useQuery({
+  const { data: novelChapter, isFetching, isError } = useQuery({
     queryKey: ["novel-chapter", title, chapterNumber],
     queryFn: () =>
       novelController.getNovelChapter({
         title: String(title),
         chapterNumber: Number(chapterNumber),
       }),
-    staleTime: 1000 * 60 * 5,
   });
 
-  if (isLoading) {
-    return <Loading title="All good things come to those who wait..." />;
+  if (!isDownloaded && isFetching) {
+    return (
+      <Loading title="To wait is to hope. It is the seed of an action yet to be." />
+    );
   }
 
   if (isError || !novelChapter || !novelChapter.content) {
+    if (isDownloaded) {
+      return <View className="flex-1 bg-background" />;
+    }
+
     return (
       <Error
         title="Here lies an unwritten chapter..."

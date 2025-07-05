@@ -1,5 +1,5 @@
 import { Explore } from "@/types/explore";
-import { Chapter, NovelInfo } from "@/types/novel";
+import { Chapter, DownloadChapter, NovelInfo } from "@/types/novel";
 import { novelService } from "../services/novel";
 
 export type ExploreSection =
@@ -38,11 +38,11 @@ export const novelController = {
     }
   },
 
-  async getNovelInfo({ title }: { title: string }): Promise<NovelInfo> {
+  async getNovel({ title }: { title: string }): Promise<NovelInfo> {
     try {
       let data: NovelInfo;
 
-      data = await novelService.getNovelInfo({ title });
+      data = await novelService.getNovel({ title });
 
       return data;
     } catch (error) {
@@ -59,13 +59,104 @@ export const novelController = {
   }: {
     title: string;
     chapterNumber: number;
-  }): Promise<Chapter> {
+  }): Promise<Chapter | null> {
     try {
-      let data: Chapter;
+      let data: Chapter | null;
 
       data = await novelService.getNovelChapter({ title, chapterNumber });
 
       return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async setLibraryStatus({
+    title,
+    saved,
+    categoriesId,
+  }: {
+    title: string;
+    saved: boolean;
+    categoriesId?: number[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.setLibraryStatus({
+        novelTitle: title,
+        saved,
+        categoriesId,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async refreshNovel({ title }: { title: string }): Promise<NovelInfo> {
+    try {
+      let data: NovelInfo;
+
+      data = await novelService.refreshNovel({ title });
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async updateNovelChapterProgress({
+    novelTitle,
+    chapterNumber,
+    chapterProgress,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+    chapterProgress: number;
+  }): Promise<boolean> {
+    try {
+      return await novelService.updateNovelChapterProgress({
+        novelTitle,
+        chapterNumber,
+        chapterProgress,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async downloadNovelChapters({
+    chapters,
+  }: {
+    chapters: DownloadChapter[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.downloadNovelChapters({ chapters });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async removeDownloadedNovelChapters({
+    chapters,
+  }: {
+    chapters: DownloadChapter[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.removeDownloadedNovelChapters({ chapters });
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;

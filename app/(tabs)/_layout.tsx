@@ -36,10 +36,10 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="settings"
+          name="more"
           options={{
-            title: "Settings",
-            tabBarIcon: () => require("../../assets/icons/settings.svg"),
+            title: "More",
+            tabBarIcon: () => require("../../assets/icons/more.svg"),
           }}
         />
       </Tabs>

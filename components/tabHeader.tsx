@@ -5,6 +5,7 @@ import { colors } from "@/lib/constants";
 import { useFocusEffect } from "@react-navigation/native";
 import { usePathname } from "expo-router";
 import { Text } from "@/components/defaults";
+import { cn } from "@/lib/cn";
 
 export default function TabHeader({
   title,
@@ -12,12 +13,14 @@ export default function TabHeader({
   setSearchQuery,
   isSearchOpen,
   setIsSearchOpen,
+  containerClassName,
 }: {
   title: string;
   searchQuery?: string;
   setSearchQuery?: (query: string) => void;
   isSearchOpen?: boolean;
   setIsSearchOpen?: (isOpen: boolean) => void;
+  containerClassName?: string;
 }) {
   const pathname = usePathname();
 
@@ -59,7 +62,12 @@ export default function TabHeader({
       {isSearchOpen &&
       searchQuery != undefined &&
       setSearchQuery != undefined ? (
-        <View className="h-12 px-5 my-3 flex flex-row items-center gap-x-2">
+        <View
+          className={cn(
+            "h-12 px-5 my-3 flex flex-row items-center",
+            containerClassName
+          )}
+        >
           <TouchableOpacity
             onPress={() => {
               if (setIsSearchOpen) {
@@ -81,7 +89,12 @@ export default function TabHeader({
           />
         </View>
       ) : (
-        <View className="h-12 px-5 my-3 flex flex-row items-center justify-between">
+        <View
+          className={cn(
+            "h-12 px-5 my-3 flex flex-row items-center justify-between",
+            containerClassName
+          )}
+        >
           <Text className="text-2xl text-muted_foreground">{title}</Text>
           <TouchableOpacity
             onPress={() => {

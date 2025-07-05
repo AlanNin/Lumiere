@@ -97,17 +97,14 @@ export default function ReaderStyleConfigDrawer({
   return (
     <BottomDrawer
       ref={drawerRef}
+      paddingBottom={insets.bottom}
       onChange={(index: number) => {
         toggleHoldHide(index === 0);
       }}
       onClose={handleReset}
     >
       <View
-        className="flex flex-col gap-y-8"
-        style={{
-          padding: 20,
-          paddingBottom: insets.bottom + 20,
-        }}
+        className="flex flex-col gap-y-8 pb-4"
         pointerEvents={pointerEvents}
       >
         <ConfigItem label="Heading Size">

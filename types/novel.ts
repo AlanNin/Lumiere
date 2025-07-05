@@ -24,4 +24,12 @@ export type NovelInfo = Novel & {
   status: string;
   chapters: Chapter[];
   categoryId?: number | null;
+  isSaved?: boolean;
+};
+
+export type DownloadChapter = {
+  novelTitle: string;
+  chapterNumber: number;
+  chapterContent?: string;
+  readingProgress?: number;
 };

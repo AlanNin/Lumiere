@@ -13,6 +13,7 @@ import Animated, {
   useDerivedValue,
   withTiming,
   interpolateColor,
+  SharedValue,
 } from "react-native-reanimated";
 
 export default function NovelHeader({
@@ -20,40 +21,33 @@ export default function NovelHeader({
   scrollY,
 }: {
   novelTitle: string;
-  scrollY: Animated.SharedValue<number>;
+  scrollY: SharedValue<number>;
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // Animate from fully transparent → your layout background
   const bgProgress = useDerivedValue(() =>
     withTiming(scrollY.value > 0 ? 1 : 0, { duration: 300 })
   );
-
-  const hex = colors.layout_background.replace("#", "");
-  const fromColor = `#00${hex}`;
-  const toColor = `#${hex}`;
-
   const backgroundStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(
       bgProgress.value,
       [0, 1],
-      [fromColor, toColor]
+      ["transparent", colors.layout_background]
     ),
   }));
 
+  // Fade & slide the title down when scrolled
   const textOpacity = useDerivedValue(() =>
     withTiming(scrollY.value > 0 ? 1 : 0, { duration: 300 })
   );
-  const textTranslate = useDerivedValue(() =>
+  const textTranslateY = useDerivedValue(() =>
     withTiming(scrollY.value > 0 ? 0 : -10, { duration: 300 })
   );
   const textStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
-    transform: [
-      {
-        translateX: textTranslate.value,
-      },
-    ],
+    transform: [{ translateX: textTranslateY.value }],
   }));
 
   return (

@@ -10,6 +10,7 @@ module.exports = {
       colors: {
         background: colors.background,
         foreground: colors.foreground,
+        foreground_invert: colors.foreground_invert,
         primary: colors.primary,
         primary_foreground: colors.primary_foreground,
         primary_dark: colors.primary_dark,

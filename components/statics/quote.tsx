@@ -1,9 +1,9 @@
 import { cn } from "@/lib/cn";
-import { LucideIcon, Search } from "lucide-react-native";
-import { Keyboard, View } from "react-native";
+import { LucideIcon } from "lucide-react-native";
+import { View } from "react-native";
 import { Text } from "../defaults";
 import { colors } from "@/lib/constants";
-import { useLayoutEffect, useState } from "react";
+import { useKeyboard } from "@react-native-community/hooks";
 
 export default function Quote({
   quote,
@@ -12,26 +12,13 @@ export default function Quote({
   quote: string;
   Icon?: LucideIcon;
 }) {
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  useLayoutEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () =>
-      setKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
-      setKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  const { keyboardShown } = useKeyboard();
 
   return (
     <View
       className={cn(
         "items-center justify-center flex flex-col gap-y-3",
-        keyboardVisible ? "h-[36%]" : "flex-1"
+        keyboardShown ? "h-[36%]" : "flex-1"
       )}
     >
       <Text className="text-muted_foreground max-w-56 text-center tracking-widest italic">
