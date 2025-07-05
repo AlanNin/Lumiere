@@ -26,10 +26,3 @@ export type NovelInfo = Novel & {
   categoryId?: number | null;
   isSaved?: boolean;
 };
-
-export type DownloadChapter = {
-  novelTitle: string;
-  chapterNumber: number;
-  chapterContent?: string;
-  readingProgress?: number;
-};

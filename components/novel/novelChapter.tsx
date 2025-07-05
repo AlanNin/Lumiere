@@ -1,8 +1,9 @@
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "../defaults";
-import { Chapter, DownloadChapter } from "@/types/novel";
+import { Chapter } from "@/types/novel";
 import { cn } from "@/lib/cn";
 import NovelDownloadChapter from "./novelDownloadChapter";
+import { DownloadChapter } from "@/types/download";
 
 export default function NovelChapter({
   chapter,
@@ -39,7 +40,7 @@ export default function NovelChapter({
   };
 
   return (
-    <View className="flex flex-row items-center justify-between px-5 py-3 mb-2 gap-x-8">
+    <View className="flex flex-row items-center justify-between px-5 py-3  gap-x-8 bg-background">
       <TouchableOpacity
         className="flex flex-row items-center gap-x-3 flex-1"
         onPress={() =>

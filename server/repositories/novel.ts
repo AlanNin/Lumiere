@@ -1,7 +1,8 @@
-import { Chapter, DownloadChapter, NovelInfo } from "@/types/novel";
+import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
 import { and, eq, lt } from "drizzle-orm";
+import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
   async findNovel(
@@ -294,42 +295,34 @@ export const novelRepository = {
     }
   },
 
-  async downloadChapters(chapters: DownloadChapter[]): Promise<boolean> {
+  async downloadChapter(chapter: DownloadChapter): Promise<boolean> {
     try {
-      if (chapters.length === 0) return false;
+      const { novelTitle, chapterNumber, chapterContent } = chapter;
 
-      const chaptersWithContent = chapters.filter(
-        (chap): chap is DownloadChapter & { chapterContent: string } =>
-          typeof chap.chapterContent === "string" &&
-          chap.chapterContent.trim().length > 0
-      );
+      if (
+        typeof chapterContent !== "string" ||
+        chapterContent.trim().length === 0
+      ) {
+        return false;
+      }
 
-      if (chaptersWithContent.length === 0) return false;
-
-      const result = await db_client.transaction(async (tx) => {
-        let totalChanges = 0;
-
-        for (const { novelTitle, chapterNumber, chapterContent } of chapters) {
-          const res = await tx
-            .update(novelChapters)
-            .set({ downloaded: 1, content: chapterContent })
-            .where(
-              and(
-                eq(novelChapters.novelTitle, novelTitle),
-                eq(novelChapters.number, chapterNumber)
-              )
+      const res = await db_client.transaction(async (tx) => {
+        const result = await tx
+          .update(novelChapters)
+          .set({ downloaded: 1, content: chapterContent })
+          .where(
+            and(
+              eq(novelChapters.novelTitle, novelTitle),
+              eq(novelChapters.number, chapterNumber)
             )
-            .run();
-
-          totalChanges += res.changes;
-        }
-
-        return totalChanges;
+          )
+          .run();
+        return result;
       });
 
-      return result > 0;
+      return (res?.changes ?? 0) > 0;
     } catch (e) {
-      console.error("Failed to download chapters:", e);
+      console.error("Failed to download chapter:", e);
       throw e;
     }
   },

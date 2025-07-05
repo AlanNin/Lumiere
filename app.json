@@ -41,7 +41,8 @@
         }
       ],
       "./patches/withAndroidDisplayCutout",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-background-task"
     ],
     "scheme": "lumiere-scheme",
     "orientation": "portrait",

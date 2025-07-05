@@ -1,5 +1,5 @@
 import { Explore } from "@/types/explore";
-import { Chapter, DownloadChapter, NovelInfo } from "@/types/novel";
+import { Chapter, NovelInfo } from "@/types/novel";
 import { ExploreSection } from "../controllers/novel";
 import {
   scrapeNovelChapter,
@@ -9,6 +9,7 @@ import {
 } from "./scrape";
 import { novelRepository } from "../repositories/novel";
 import { tryAndReTry, tryAndReTry2Params } from "@/lib/retry";
+import { DownloadChapter } from "@/types/download";
 
 export const novelService = {
   async getExploreSection({
@@ -187,37 +188,32 @@ export const novelService = {
     }
   },
 
-  async downloadNovelChapters({
-    chapters,
-  }: {
-    chapters: DownloadChapter[];
-  }): Promise<boolean> {
+  async downloadNovelChapter(chapter: DownloadChapter): Promise<boolean> {
     try {
-      if (chapters.length === 0) return false;
+      if (!chapter) return false;
 
-      const chaptersWithContent = await Promise.all(
-        chapters.map(async ({ novelTitle, chapterNumber }) => {
-          const slug = novelTitle
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, "")
-            .replace(/\s+/g, "-");
+      const slug = chapter.novelTitle
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-");
 
-          const scrapedChapter = await tryAndReTry2Params<Chapter>(
-            slug,
-            chapterNumber,
-            scrapeNovelChapter
-          );
-
-          return {
-            novelTitle,
-            chapterNumber,
-            chapterContent: scrapedChapter.content,
-          };
-        })
+      const scrapedChapter = await tryAndReTry2Params<Chapter>(
+        slug,
+        chapter.chapterNumber,
+        scrapeNovelChapter
       );
 
-      return await novelRepository.downloadChapters(chaptersWithContent);
+      const content = scrapedChapter.content;
+      if (!content) return false;
+
+      const chaptersWithContent: DownloadChapter = {
+        novelTitle: chapter.novelTitle,
+        chapterNumber: chapter.chapterNumber,
+        chapterContent: content,
+      };
+
+      return await novelRepository.downloadChapter(chaptersWithContent);
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;

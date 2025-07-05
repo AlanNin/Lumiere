@@ -7,7 +7,7 @@ import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
 import React, { useRef } from "react";
 import { TouchableOpacity, View } from "react-native";
-import { Chapter, DownloadChapter } from "@/types/novel";
+import { Chapter } from "@/types/novel";
 import { Telescope } from "lucide-react-native";
 import { Text } from "@/components/defaults";
 import { useRouter } from "expo-router";
@@ -23,6 +23,10 @@ import Loading from "@/components/statics/loading";
 import Error from "@/components/statics/error";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import BottomDrawer from "@/components/bottomDrawer";
+import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
+import { DownloadChapter } from "@/types/download";
+import { RefreshControl } from "react-native-gesture-handler";
+import { colors } from "@/lib/constants";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -34,9 +38,6 @@ export default function NovelScreen() {
   const [listLoaded, setListLoaded] = React.useState(false);
   const router = useRouter();
   const scrollY = useSharedValue(0);
-  const [downloadingChapters, setDownloadingChapters] = React.useState<
-    DownloadChapter[]
-  >([]);
   const [chaptersToDelete, setChaptersToDelete] = React.useState<
     DownloadChapter[]
   >([]);
@@ -51,6 +52,10 @@ export default function NovelScreen() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { enqueue, queue } = useChapterDownloadQueue();
+
+  const prevQueueLengthRef = useRef<number>(queue.length);
+
   const { mutate: refreshNovel, isPending: isRefreshing } = useMutation({
     mutationFn: () =>
       novelController.refreshNovel({
@@ -58,39 +63,6 @@ export default function NovelScreen() {
       }),
     onSuccess: () => {
       refetchNovelInfo();
-    },
-  });
-
-  const { mutate: downloadChapters } = useMutation({
-    mutationFn: (chapters: DownloadChapter[]) =>
-      novelController.downloadNovelChapters({ chapters }),
-    onMutate: (chapters) => {
-      setDownloadingChapters((prev) => [...prev, ...chapters]);
-    },
-    onSuccess: (_data, chapters) => {
-      setDownloadingChapters((prev) =>
-        prev.filter(
-          (c) =>
-            !chapters.some(
-              (d) =>
-                d.novelTitle === c.novelTitle &&
-                d.chapterNumber === c.chapterNumber
-            )
-        )
-      );
-      refetchNovelInfo();
-    },
-    onError: (_err, chapters) => {
-      setDownloadingChapters((prev) =>
-        prev.filter(
-          (c) =>
-            !chapters.some(
-              (d) =>
-                d.novelTitle === c.novelTitle &&
-                d.chapterNumber === c.chapterNumber
-            )
-        )
-      );
     },
   });
 
@@ -152,26 +124,30 @@ export default function NovelScreen() {
     [router, novelInfo?.title]
   );
 
-  const handleDownloadPress = React.useCallback(
-    ({
-      chapter,
-      isDownloaded,
-      isDownloading,
-    }: {
-      chapter: DownloadChapter;
-      isDownloaded?: boolean;
-      isDownloading: boolean;
-    }) => {
-      if (isDownloading) return;
-      if (!isDownloaded) {
-        downloadChapters([chapter]);
-      } else {
-        setChaptersToDelete([chapter]);
-        bottomDrawerDownloadRef.current?.present();
-      }
-    },
-    [downloadChapters, bottomDrawerDownloadRef]
-  );
+  function handleDownloadPress({
+    chapter,
+    isDownloaded,
+    isDownloading,
+  }: {
+    chapter: DownloadChapter;
+    isDownloaded?: boolean;
+    isDownloading: boolean;
+  }) {
+    if (isDownloading) return;
+    if (!isDownloaded) {
+      enqueue([chapter]);
+    } else {
+      setChaptersToDelete([chapter]);
+      bottomDrawerDownloadRef.current?.present();
+    }
+  }
+
+  React.useEffect(() => {
+    if (prevQueueLengthRef.current > queue.length) {
+      refetchNovelInfo();
+    }
+    prevQueueLengthRef.current = queue.length;
+  }, [queue, refetchNovelInfo]);
 
   const handleDeleteChapters = React.useCallback(() => {
     removeDownloadChapters(chaptersToDelete);
@@ -186,7 +162,7 @@ export default function NovelScreen() {
 
   const renderItem = React.useCallback(
     ({ item }: { item: Chapter }) => {
-      const isDownloading = downloadingChapters.some(
+      const isDownloading = queue.some(
         (c) =>
           c.novelTitle === item.novelTitle && c.chapterNumber === item.number
       );
@@ -200,7 +176,7 @@ export default function NovelScreen() {
         />
       );
     },
-    [handleChapterPress, handleDownloadPress, downloadingChapters]
+    [handleChapterPress, handleDownloadPress, queue]
   );
 
   const keyExtractor = React.useCallback(
@@ -260,7 +236,7 @@ export default function NovelScreen() {
       <AnimatedFlashList
         ListHeaderComponent={ListHeader}
         data={novelInfo.chapters}
-        extraData={downloadingChapters}
+        extraData={queue}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         estimatedItemSize={44}
@@ -269,8 +245,14 @@ export default function NovelScreen() {
         contentContainerStyle={{ paddingBottom: 80 }}
         removeClippedSubviews={true}
         onLoad={() => setListLoaded(true)}
-        onRefresh={refreshNovel}
-        refreshing={isRefreshing}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refreshNovel}
+            progressBackgroundColor={colors.primary}
+            colors={[colors.primary_foreground]}
+          />
+        }
       />
 
       {listLoaded && (

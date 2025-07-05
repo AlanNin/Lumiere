@@ -1,6 +1,7 @@
 import { Explore } from "@/types/explore";
-import { Chapter, DownloadChapter, NovelInfo } from "@/types/novel";
+import { Chapter, NovelInfo } from "@/types/novel";
 import { novelService } from "../services/novel";
+import { DownloadChapter } from "@/types/download";
 
 export type ExploreSection =
   | "popular"
@@ -135,13 +136,9 @@ export const novelController = {
     }
   },
 
-  async downloadNovelChapters({
-    chapters,
-  }: {
-    chapters: DownloadChapter[];
-  }): Promise<boolean> {
+  async downloadNovelChapter(chapter: DownloadChapter): Promise<boolean> {
     try {
-      return await novelService.downloadNovelChapters({ chapters });
+      return await novelService.downloadNovelChapter(chapter);
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
