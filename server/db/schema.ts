@@ -1,11 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  index,
-  int,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { int, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
 export const categories = sqliteTable("categories", {
@@ -52,6 +46,7 @@ export const novelChapters = sqliteTable(
       .references(() => novels.title, { onDelete: "cascade" }),
     number: int().notNull(),
     title: text().notNull(),
+    url: text().notNull(),
     progress: int()
       .notNull()
       .default(sql`0`),

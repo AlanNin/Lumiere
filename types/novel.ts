@@ -3,6 +3,7 @@ export type Chapter = {
   novelTitle: string;
   number: number;
   title: string;
+  url: string;
   progress?: number;
   content?: string;
   bookMarked?: boolean;

@@ -54,20 +54,20 @@ export default function HomeScreen() {
 
   const { width } = useWindowDimensions();
 
-  const {
-    data: libraryCategories = [
-      { id: 0, label: "Default", novels: [], sortOrder: 0 },
-    ],
-    isLoading: isLoadingLibraryCategories,
-  } = useQuery({
+  const defaultLibrary = [
+    { id: 0, label: "Default", novels: [], sortOrder: 0 },
+  ];
+
+  const { data: libraryCategories = defaultLibrary } = useQuery({
     queryKey: ["library"],
     queryFn: () => libraryController.getLibrary(),
   });
 
-  const sortedCategories = React.useMemo(
-    () => [...libraryCategories].sort((a, b) => a.sortOrder - b.sortOrder),
-    [libraryCategories]
-  );
+  const sortedCategories = React.useMemo(() => {
+    const source = !libraryCategories ? defaultLibrary : libraryCategories;
+
+    return [...source].sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [libraryCategories, defaultLibrary]);
 
   const routes = React.useMemo(
     () =>
@@ -102,10 +102,6 @@ export default function HomeScreen() {
       scrollEnabled
     />
   );
-
-  if (isLoadingLibraryCategories) {
-    return;
-  }
 
   return (
     <View className="flex-1 bg-background">

@@ -11,8 +11,10 @@ import { useEffect, useRef, useState } from "react";
 export default function NovelReaderScreen() {
   const router = useRouter();
   const {
-    title,
+    novelTitle,
     chapterNumber,
+    chapterTitle,
+    chapterUrl,
     totalChapters,
     downloaded,
   } = useLocalSearchParams();
@@ -40,11 +42,13 @@ export default function NovelReaderScreen() {
   }, [bottom]);
 
   const { data: novelChapter, isFetching, isError } = useQuery({
-    queryKey: ["novel-chapter", title, chapterNumber],
+    queryKey: ["novel-chapter", novelTitle, chapterNumber, chapterUrl],
     queryFn: () =>
       novelController.getNovelChapter({
-        title: String(title),
+        novelTitle: String(novelTitle),
         chapterNumber: Number(chapterNumber),
+        chapterTitle: String(chapterTitle),
+        chapterUrl: String(chapterUrl),
       }),
   });
 
@@ -64,7 +68,7 @@ export default function NovelReaderScreen() {
         title="Here lies an unwritten chapter..."
         pressable={{
           onPress: () => router.back(),
-          title: "Go back to " + title,
+          title: "Go back to " + novelTitle,
         }}
       />
     );

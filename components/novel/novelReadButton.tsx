@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { TouchableOpacity } from "react-native";
 import Animated, {
   SharedValue,
@@ -5,12 +6,13 @@ import Animated, {
   useDerivedValue,
   withTiming,
   Easing,
+  FadeIn,
+  FadeOut,
 } from "react-native-reanimated";
 import { Play } from "lucide-react-native";
 import { colors } from "@/lib/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useCallback } from "react";
 
 const FIXED_BUTTON_WIDTH = {
   NOT_SCROLLING: {
@@ -34,6 +36,7 @@ export default function NovelReadButton({
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  // animate width when scrolling
   const widthAnim = useDerivedValue(() =>
     withTiming(
       scrollY.value > 0
@@ -51,6 +54,7 @@ export default function NovelReadButton({
     right: 18,
   }));
 
+  // animate text opacity when scrolling
   const textOpacityAnim = useDerivedValue(() =>
     withTiming(scrollY.value > 0 ? 0 : 1, {
       duration: 300,
@@ -63,29 +67,21 @@ export default function NovelReadButton({
   }));
 
   const handlePress = useCallback(() => {
-    if (resumeFromNovelChapter) {
-      router.push({
-        pathname: `/novel/reader`,
-        params: {
-          title: novelTitle,
-          chapterNumber: resumeFromNovelChapter,
-          totalChapters: novelTotalChapters,
-        },
-      });
-    } else {
-      router.push({
-        pathname: `/novel/reader`,
-        params: {
-          title: novelTitle,
-          chapterNumber: 1,
-          totalChapters: novelTotalChapters,
-        },
-      });
-    }
-  }, [router, resumeFromNovelChapter]);
+    const chapter = resumeFromNovelChapter ?? 1;
+    router.push({
+      pathname: `/novel/reader`,
+      params: {
+        title: novelTitle,
+        chapterNumber: chapter,
+        totalChapters: novelTotalChapters,
+      },
+    });
+  }, [router, novelTitle, resumeFromNovelChapter, novelTotalChapters]);
 
   return (
     <Animated.View
+      entering={FadeIn.duration(150)}
+      exiting={FadeOut.duration(150)}
       className="absolute z-10 overflow-hidden rounded-xl"
       style={buttonStyle}
     >

@@ -8,7 +8,7 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useRef } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { Chapter } from "@/types/novel";
-import { Telescope } from "lucide-react-native";
+import { ListFilter, Telescope } from "lucide-react-native";
 import { Text } from "@/components/defaults";
 import { useRouter } from "expo-router";
 import NovelChapter from "@/components/novel/novelChapter";
@@ -27,6 +27,8 @@ import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
 import { DownloadChapter } from "@/types/download";
 import { RefreshControl } from "react-native-gesture-handler";
 import { colors } from "@/lib/constants";
+import NovelActionsBar from "@/components/novel/novelActionsBar";
+import { useHaptics } from "@/hooks/useHaptics";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -38,6 +40,7 @@ export default function NovelScreen() {
   const [listLoaded, setListLoaded] = React.useState(false);
   const router = useRouter();
   const scrollY = useSharedValue(0);
+  const [selectedChapters, setSelectedChapters] = React.useState<Chapter[]>([]);
   const [chaptersToDelete, setChaptersToDelete] = React.useState<
     DownloadChapter[]
   >([]);
@@ -52,6 +55,7 @@ export default function NovelScreen() {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { vibration } = useHaptics();
   const { enqueue, queue } = useChapterDownloadQueue();
 
   const prevQueueLengthRef = useRef<number>(queue.length);
@@ -76,6 +80,40 @@ export default function NovelScreen() {
     },
   });
 
+  const { mutate: toggleReadChapter } = useMutation({
+    mutationFn: ({
+      novelTitle,
+      chapterNumber,
+    }: {
+      novelTitle: string;
+      chapterNumber: number;
+    }) =>
+      novelController.toggleMarkChapterAsRead({
+        novelTitle,
+        chapterNumber,
+      }),
+    onSuccess: () => {
+      refetchNovelInfo();
+    },
+  });
+
+  const { mutate: toggleBookmarkChapter } = useMutation({
+    mutationFn: ({
+      novelTitle,
+      chapterNumber,
+    }: {
+      novelTitle: string;
+      chapterNumber: number;
+    }) =>
+      novelController.toggleBookmarkChapter({
+        novelTitle,
+        chapterNumber,
+      }),
+    onSuccess: () => {
+      refetchNovelInfo();
+    },
+  });
+
   const scrollYHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
@@ -84,21 +122,17 @@ export default function NovelScreen() {
 
   const resumeChapter = React.useMemo<Chapter | null>(() => {
     const chapters = novelInfo?.chapters;
-    if (!chapters || chapters.length === 0) return null;
+    if (!chapters?.length) return null;
 
-    const incomplete = chapters.filter((chap) => chap.progress! < 100);
+    const incomplete = chapters.filter((c) => (c.progress ?? 0) < 100);
+    if (!incomplete.length) return null;
 
-    if (incomplete.length === 0) {
-      return null;
-    }
-
-    const candidate = incomplete.reduce((minChap, chap) =>
-      chap.number < minChap.number ? chap : minChap
+    const candidate = incomplete.reduce((min, c) =>
+      c.number < min.number ? c : min
     );
 
-    if (candidate.number === 1 && candidate.progress === 0) {
-      return null;
-    }
+    const anyRead = chapters.some((c) => (c.progress ?? 0) > 0);
+    if (!anyRead) return null;
 
     return candidate;
   }, [novelInfo]);
@@ -106,16 +140,22 @@ export default function NovelScreen() {
   const handleChapterPress = React.useCallback(
     ({
       chapterNumber,
+      chapterTitle,
+      chapterUrl,
       downloaded,
     }: {
       chapterNumber: number;
+      chapterTitle: string;
+      chapterUrl: string;
       downloaded?: boolean;
     }) => {
       router.push({
         pathname: "/novel/reader",
         params: {
-          title: novelInfo?.title ?? "",
+          novelTitle: novelInfo?.title ?? "",
           chapterNumber,
+          chapterTitle,
+          chapterUrl,
           totalChapters: novelInfo?.chapters.length ?? 0,
           downloaded: downloaded ? 1 : 0,
         },
@@ -123,6 +163,11 @@ export default function NovelScreen() {
     },
     [router, novelInfo?.title]
   );
+
+  function handleOpenDeleteChaptersDrawer(chapters: DownloadChapter[]) {
+    setChaptersToDelete(chapters);
+    bottomDrawerDownloadRef.current?.present();
+  }
 
   function handleDownloadPress({
     chapter,
@@ -137,17 +182,9 @@ export default function NovelScreen() {
     if (!isDownloaded) {
       enqueue([chapter]);
     } else {
-      setChaptersToDelete([chapter]);
-      bottomDrawerDownloadRef.current?.present();
+      handleOpenDeleteChaptersDrawer([chapter]);
     }
   }
-
-  React.useEffect(() => {
-    if (prevQueueLengthRef.current > queue.length) {
-      refetchNovelInfo();
-    }
-    prevQueueLengthRef.current = queue.length;
-  }, [queue, refetchNovelInfo]);
 
   const handleDeleteChapters = React.useCallback(() => {
     removeDownloadChapters(chaptersToDelete);
@@ -159,6 +196,52 @@ export default function NovelScreen() {
     setChaptersToDelete([]);
     bottomDrawerDownloadRef.current?.dismiss();
   }, [bottomDrawerDownloadRef]);
+
+  const handleSelectChapter = React.useCallback(
+    (chapter: Chapter) => {
+      if (selectedChapters.length === 0) {
+        vibration();
+      }
+
+      setSelectedChapters((prev) => {
+        if (prev.some((c) => c.number === chapter.number)) {
+          return prev.filter((c) => c.number !== chapter.number);
+        } else {
+          return [...prev, chapter];
+        }
+      });
+    },
+    [selectedChapters.length, queue.length]
+  );
+
+  const handleClearSelectedChapters = React.useCallback(() => {
+    setSelectedChapters([]);
+  }, []);
+
+  const handleSelectAllChapters = React.useCallback(() => {
+    if (
+      !novelInfo?.chapters ||
+      selectedChapters.length === novelInfo?.chapters.length
+    ) {
+      return;
+    }
+
+    setSelectedChapters(novelInfo?.chapters);
+  }, [novelInfo?.chapters, selectedChapters.length]);
+
+  const handleSelectRemainingChapters = React.useCallback(() => {
+    if (!novelInfo?.chapters) return;
+
+    const remaining = novelInfo?.chapters.filter(
+      (c) => !selectedChapters.some((sc) => sc.number === c.number)
+    );
+
+    if (remaining.length === 0) {
+      setSelectedChapters([]);
+    } else {
+      setSelectedChapters(remaining);
+    }
+  }, [novelInfo?.chapters, selectedChapters]);
 
   const renderItem = React.useCallback(
     ({ item }: { item: Chapter }) => {
@@ -173,10 +256,19 @@ export default function NovelScreen() {
           isDownloading={isDownloading}
           onChapterPress={handleChapterPress}
           onDownloadPress={handleDownloadPress}
+          selectedChapters={selectedChapters}
+          onSelectChapter={handleSelectChapter}
         />
       );
     },
-    [handleChapterPress, handleDownloadPress, queue]
+    [
+      queue,
+      selectedChapters,
+      handleChapterPress,
+      handleDownloadPress,
+      toggleBookmarkChapter,
+      toggleReadChapter,
+    ]
   );
 
   const keyExtractor = React.useCallback(
@@ -206,12 +298,29 @@ export default function NovelScreen() {
         <NovelGenres
           genres={novelInfo.genres.split(",").map((g) => g.trim())}
         />
-        <Text className="text-lg font-medium text-muted_foreground px-5 -mb-2">
-          {novelInfo.chapters.length} Chapters
-        </Text>
+        <View className="flex flex-row items-center justify-between px-5 -mb-2">
+          <Text className="text-lg font-medium text-muted_foreground">
+            {novelInfo.chapters.length} Chapters
+          </Text>
+          <TouchableOpacity className="p-2 -mr-2">
+            <ListFilter
+              color={colors.muted_foreground}
+              size={20}
+              strokeWidth={1.6}
+              className="p-2"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }, [novelInfo]);
+
+  React.useEffect(() => {
+    if (prevQueueLengthRef.current > queue.length) {
+      refetchNovelInfo();
+    }
+    prevQueueLengthRef.current = queue.length;
+  }, [queue, refetchNovelInfo]);
 
   if (isLoadingNovel) {
     return <Loading title="The ink is still drying on this novel..." />;
@@ -232,11 +341,18 @@ export default function NovelScreen() {
 
   return (
     <View className="flex-1 bg-background relative">
-      <NovelHeader scrollY={scrollY} novelTitle={novelInfo.title} />
+      <NovelHeader
+        scrollY={scrollY}
+        novelTitle={novelInfo.title}
+        selectedChapters={selectedChapters.length}
+        handleClearSelectedChapters={handleClearSelectedChapters}
+        handleSelectAllChapters={handleSelectAllChapters}
+        handleSelectRemainingChapters={handleSelectRemainingChapters}
+      />
       <AnimatedFlashList
         ListHeaderComponent={ListHeader}
         data={novelInfo.chapters}
-        extraData={queue}
+        extraData={[queue.length, selectedChapters.length]}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         estimatedItemSize={44}
@@ -255,7 +371,7 @@ export default function NovelScreen() {
         }
       />
 
-      {listLoaded && (
+      {listLoaded && selectedChapters.length === 0 && (
         <NovelReadButton
           scrollY={scrollY}
           novelTitle={novelInfo.title}
@@ -265,6 +381,16 @@ export default function NovelScreen() {
           }
         />
       )}
+
+      <NovelActionsBar
+        novelTitle={novelInfo.title}
+        selectedChapters={selectedChapters}
+        setSelectedChapters={setSelectedChapters}
+        refetchNovelInfo={refetchNovelInfo}
+        enqueueDownload={enqueue}
+        onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
+      />
+
       <BottomDrawer ref={bottomDrawerDownloadRef}>
         <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-8 flex-1">
           <Text className="text-lg font-medium text-center">

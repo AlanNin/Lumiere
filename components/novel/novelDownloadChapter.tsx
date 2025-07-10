@@ -1,6 +1,6 @@
 import { cn } from "@/lib/cn";
 import { colors } from "@/lib/constants";
-import { DownloadChapter } from "@/types/novel";
+import { DownloadChapter } from "@/types/download";
 import { ArrowDown, Check } from "lucide-react-native";
 import { TouchableOpacity, View, ActivityIndicator } from "react-native";
 
@@ -34,7 +34,7 @@ export default function NovelDownloadChapter({
       }
       activeOpacity={0.7}
       disabled={isDownloading}
-      className="p-1"
+      className="py-4"
     >
       <View
         style={{

@@ -55,8 +55,10 @@ export default function ReaderBottomBar({
     router.replace({
       pathname: "/novel/reader",
       params: {
-        title: chapter.novelTitle,
+        novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number + 1,
+        chapterTitle: chapter.title,
+        chapterUrl: chapter.url,
         totalChapters,
       },
     });
@@ -66,7 +68,12 @@ export default function ReaderBottomBar({
     if (chapter.number === totalChapters) return;
     router.replace({
       pathname: "/novel/reader",
-      params: { title: chapter.novelTitle, chapterNumber: chapter.number + 1 },
+      params: {
+        novelTitle: chapter.novelTitle,
+        chapterNumber: chapter.number + 1,
+        chapterTitle: chapter.title,
+        chapterUrl: chapter.url,
+      },
     });
   }
 

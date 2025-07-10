@@ -78,12 +78,35 @@ export function sanitizeHtml(dirtyHtml: string) {
   return cleanHtml;
 }
 
-export function insertTitleHtml(title: string, html: string): string {
-  const h4Regex = /<h4>[\s\S]*?<\/h4>/i;
+export function extractChapterTitle(rawText: string): string {
+  let cleanText = rawText.trim();
+
+  cleanText = cleanText.replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
+
+  cleanText = cleanText.replace(/^Chapter\s+/i, "");
+
+  cleanText = cleanText.trim();
+
+  cleanText = cleanText.replace(/^\d+\s*[-–—:]\s*/, "");
+
+  cleanText = cleanText.replace(/^\d+\s+/, "");
+
+  return cleanText.trim();
+}
+
+export function insertTitleHtml(
+  title: string,
+  chapterNumber: number,
+  html: string
+): string {
+  const h4Regex = /<h4>([\s\S]*?)<\/h4>/i;
 
   if (h4Regex.test(html)) {
-    return html.replace(h4Regex, `<h4>${title}</h4>`);
+    return html.replace(h4Regex, (_match, content) => {
+      const cleanedContent = extractChapterTitle(content);
+      return `<h4>Chapter ${chapterNumber} - ${cleanedContent}</h4>`;
+    });
   } else {
-    return `<h4>${title}</h4>\n` + html;
+    return `<h4>Chapter ${chapterNumber} - ${title}</h4>\n` + html;
   }
 }

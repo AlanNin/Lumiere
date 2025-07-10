@@ -1,7 +1,7 @@
 import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
@@ -36,6 +36,7 @@ export const novelRepository = {
           id: novelChapters.id,
           number: novelChapters.number,
           title: novelChapters.title,
+          url: novelChapters.url,
           progress: novelChapters.progress,
           bookMarked: novelChapters.bookMarked,
           downloaded: novelChapters.downloaded,
@@ -61,6 +62,7 @@ export const novelRepository = {
           novelTitle: novelTitle,
           number: Number(c.number),
           title: String(c.title),
+          url: String(c.url),
           progress: Number(c.progress),
           bookMarked: Boolean(c.bookMarked),
           downloaded: Boolean(c.downloaded),
@@ -97,6 +99,7 @@ export const novelRepository = {
           novelTitle: novel.title,
           number: chap.number,
           title: chap.title,
+          url: chap.url,
         }));
 
         const BATCH_SIZE = 1000;
@@ -195,6 +198,7 @@ export const novelRepository = {
           novelTitle: novel.title,
           number: chap.number,
           title: chap.title,
+          url: chap.url,
         }));
 
         for (let i = 0; i < insertPayload.length; i += BATCH) {
@@ -232,6 +236,7 @@ export const novelRepository = {
           novelTitle: novelChapters.novelTitle,
           number: novelChapters.number,
           title: novelChapters.title,
+          url: novelChapters.url,
           progress: novelChapters.progress,
           bookMarked: novelChapters.bookMarked,
           downloaded: novelChapters.downloaded,
@@ -254,6 +259,7 @@ export const novelRepository = {
         novelTitle: row.novelTitle,
         number: row.number,
         title: row.title,
+        url: row.url,
         progress: row.progress,
         bookMarked: Boolean(row.bookMarked),
         downloaded: Boolean(row.downloaded),
@@ -328,33 +334,62 @@ export const novelRepository = {
   },
 
   async removeDownloadedChapters(
-    chapters: {
-      novelTitle: string;
-      chapterNumber: number;
-    }[]
+    chapters: Array<{ novelTitle: string; chapterNumber: number }>
   ): Promise<boolean> {
+    if (!Array.isArray(chapters)) {
+      throw new Error("Expected chapters to be an array");
+    }
+    const valid: typeof chapters = [];
+    const skipped: typeof chapters = [];
+
+    for (const ch of chapters) {
+      if (
+        ch &&
+        typeof ch.novelTitle === "string" &&
+        Number.isInteger(ch.chapterNumber)
+      ) {
+        valid.push(ch);
+      } else {
+        skipped.push(ch);
+      }
+    }
+    if (valid.length === 0) {
+      return false;
+    }
+
     try {
-      if (chapters.length === 0) return false;
+      const groups = valid.reduce<Record<string, number[]>>(
+        (acc, { novelTitle, chapterNumber }) => {
+          acc[novelTitle] = acc[novelTitle] || [];
+          acc[novelTitle].push(chapterNumber);
+          return acc;
+        },
+        {}
+      );
 
       const totalChanges = await db_client.transaction(async (tx) => {
-        let changesCount = 0;
+        let changes = 0;
 
-        for (const { novelTitle, chapterNumber } of chapters) {
+        for (const [novelTitle, numbers] of Object.entries(groups)) {
+          const uniqueNumbers = Array.from(new Set(numbers)).sort(
+            (a, b) => a - b
+          );
+
           const res = await tx
             .update(novelChapters)
             .set({ downloaded: 0, content: null })
             .where(
               and(
                 eq(novelChapters.novelTitle, novelTitle),
-                eq(novelChapters.number, chapterNumber)
+                inArray(novelChapters.number, uniqueNumbers)
               )
             )
             .run();
 
-          changesCount += res.changes;
+          changes += res.changes;
         }
 
-        return changesCount;
+        return changes;
       });
 
       return totalChanges > 0;
@@ -362,5 +397,193 @@ export const novelRepository = {
       console.error("Failed to reset downloaded chapters:", e);
       throw e;
     }
+  },
+
+  async toggleMarkChapterAsRead({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    const chapter = await db_client
+      .select({ progress: novelChapters.progress })
+      .from(novelChapters)
+      .where(
+        and(
+          eq(novelChapters.novelTitle, novelTitle),
+          eq(novelChapters.number, chapterNumber)
+        )
+      )
+      .get();
+
+    if (!chapter) {
+      throw new Error("NO_CHAPTER_FOUND");
+    }
+
+    const newProg = chapter.progress === 100 ? 0 : 100;
+
+    const result = await db_client
+      .update(novelChapters)
+      .set({ progress: newProg })
+      .where(
+        and(
+          eq(novelChapters.novelTitle, novelTitle),
+          eq(novelChapters.number, chapterNumber)
+        )
+      )
+      .returning({ id: novelChapters.id })
+      .run();
+
+    if (!result) {
+      throw new Error("NO_CHAPTER_FOUND");
+    }
+
+    return true;
+  },
+
+  async toggleBookmarkChapter({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    const filter = and(
+      eq(novelChapters.novelTitle, novelTitle),
+      eq(novelChapters.number, chapterNumber)
+    );
+
+    const chapter = await db_client
+      .select({ bookMarked: novelChapters.bookMarked })
+      .from(novelChapters)
+      .where(filter)
+      .get();
+
+    if (!chapter) {
+      throw new Error("NO_CHAPTER_FOUND");
+    }
+
+    const newBookmarked = chapter.bookMarked === 1 ? 0 : 1;
+
+    const result = await db_client
+      .update(novelChapters)
+      .set({ bookMarked: newBookmarked })
+      .where(filter)
+      .returning({ id: novelChapters.id })
+      .run();
+
+    if (!result) {
+      throw new Error("NO_CHAPTER_FOUND");
+    }
+    return true;
+  },
+
+  async markChaptersAsBookmarked({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    if (chapterNumbers.length === 0) return true;
+
+    const filter = and(
+      eq(novelChapters.novelTitle, novelTitle),
+      inArray(novelChapters.number, chapterNumbers)
+    );
+
+    const result = await db_client
+      .update(novelChapters)
+      .set({ bookMarked: 1 })
+      .where(filter)
+      .returning({ id: novelChapters.id })
+      .run();
+
+    if (!result) {
+      throw new Error("NO_CHAPTERS_UPDATED");
+    }
+    return true;
+  },
+
+  async unMarkChaptersAsBookmarked({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    if (chapterNumbers.length === 0) return true;
+
+    const filter = and(
+      eq(novelChapters.novelTitle, novelTitle),
+      inArray(novelChapters.number, chapterNumbers)
+    );
+
+    const result = await db_client
+      .update(novelChapters)
+      .set({ bookMarked: 0 })
+      .where(filter)
+      .returning({ id: novelChapters.id })
+      .run();
+
+    if (!result) {
+      throw new Error("NO_CHAPTERS_UPDATED");
+    }
+    return true;
+  },
+
+  async markChaptersAsRead({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    if (chapterNumbers.length === 0) return true;
+
+    const filter = and(
+      eq(novelChapters.novelTitle, novelTitle),
+      inArray(novelChapters.number, chapterNumbers)
+    );
+
+    const result = await db_client
+      .update(novelChapters)
+      .set({ progress: 100 })
+      .where(filter)
+      .returning({ id: novelChapters.id })
+      .run();
+
+    if (!result) {
+      throw new Error("NO_CHAPTERS_UPDATED");
+    }
+    return true;
+  },
+
+  async unMarkChaptersAsRead({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    if (chapterNumbers.length === 0) return true;
+
+    const filter = and(
+      eq(novelChapters.novelTitle, novelTitle),
+      inArray(novelChapters.number, chapterNumbers)
+    );
+
+    const result = await db_client
+      .update(novelChapters)
+      .set({ progress: 0 })
+      .where(filter)
+      .returning({ id: novelChapters.id })
+      .run();
+
+    if (!result) {
+      throw new Error("NO_CHAPTERS_UPDATED");
+    }
+    return true;
   },
 };

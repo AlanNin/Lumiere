@@ -55,16 +55,25 @@ export const novelController = {
   },
 
   async getNovelChapter({
-    title,
+    novelTitle,
     chapterNumber,
+    chapterTitle,
+    chapterUrl,
   }: {
-    title: string;
+    novelTitle: string;
     chapterNumber: number;
+    chapterTitle: string;
+    chapterUrl: string;
   }): Promise<Chapter | null> {
     try {
       let data: Chapter | null;
 
-      data = await novelService.getNovelChapter({ title, chapterNumber });
+      data = await novelService.getNovelChapter({
+        novelTitle,
+        chapterNumber,
+        chapterTitle,
+        chapterUrl,
+      });
 
       return data;
     } catch (error) {
@@ -154,6 +163,126 @@ export const novelController = {
   }): Promise<boolean> {
     try {
       return await novelService.removeDownloadedNovelChapters({ chapters });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async toggleMarkChapterAsRead({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    try {
+      return await novelService.toggleMarkChapterAsRead({
+        novelTitle,
+        chapterNumber,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async toggleBookmarkChapter({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    try {
+      return await novelService.toggleBookmarkChapter({
+        novelTitle,
+        chapterNumber,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async markChaptersAsBookmarked({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.markChaptersAsBookmarked({
+        novelTitle,
+        chapterNumbers,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async unMarkChaptersAsBookmarked({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.unMarkChaptersAsBookmarked({
+        novelTitle,
+        chapterNumbers,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async markChaptersAsRead({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.markChaptersAsRead({
+        novelTitle,
+        chapterNumbers,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async unMarkChaptersAsRead({
+    novelTitle,
+    chapterNumbers,
+  }: {
+    novelTitle: string;
+    chapterNumbers: number[];
+  }): Promise<boolean> {
+    try {
+      return await novelService.unMarkChaptersAsRead({
+        novelTitle,
+        chapterNumbers,
+      });
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;

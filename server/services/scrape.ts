@@ -1,7 +1,7 @@
 import { Chapter, Novel, NovelInfo } from "@/types/novel";
 import cheerio from "cheerio";
 import { ExploreSection } from "../controllers/novel";
-import { insertTitleHtml, sanitizeHtml } from "@/lib/html";
+import { extractChapterTitle, insertTitleHtml, sanitizeHtml } from "@/lib/html";
 import { colors } from "@/lib/constants";
 
 const DEFAULT_HEADERS = {
@@ -97,28 +97,22 @@ export async function scrapeNovelsSearch(
   return { novels };
 }
 
-export async function scrapeNovelInfo(slug: string): Promise<NovelInfo | null> {
-  const novelInfoUrl = `https://lightnovelpub.me/book/${slug}`;
-  const novelChaptersUrl = `https://novelbin.com/ajax/chapter-archive?novelId=${slug}`;
-
+export async function scrapeNovelInfo(
+  novelTitleSlug: string
+): Promise<NovelInfo | null> {
+  const novelInfoUrl = `https://lightnovelpub.me/book/${novelTitleSlug}`;
+  const novelChaptersUrl = `https://novelbin.com/ajax/chapter-archive?novelId=${novelTitleSlug}`;
   const [novelInfoHtml, novelChaptersHtml] = await Promise.all([
-    fetch(novelInfoUrl, {
-      headers: DEFAULT_HEADERS,
-    }).then((r) => {
-      return r.text();
-    }),
-    fetch(novelChaptersUrl, { headers: DEFAULT_HEADERS }).then((r) => {
-      return r.text();
-    }),
-    ,
+    fetch(novelInfoUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text()),
+    fetch(novelChaptersUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text()),
   ]);
-
-  if (!novelInfoHtml || !novelChaptersHtml) throw new Error("Novel not found");
-
+  if (!novelInfoHtml || !novelChaptersHtml) {
+    throw new Error("Novel not found");
+  }
   const NI$ = cheerio.load(novelInfoHtml);
-
   const NC$ = cheerio.load(novelChaptersHtml);
 
+  // ——— Novel metadata —————————————————————————————————————————————————
   const rawTitle = NI$(".m-info h3.tit").text().trim();
   const fullTitle = rawTitle.replace(/\.+$/, "");
   if (!fullTitle) return null;
@@ -128,34 +122,9 @@ export async function scrapeNovelInfo(slug: string): Promise<NovelInfo | null> {
   );
   const rating = Number.isFinite(ratingRaw) ? ratingRaw : 0;
 
-  const anchors = NC$(".list-chapter li a").toArray();
-
-  const chapters: Chapter[] = anchors
-    .map((el: cheerio.Element) => {
-      const a = NC$(el);
-      const rawHref = a.attr("href") || "";
-      const rawText = (
-        a.find(".nchr-text, .chapter-title").text() || a.text()
-      ).trim();
-
-      const match = rawHref.match(/chapter-(\d+)/i);
-      const number = match ? parseInt(match[1], 10) : NaN;
-
-      const title = rawText.replace(/^Chapter\s*\d+\s*[:\-–—]?\s*/i, "").trim();
-
-      const url = rawHref.startsWith("http")
-        ? rawHref
-        : `https://novelbin.com${rawHref}`;
-
-      return { title, number, url };
-    })
-    .filter((ch: Chapter): ch is Chapter => ch.number > 0)
-    .sort((a: Chapter, b: Chapter) => a.number - b.number);
-
   const rawDesc = NI$(".m-desc .txt .inner").text().trim();
-
   const description = rawDesc
-    .replace(/You[’']?re reading[\s\S]*?free on [^\.!?]+[\.!?]?/i, "")
+    .replace(/You['']?re reading[\s\S]*?free on [^\.!?]+[\.!?]?/i, "")
     .replace(/\s*com !$/i, "")
     .trim();
 
@@ -165,32 +134,63 @@ export async function scrapeNovelInfo(slug: string): Promise<NovelInfo | null> {
     .map((_: number, a: cheerio.Element) => NI$(a).text().trim())
     .get();
 
-  const novelInfo = {
+  const author = NI$(".m-book1 .txt .glyphicon-user")
+    .next(".right")
+    .find("a")
+    .first()
+    .text()
+    .trim();
+
+  const status = NI$(".m-book1 .txt .glyphicon-time")
+    .next(".right")
+    .text()
+    .trim();
+
+  const imageUrl = NI$(".m-book1 .pic img").attr("src") || "";
+
+  // ——— Chapters —————————————————————————————————————————————————————
+  const items = NC$(".list-chapter li").toArray();
+  const chapters: Chapter[] = items
+    .map((liEl: cheerio.Element, idx: number) => {
+      const li = NC$(liEl);
+      const rawText = li.find(".nchr-text, .chapter-title").text().trim();
+      const url = li.find("a").attr("href") || "";
+
+      const numberMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
+      let number: number;
+      if (numberMatch) {
+        number = parseInt(numberMatch[1], 10);
+      } else {
+        number = idx + 1;
+      }
+
+      const title = extractChapterTitle(rawText);
+
+      return { number, title, url };
+    })
+    .filter((ch: Chapter): ch is Chapter => ch.number > 0)
+    .sort((a: Chapter, b: Chapter) => a.number - b.number);
+
+  // ——— Build and return —————————————————————————————————————————————
+  const novelInfo: NovelInfo = {
     title: fullTitle,
     url: novelInfoUrl,
-    imageUrl: NI$(".m-book1 .pic img").attr("src") || "",
+    imageUrl,
     rating,
     genres: genresArray.join(","),
-    status: NI$(".m-book1 .txt .glyphicon-time").next(".right").text().trim(),
-    author: NI$(".m-book1 .txt .glyphicon-user")
-      .next(".right")
-      .find("a")
-      .first()
-      .text()
-      .trim(),
+    status,
+    author,
     description,
     chapters,
   };
-
   return novelInfo;
 }
 
 export async function scrapeNovelChapter(
-  slug: string,
+  chapterUrl: string,
   chapterNumber: number
 ): Promise<Chapter | null> {
-  const url = `https://novelbin.com/b/${slug}/chapter-${chapterNumber}`;
-  const res = await fetch(url, { headers: DEFAULT_HEADERS });
+  const res = await fetch(chapterUrl, { headers: DEFAULT_HEADERS });
   if (!res.ok) throw new Error(`Failed to fetch chapter ${chapterNumber}`);
   const html = await res.text();
 
@@ -202,8 +202,7 @@ export async function scrapeNovelChapter(
 
   const novelTitle =
     $(".col-xs-12 a.novel-title").first().attr("title")?.trim() ||
-    $(".col-xs-12 a.novel-title").first().text().trim() ||
-    slug;
+    $(".col-xs-12 a.novel-title").first().text().trim();
 
   const rawTitle = chr
     .find("h2 a.chr-title span.chr-text")
@@ -223,11 +222,7 @@ export async function scrapeNovelChapter(
 
   const cleanHtml = sanitizeHtml(dirtyHtml);
 
-  const htmlTitleToInsert = `Chapter ${chapterNumber}${
-    !onlyNumberMatch ? ` - ${title}` : ""
-  }`;
-
-  const htmlWithTitle = insertTitleHtml(htmlTitleToInsert, cleanHtml);
+  const htmlWithTitle = insertTitleHtml(title, chapterNumber, cleanHtml);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -252,6 +247,7 @@ export async function scrapeNovelChapter(
       novelTitle,
       number: parseInt(onlyNumberMatch[1], 10),
       title: "",
+      url: chapterUrl,
       content: htmlContent,
     };
   }
@@ -260,6 +256,7 @@ export async function scrapeNovelChapter(
     novelTitle,
     number,
     title,
+    url: chapterUrl,
     content: htmlContent,
   };
 }
