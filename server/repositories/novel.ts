@@ -413,86 +413,6 @@ export const novelRepository = {
     }
   },
 
-  async toggleMarkChapterAsRead({
-    novelTitle,
-    chapterNumber,
-  }: {
-    novelTitle: string;
-    chapterNumber: number;
-  }): Promise<boolean> {
-    const chapter = await db_client
-      .select({ progress: novelChapters.progress })
-      .from(novelChapters)
-      .where(
-        and(
-          eq(novelChapters.novelTitle, novelTitle),
-          eq(novelChapters.number, chapterNumber)
-        )
-      )
-      .get();
-
-    if (!chapter) {
-      throw new Error("NO_CHAPTER_FOUND");
-    }
-
-    const newProg = chapter.progress === 100 ? 0 : 100;
-
-    const result = await db_client
-      .update(novelChapters)
-      .set({ progress: newProg })
-      .where(
-        and(
-          eq(novelChapters.novelTitle, novelTitle),
-          eq(novelChapters.number, chapterNumber)
-        )
-      )
-      .returning({ id: novelChapters.id })
-      .run();
-
-    if (!result) {
-      throw new Error("NO_CHAPTER_FOUND");
-    }
-
-    return true;
-  },
-
-  async toggleBookmarkChapter({
-    novelTitle,
-    chapterNumber,
-  }: {
-    novelTitle: string;
-    chapterNumber: number;
-  }): Promise<boolean> {
-    const filter = and(
-      eq(novelChapters.novelTitle, novelTitle),
-      eq(novelChapters.number, chapterNumber)
-    );
-
-    const chapter = await db_client
-      .select({ bookMarked: novelChapters.bookMarked })
-      .from(novelChapters)
-      .where(filter)
-      .get();
-
-    if (!chapter) {
-      throw new Error("NO_CHAPTER_FOUND");
-    }
-
-    const newBookmarked = chapter.bookMarked === 1 ? 0 : 1;
-
-    const result = await db_client
-      .update(novelChapters)
-      .set({ bookMarked: newBookmarked })
-      .where(filter)
-      .returning({ id: novelChapters.id })
-      .run();
-
-    if (!result) {
-      throw new Error("NO_CHAPTER_FOUND");
-    }
-    return true;
-  },
-
   async markChaptersAsBookmarked({
     novelTitle,
     chapterNumbers,
@@ -507,16 +427,16 @@ export const novelRepository = {
       inArray(novelChapters.number, chapterNumbers)
     );
 
-    const result = await db_client
+    const { changes } = await db_client
       .update(novelChapters)
       .set({ bookMarked: 1 })
       .where(filter)
-      .returning({ id: novelChapters.id })
       .run();
 
-    if (!result) {
+    if (changes === 0) {
       throw new Error("NO_CHAPTERS_UPDATED");
     }
+
     return true;
   },
 
@@ -534,16 +454,16 @@ export const novelRepository = {
       inArray(novelChapters.number, chapterNumbers)
     );
 
-    const result = await db_client
+    const { changes } = await db_client
       .update(novelChapters)
       .set({ bookMarked: 0 })
       .where(filter)
-      .returning({ id: novelChapters.id })
       .run();
 
-    if (!result) {
+    if (changes === 0) {
       throw new Error("NO_CHAPTERS_UPDATED");
     }
+
     return true;
   },
 
@@ -565,7 +485,6 @@ export const novelRepository = {
       .update(novelChapters)
       .set({ progress: 100 })
       .where(filter)
-      .returning({ id: novelChapters.id })
       .run();
 
     if (!result) {
@@ -592,7 +511,6 @@ export const novelRepository = {
       .update(novelChapters)
       .set({ progress: 0 })
       .where(filter)
-      .returning({ id: novelChapters.id })
       .run();
 
     if (!result) {

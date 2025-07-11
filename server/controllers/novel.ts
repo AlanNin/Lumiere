@@ -170,46 +170,6 @@ export const novelController = {
     }
   },
 
-  async toggleMarkChapterAsRead({
-    novelTitle,
-    chapterNumber,
-  }: {
-    novelTitle: string;
-    chapterNumber: number;
-  }): Promise<boolean> {
-    try {
-      return await novelService.toggleMarkChapterAsRead({
-        novelTitle,
-        chapterNumber,
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error.message;
-      }
-      throw new Error("An unknown error occurred.");
-    }
-  },
-
-  async toggleBookmarkChapter({
-    novelTitle,
-    chapterNumber,
-  }: {
-    novelTitle: string;
-    chapterNumber: number;
-  }): Promise<boolean> {
-    try {
-      return await novelService.toggleBookmarkChapter({
-        novelTitle,
-        chapterNumber,
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error.message;
-      }
-      throw new Error("An unknown error occurred.");
-    }
-  },
-
   async markChaptersAsBookmarked({
     novelTitle,
     chapterNumbers,

@@ -113,40 +113,6 @@ export default function NovelScreen() {
     },
   });
 
-  const { mutate: toggleReadChapter } = useMutation({
-    mutationFn: ({
-      novelTitle,
-      chapterNumber,
-    }: {
-      novelTitle: string;
-      chapterNumber: number;
-    }) =>
-      novelController.toggleMarkChapterAsRead({
-        novelTitle,
-        chapterNumber,
-      }),
-    onSuccess: () => {
-      refetchNovelInfo();
-    },
-  });
-
-  const { mutate: toggleBookmarkChapter } = useMutation({
-    mutationFn: ({
-      novelTitle,
-      chapterNumber,
-    }: {
-      novelTitle: string;
-      chapterNumber: number;
-    }) =>
-      novelController.toggleBookmarkChapter({
-        novelTitle,
-        chapterNumber,
-      }),
-    onSuccess: () => {
-      refetchNovelInfo();
-    },
-  });
-
   const scrollYHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
@@ -277,14 +243,7 @@ export default function NovelScreen() {
         />
       );
     },
-    [
-      queue,
-      selectedChapters,
-      handleChapterPress,
-      handleDownloadPress,
-      toggleBookmarkChapter,
-      toggleReadChapter,
-    ]
+    [queue, selectedChapters, handleChapterPress, handleDownloadPress]
   );
 
   const keyExtractor = React.useCallback(

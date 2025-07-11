@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   TouchableOpacity,
   View,
   StyleProp,
   ViewStyle,
+  BackHandler,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import { colors } from "@/lib/constants";
 import { novelController } from "@/server/controllers/novel";
 import { DownloadChapter } from "@/types/download";
 import { Chapter } from "@/types/novel";
+import { useFocusEffect } from "expo-router";
 
 const ANIM_DURATION = 150;
 
@@ -137,6 +139,34 @@ export default function NovelActionsBar({
     },
     onSuccess,
   });
+
+  // Effect: Handle back with actions bar showing
+  useFocusEffect(
+    useCallback(() => {
+      const hasSelectedChapters = selectedChapters.length > 0;
+
+      if (!hasSelectedChapters) {
+        return;
+      }
+
+      const onBackPress = () => {
+        if (hasSelectedChapters) {
+          setSelectedChapters([]);
+          return true;
+        }
+        return false;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => {
+        subscription.remove();
+      };
+    }, [selectedChapters.length])
+  );
 
   // Effect: run our show/hide animation whenever `visible` changes
   useEffect(() => {
