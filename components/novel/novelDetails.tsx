@@ -12,6 +12,8 @@ import LinearGradient from "react-native-linear-gradient";
 import { Text } from "@/components/defaults";
 import { cn } from "@/lib/cn";
 
+const TOP_RANK_THRESHOLD = 10;
+
 export default function NovelDetails({
   imageUrl,
   title,
@@ -33,7 +35,7 @@ export default function NovelDetails({
     return `rgba(${difuminationColor}, ${opacity})`;
   }
 
-  const isTopRanking = rank <= 3;
+  const isTopRanking = rank <= TOP_RANK_THRESHOLD;
 
   return (
     <View className="relative min-h-[276px] w-full mb-6">

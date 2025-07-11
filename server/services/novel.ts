@@ -1,5 +1,10 @@
 import { Explore } from "@/types/explore";
-import { Chapter, NovelInfo } from "@/types/novel";
+import {
+  Chapter,
+  NovelChaptersFilter,
+  NovelChaptersSort,
+  NovelInfo,
+} from "@/types/novel";
 import { ExploreSection } from "../controllers/novel";
 import {
   scrapeNovelChapter,
@@ -56,13 +61,17 @@ export const novelService = {
     };
   },
 
-  async getNovel({ title }: { title: string }): Promise<NovelInfo> {
+  async getNovel({
+    novelTitle,
+  }: {
+    novelTitle: NovelInfo["title"];
+  }): Promise<NovelInfo> {
     try {
-      const novelTitleSlug = slugify(title);
+      const novelTitleSlug = slugify(novelTitle);
 
       let info: NovelInfo | null = null;
 
-      info = await novelRepository.findNovel(title);
+      info = await novelRepository.findNovel({ novelTitle });
 
       if (info) {
         return info;

@@ -5,9 +5,11 @@ import { and, asc, eq, gt, inArray, lt } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
-  async findNovel(
-    novelTitle: NovelInfo["title"]
-  ): Promise<(NovelInfo & { chapters: Chapter[] }) | null> {
+  async findNovel({
+    novelTitle,
+  }: {
+    novelTitle: NovelInfo["title"];
+  }): Promise<(NovelInfo & { chapters: Chapter[] }) | null> {
     try {
       const novelRows = await db_client
         .select({
@@ -184,6 +186,7 @@ export const novelRepository = {
               imageUrl: novel.imageUrl,
               description: novel.description,
               rating: novel.rating,
+              rank: novel.rank,
               author: novel.author,
               genres: novel.genres,
               status: novel.status,

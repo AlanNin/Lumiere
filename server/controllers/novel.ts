@@ -1,5 +1,10 @@
 import { Explore } from "@/types/explore";
-import { Chapter, NovelInfo } from "@/types/novel";
+import {
+  Chapter,
+  NovelChaptersFilter,
+  NovelChaptersSort,
+  NovelInfo,
+} from "@/types/novel";
 import { novelService } from "../services/novel";
 import { DownloadChapter } from "@/types/download";
 
@@ -35,11 +40,15 @@ export const novelController = {
     }
   },
 
-  async getNovel({ title }: { title: string }): Promise<NovelInfo> {
+  async getNovel({
+    novelTitle,
+  }: {
+    novelTitle: NovelInfo["title"];
+  }): Promise<NovelInfo> {
     try {
       let data: NovelInfo;
 
-      data = await novelService.getNovel({ title });
+      data = await novelService.getNovel({ novelTitle });
 
       return data;
     } catch (error) {

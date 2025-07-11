@@ -7,8 +7,6 @@ import {
   NativeSyntheticEvent,
   Pressable,
   ScrollView,
-  TouchableOpacity,
-  View,
   useWindowDimensions,
 } from "react-native";
 import {
@@ -25,7 +23,6 @@ import ReaderLayout from "./layout";
 import { useMutation } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { invalidateQueries } from "@/providers/reactQuery";
-import { Text } from "../defaults";
 import ReaderFooter from "./footer";
 
 export default function ReaderComponent({

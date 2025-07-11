@@ -4,6 +4,7 @@ import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { novelController } from "@/server/controllers/novel";
 import { DownloadChapter } from "@/types/download";
+import { invalidateQueries } from "@/providers/reactQuery";
 
 const TASK_NAME = "DOWNLOAD_QUEUE_TASK";
 const STORAGE_KEY = "DOWNLOAD_QUEUE";
@@ -187,15 +188,15 @@ export function useChapterDownloadQueue() {
     );
     if (activeQueue.length === 0) return;
 
+    const currentChapter = activeQueue[0];
+    const remainingQueue = currentQueue.filter(
+      (item) => item.id !== currentChapter.id
+    );
+
     processingRef.current = true;
     setIsProcessing(true);
 
     try {
-      const [currentChapter, ...rest] = activeQueue;
-      const remainingQueue = currentQueue.filter(
-        (item) => item.id !== currentChapter.id
-      );
-
       // Update status to downloading
       const updatedCurrentChapter = {
         ...currentChapter,
@@ -281,6 +282,14 @@ export function useChapterDownloadQueue() {
         }
       }
     } finally {
+      invalidateQueries(
+        ["novel-info", currentChapter.novelTitle],
+        [
+          "novel-chapter",
+          currentChapter.novelTitle,
+          currentChapter.chapterNumber,
+        ]
+      );
       processingRef.current = false;
       if (mountedRef.current) {
         setIsProcessing(false);

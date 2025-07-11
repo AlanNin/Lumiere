@@ -171,8 +171,22 @@ export async function scrapeNovelInfo({
     .get()
     .join(",");
 
-  // Short description under the info section
-  const description = $("section#info p.description").text().trim();
+  // Description
+  const summaryParas: string[] = $("div.summary .content p")
+    .map((_: number, p: cheerio.Element) => $(p).text().trim())
+    .get()
+    .filter((t: string) => t.length > 0)
+    .filter((t: string) => /[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ]/.test(t));
+
+  let description: string;
+  if (summaryParas.length > 0) {
+    description = summaryParas.join("\n\n");
+  } else {
+    description =
+      $('article[itemprop="itemReviewed"] meta[itemprop="description"]')
+        .attr("content")
+        ?.trim() || "";
+  }
 
   // ——— Chapters parsing —————————————————————————————————————————————————————
   const items = $$(".list-chapter li").toArray();

@@ -5,10 +5,30 @@ import { FlatList, View, useWindowDimensions } from "react-native";
 import { Novel } from "@/types/novel";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import { colors } from "@/lib/constants";
-import { Frown, Telescope } from "lucide-react-native";
+import { Telescope } from "lucide-react-native";
 import Quote from "@/components/statics/quote";
 import { useQuery } from "@tanstack/react-query";
 import { libraryController } from "@/server/controllers/library";
+
+const renderTabBar = (props: any) => (
+  <TabBar
+    {...props}
+    style={{
+      backgroundColor: colors.background,
+      borderBottomColor: colors.muted,
+      borderBottomWidth: 0.5,
+      paddingLeft: 4,
+      paddingRight: 4,
+    }}
+    tabStyle={{ width: "auto" }}
+    indicatorStyle={{
+      backgroundColor: colors.primary,
+      width: 0.6,
+    }}
+    activeColor={colors.primary}
+    scrollEnabled
+  />
+);
 
 const renderNovels = (novels: Novel[], width: number) => {
   if (novels.length === 0) {
@@ -82,26 +102,6 @@ export default function HomeScreen() {
     scenes[category.label] = () => renderNovels(category.novels, width);
     return scenes;
   }, {} as { [key: string]: () => React.ReactNode });
-
-  const renderTabBar = (props: any) => (
-    <TabBar
-      {...props}
-      style={{
-        backgroundColor: colors.background,
-        borderBottomColor: colors.muted,
-        borderBottomWidth: 0.5,
-        paddingLeft: 4,
-        paddingRight: 4,
-      }}
-      tabStyle={{ width: "auto" }}
-      indicatorStyle={{
-        backgroundColor: colors.primary,
-        width: 0.6,
-      }}
-      activeColor={colors.primary}
-      scrollEnabled
-    />
-  );
 
   return (
     <View className="flex-1 bg-background">

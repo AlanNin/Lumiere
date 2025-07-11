@@ -7,8 +7,12 @@ import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
 import React, { useRef } from "react";
 import { TouchableOpacity, View } from "react-native";
-import { Chapter } from "@/types/novel";
-import { ListFilter, Telescope } from "lucide-react-native";
+import {
+  Chapter,
+  NovelChaptersFilter,
+  NovelChaptersSortUI,
+} from "@/types/novel";
+import { Frown, Library, ListFilter, Telescope } from "lucide-react-native";
 import { Text } from "@/components/defaults";
 import { useRouter } from "expo-router";
 import NovelChapter from "@/components/novel/novelChapter";
@@ -21,39 +25,77 @@ import NovelReadButton from "@/components/novel/novelReadButton";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
 import Loading from "@/components/statics/loading";
 import Error from "@/components/statics/error";
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import BottomDrawer from "@/components/bottomDrawer";
 import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
 import { DownloadChapter } from "@/types/download";
 import { RefreshControl } from "react-native-gesture-handler";
 import { colors } from "@/lib/constants";
 import NovelActionsBar from "@/components/novel/novelActionsBar";
 import { useHaptics } from "@/hooks/useHaptics";
+import NovelRemoveDownloadDrawer from "@/components/novel/novelRemoveDownloadDrawer";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import NovelChaptersFilterDrawer from "@/components/novel/novelChaptersFilterDrawer";
+import { useConfig } from "@/providers/appConfig";
+import { applyNovelChaptersFiltersAndSort } from "@/lib/novel";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
 >(FlashList);
 
 export default function NovelScreen() {
-  const bottomDrawerDownloadRef = useRef<BottomSheetModal>(null);
-  const { title } = useLocalSearchParams();
-  const [listLoaded, setListLoaded] = React.useState(false);
   const router = useRouter();
+
+  // Local pathname state
+  const { title } = useLocalSearchParams();
+
+  // States
   const scrollY = useSharedValue(0);
+  const [listLoaded, setListLoaded] = React.useState(false);
   const [selectedChapters, setSelectedChapters] = React.useState<Chapter[]>([]);
   const [chaptersToDelete, setChaptersToDelete] = React.useState<
     DownloadChapter[]
   >([]);
+  const [novelChaptersFilter, setNovelChaptersFilter] = useConfig<
+    Record<string, NovelChaptersFilter["value"]>
+  >("novelChaptersFilter", {});
+  const [novelChaptersSort, setNovelChaptersSort] = useConfig<
+    NovelChaptersSortUI
+  >("novelChaptersSort", {
+    key: "by_chapter",
+    label: "By Chapter",
+    order: "asc",
+  });
+  const hasChaptersFilterApplied = React.useMemo(() => {
+    return Object.values(novelChaptersFilter).some(
+      (v) => v === "checked" || v === "indeterminate"
+    );
+  }, [novelChaptersFilter]);
 
+  // Drawers
+  const bottomDrawerRemoveDownloadRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerChaptersFilterRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerMoreRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerDownloadRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerSearchChapterRef = useRef<BottomSheetModal>(null);
+
+  // Fetch novel info data and apply filters and sorts to chapters
   const {
     data: novelInfo,
     isLoading: isLoadingNovel,
     refetch: refetchNovelInfo,
   } = useQuery({
     queryKey: ["novel-info", title],
-    queryFn: () => novelController.getNovel({ title: String(title) }),
+    queryFn: () => novelController.getNovel({ novelTitle: String(title) }),
     staleTime: 1000 * 60 * 5,
   });
+
+  const novelChapters = React.useMemo<Chapter[]>(() => {
+    if (!novelInfo) return [];
+    return applyNovelChaptersFiltersAndSort(
+      novelInfo.chapters,
+      novelChaptersFilter,
+      novelChaptersSort
+    );
+  }, [novelInfo, novelChaptersFilter, novelChaptersSort]);
 
   const { vibration } = useHaptics();
   const { enqueue, queue } = useChapterDownloadQueue();
@@ -64,16 +106,6 @@ export default function NovelScreen() {
     mutationFn: () =>
       novelController.refreshNovel({
         title: String(title),
-      }),
-    onSuccess: () => {
-      refetchNovelInfo();
-    },
-  });
-
-  const { mutate: removeDownloadChapters } = useMutation({
-    mutationFn: (chapters: DownloadChapter[]) =>
-      novelController.removeDownloadedNovelChapters({
-        chapters,
       }),
     onSuccess: () => {
       refetchNovelInfo();
@@ -160,7 +192,7 @@ export default function NovelScreen() {
 
   function handleOpenDeleteChaptersDrawer(chapters: DownloadChapter[]) {
     setChaptersToDelete(chapters);
-    bottomDrawerDownloadRef.current?.present();
+    bottomDrawerRemoveDownloadRef.current?.present();
   }
 
   function handleDownloadPress({
@@ -179,17 +211,6 @@ export default function NovelScreen() {
       handleOpenDeleteChaptersDrawer([chapter]);
     }
   }
-
-  const handleDeleteChapters = React.useCallback(() => {
-    removeDownloadChapters(chaptersToDelete);
-    setChaptersToDelete([]);
-    bottomDrawerDownloadRef.current?.dismiss();
-  }, [removeDownloadChapters, bottomDrawerDownloadRef, chaptersToDelete]);
-
-  const handleCancelDeleteChapters = React.useCallback(() => {
-    setChaptersToDelete([]);
-    bottomDrawerDownloadRef.current?.dismiss();
-  }, [bottomDrawerDownloadRef]);
 
   const handleSelectChapter = React.useCallback(
     (chapter: Chapter) => {
@@ -294,11 +315,18 @@ export default function NovelScreen() {
         />
         <View className="flex flex-row items-center justify-between px-5 -mb-2">
           <Text className="text-lg font-medium text-muted_foreground">
-            {novelInfo.chapters.length} Chapters
+            {novelChapters.length} Chapters
           </Text>
-          <TouchableOpacity className="p-2 -mr-2">
+          <TouchableOpacity
+            className="p-2 -mr-2"
+            onPress={() => bottomDrawerChaptersFilterRef.current?.present()}
+          >
             <ListFilter
-              color={colors.muted_foreground}
+              color={
+                hasChaptersFilterApplied
+                  ? colors.primary
+                  : colors.muted_foreground
+              }
               size={20}
               strokeWidth={1.6}
               className="p-2"
@@ -307,7 +335,21 @@ export default function NovelScreen() {
         </View>
       </View>
     );
-  }, [novelInfo]);
+  }, [novelInfo, novelChapters]);
+
+  const EmptyChaptersComponent = React.useMemo(() => {
+    if (!novelInfo) return null;
+
+    const title = hasChaptersFilterApplied
+      ? "Try clearing or adjusting your filters to see more chapters."
+      : "A blank page, no chapters yet.";
+
+    return (
+      <View className="flex-1 min-h-52">
+        <Error title={title} Icon={Library} />
+      </View>
+    );
+  }, [novelChapters, hasChaptersFilterApplied]);
 
   React.useEffect(() => {
     if (prevQueueLengthRef.current > queue.length) {
@@ -345,7 +387,7 @@ export default function NovelScreen() {
       />
       <AnimatedFlashList
         ListHeaderComponent={ListHeader}
-        data={novelInfo.chapters}
+        data={novelChapters}
         extraData={[queue.length, selectedChapters.length]}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
@@ -363,13 +405,14 @@ export default function NovelScreen() {
             colors={[colors.primary_foreground]}
           />
         }
+        ListEmptyComponent={EmptyChaptersComponent}
       />
 
       {listLoaded && selectedChapters.length === 0 && (
         <NovelReadButton
           scrollY={scrollY}
           novelTitle={novelInfo.title}
-          novelTotalChapters={novelInfo.chapters.length}
+          novelTotalChapters={novelChapters.length}
           resumeFromNovelChapter={
             resumeChapter ? resumeChapter.number : undefined
           }
@@ -385,33 +428,20 @@ export default function NovelScreen() {
         onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
       />
 
-      <BottomDrawer ref={bottomDrawerDownloadRef}>
-        <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-8 flex-1">
-          <Text className="text-lg font-medium text-center">
-            Delete Downloaded{" "}
-            {chaptersToDelete.length > 1 ? "Chapters" : "Chapter"}
-          </Text>
-          <Text className="text-muted_foreground/85 text-center mx-2 mb-4">
-            You won't be able to read{" "}
-            {chaptersToDelete.length > 1 ? "these chapters" : "this chapter"}{" "}
-            without internet connection.
-          </Text>
-          <View className="flex flex-col items-center gap-y-4 flex-1 w-full px-16">
-            <TouchableOpacity
-              className="bg-primary text-primary_foreground px-6 py-3 rounded-lg w-full flex items-center justify-center"
-              onPress={handleDeleteChapters}
-            >
-              <Text>I Understand, Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="px-4 py-1 rounded-lg w-full flex items-center justify-center"
-              onPress={handleCancelDeleteChapters}
-            >
-              <Text>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </BottomDrawer>
+      <NovelRemoveDownloadDrawer
+        bottomDrawerRef={bottomDrawerRemoveDownloadRef}
+        chaptersToDelete={chaptersToDelete}
+        setChaptersToDelete={setChaptersToDelete}
+        refetchNovelInfo={refetchNovelInfo}
+      />
+
+      <NovelChaptersFilterDrawer
+        bottomDrawerRef={bottomDrawerChaptersFilterRef}
+        novelChaptersFilter={novelChaptersFilter}
+        setNovelChaptersFilter={setNovelChaptersFilter}
+        novelChaptersSort={novelChaptersSort}
+        setNovelChaptersSort={setNovelChaptersSort}
+      />
     </View>
   );
 }
