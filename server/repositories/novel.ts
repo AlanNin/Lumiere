@@ -467,6 +467,42 @@ export const novelRepository = {
     return true;
   },
 
+  async toggleBookmarkChapter({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    const filter = and(
+      eq(novelChapters.novelTitle, novelTitle),
+      eq(novelChapters.number, chapterNumber)
+    );
+
+    const chapter = await db_client
+      .select({ bookMarked: novelChapters.bookMarked })
+      .from(novelChapters)
+      .where(filter)
+      .get();
+
+    if (!chapter) {
+      throw new Error("NO_CHAPTER_FOUND");
+    }
+
+    const newBookmarked = chapter.bookMarked === 1 ? 0 : 1;
+
+    const { changes } = await db_client
+      .update(novelChapters)
+      .set({ bookMarked: newBookmarked })
+      .where(filter)
+      .run();
+
+    if (changes === 0) {
+      throw new Error("NO_CHAPTERS_UPDATED");
+    }
+    return true;
+  },
+
   async markChaptersAsRead({
     novelTitle,
     chapterNumbers,
@@ -481,13 +517,13 @@ export const novelRepository = {
       inArray(novelChapters.number, chapterNumbers)
     );
 
-    const result = await db_client
+    const { changes } = await db_client
       .update(novelChapters)
       .set({ progress: 100 })
       .where(filter)
       .run();
 
-    if (!result) {
+    if (changes === 0) {
       throw new Error("NO_CHAPTERS_UPDATED");
     }
     return true;
@@ -507,13 +543,13 @@ export const novelRepository = {
       inArray(novelChapters.number, chapterNumbers)
     );
 
-    const result = await db_client
+    const { changes } = await db_client
       .update(novelChapters)
       .set({ progress: 0 })
       .where(filter)
       .run();
 
-    if (!result) {
+    if (changes === 0) {
       throw new Error("NO_CHAPTERS_UPDATED");
     }
     return true;

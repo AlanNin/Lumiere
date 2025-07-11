@@ -201,7 +201,7 @@ export async function scrapeNovelInfo({
       const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
       const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
 
-      // Extract subtitle if present
+      // Extract title if present
       const title = extractChapterTitle(rawText);
       return { number, title, url };
     })

@@ -87,16 +87,24 @@ export function sanitizeHtml(dirtyHtml: string) {
 export function extractChapterTitle(rawText: string): string {
   let cleanText = rawText.trim();
 
-  cleanText = cleanText.replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
+  // Remove zero-width characters
+  cleanText = cleanText.replace(/[​‌‍﻿]/g, "");
 
+  // Remove leading "Chapter" keyword
   cleanText = cleanText.replace(/^Chapter\s+/i, "");
 
   cleanText = cleanText.trim();
 
+  // Remove numeric prefixes with separators
   cleanText = cleanText.replace(/^\d+\s*[-–—:]\s*/, "");
 
+  // Remove standalone numeric prefixes
   cleanText = cleanText.replace(/^\d+\s+/, "");
 
+  // Strip everything before the colon for log-like input
+  cleanText = cleanText.replace(/^.*?:\s*/, "");
+
+  // If the remaining text is only digits, return an empty title
   return /^\d+$/.test(cleanText) ? "" : cleanText.trim();
 }
 

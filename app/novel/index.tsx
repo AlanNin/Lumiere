@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
 import React, { useRef } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { RefreshControl, TouchableOpacity, View } from "react-native";
 import {
   Chapter,
   NovelChaptersFilter,
@@ -27,7 +27,6 @@ import Loading from "@/components/statics/loading";
 import Error from "@/components/statics/error";
 import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
 import { DownloadChapter } from "@/types/download";
-import { RefreshControl } from "react-native-gesture-handler";
 import { colors } from "@/lib/constants";
 import NovelActionsBar from "@/components/novel/novelActionsBar";
 import { useHaptics } from "@/hooks/useHaptics";

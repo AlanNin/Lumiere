@@ -64,6 +64,7 @@ const renderNovels = (novels: Novel[], width: number) => {
         contentContainerClassName="gap-4 p-4"
         keyExtractor={(item) => item.title}
         numColumns={2}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );

@@ -2,10 +2,10 @@ import * as StatusBar from "expo-status-bar";
 import * as NavigationBar from "expo-navigation-bar";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import {
+  GestureResponderEvent,
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   ScrollView,
   useWindowDimensions,
 } from "react-native";
@@ -36,6 +36,7 @@ export default function ReaderComponent({
 }) {
   const { width } = useWindowDimensions();
   const [layoutVisible, setLayoutVisible] = useState(false);
+  const touchStartRef = useRef<number>(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const htmlSource = useMemo(() => ({ html: chapter.content ?? "" }), [
@@ -79,11 +80,23 @@ export default function ReaderComponent({
         tagsStyles={styles as Record<string, MixedStyleDeclaration>}
         enableExperimentalMarginCollapsing
         systemFonts={[...defaultSystemFonts]}
-        defaultTextProps={{ selectable: false }}
+        defaultTextProps={{ selectable: true }}
       />
     ),
     [width, htmlSource, styles]
   );
+
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    postponeHide();
+    touchStartRef.current = Date.now();
+  };
+
+  const handleTouchEndCapture = (e: GestureResponderEvent) => {
+    const delta = Date.now() - touchStartRef.current;
+    if (delta <= 300) {
+      toggleBars();
+    }
+  };
 
   const postponeHide = useCallback(() => {
     if (timeoutRef.current) {
@@ -202,7 +215,9 @@ export default function ReaderComponent({
     >
       <ScrollView
         ref={scrollViewRef}
-        style={{ flex: 1 }}
+        style={{
+          flex: 1,
+        }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={onScroll}
@@ -210,20 +225,15 @@ export default function ReaderComponent({
         onLayout={onLayout}
         onScrollBeginDrag={postponeHide}
         onScrollEndDrag={postponeHide}
-        onTouchStart={postponeHide}
         contentContainerStyle={{
           paddingBottom: insets.bottom,
           paddingTop: insets.top,
         }}
+        onTouchStart={handleTouchStart}
+        onTouchEndCapture={handleTouchEndCapture}
       >
-        <Pressable
-          style={{ flex: 1, paddingBottom: insets.bottom + 12 }}
-          onPress={toggleBars}
-          className="flex flex-col gap-y-4"
-        >
-          {renderContent}
-          <ReaderFooter chapter={chapter} styles={styles} />
-        </Pressable>
+        {renderContent}
+        <ReaderFooter chapter={chapter} styles={styles} insets={insets} />
       </ScrollView>
     </ReaderLayout>
   );

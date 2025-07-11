@@ -7,9 +7,11 @@ import { useRouter } from "expo-router";
 export default function ReaderFooter({
   chapter,
   styles,
+  insets,
 }: {
   chapter: Chapter;
   styles: Style;
+  insets: { top: number; bottom: number };
 }) {
   const router = useRouter();
 
@@ -25,10 +27,13 @@ export default function ReaderFooter({
   }
 
   return (
-    <View className="px-5 gap-y-4 flex flex-col items-center justify-center -mt-1">
+    <View
+      className="px-5 gap-y-4 flex flex-col items-center justify-center mt-4"
+      style={{ marginBottom: insets.bottom + 12 }}
+    >
       <Text
-        className="text-center opacity-75 italic"
-        style={{ color: styles.body.color, fontSize: styles.p.fontSize }}
+        className="text-center opacity-75"
+        style={{ color: styles.body.color, fontSize: styles.p.fontSize - 2 }}
       >
         Finished: Chapter {chapter.number}{" "}
         {chapter.title ? `- ${chapter.title}` : ""}

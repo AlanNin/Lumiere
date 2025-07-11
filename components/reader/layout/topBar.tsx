@@ -1,8 +1,11 @@
 import { Text } from "@/components/defaults";
 import { colors } from "@/lib/constants";
+import { novelController } from "@/server/controllers/novel";
 import { Chapter } from "@/types/novel";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Bookmark, Volume1 } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { Pressable, TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -35,6 +38,24 @@ export default function ReaderTopBar({
   const animatedTopBarStyle = useAnimatedStyle(() => ({
     opacity: topBarAnimValue.value,
   }));
+
+  // book mark logic
+  const [bookMarked, setBookMarked] = useState(chapter.bookMarked);
+
+  useEffect(() => {
+    setBookMarked(chapter.bookMarked);
+  }, [chapter.bookMarked]);
+
+  const { mutate: toggleBookMarked } = useMutation({
+    mutationFn: () =>
+      novelController.toggleBookmarkChapter({
+        novelTitle: chapter.novelTitle,
+        chapterNumber: chapter.number,
+      }),
+    onSuccess: () => {
+      setBookMarked(!bookMarked);
+    },
+  });
 
   return (
     <Animated.View
@@ -71,8 +92,13 @@ export default function ReaderTopBar({
             <TouchableOpacity>
               <Volume1 color={colors.foreground} size={24} strokeWidth={1.6} />
             </TouchableOpacity>
-            <TouchableOpacity>
-              <Bookmark color={colors.foreground} size={24} strokeWidth={1.6} />
+            <TouchableOpacity onPress={() => toggleBookMarked()}>
+              <Bookmark
+                color={bookMarked ? colors.secondary : colors.foreground}
+                fill={bookMarked ? colors.secondary : undefined}
+                size={24}
+                strokeWidth={1.6}
+              />
             </TouchableOpacity>
           </View>
         </View>
