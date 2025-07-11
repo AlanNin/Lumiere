@@ -14,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { ArrowDown, ArrowUp } from "lucide-react-native";
 import Checkbox from "../checkbox";
 import { NovelChaptersFilter, NovelChaptersSortUI } from "@/types/novel";
+import { useConfig } from "@/providers/appConfig";
 
 const SECTIONS: { key: string; label: string }[] = [
   { key: "filter", label: "Filter" },
@@ -55,15 +56,11 @@ const renderTabBar = (props: any) => (
   />
 );
 
-function renderFilterSection({
-  novelChaptersFilter,
-  setNovelChaptersFilter,
-}: {
-  novelChaptersFilter: Record<string, NovelChaptersFilter["value"]>;
-  setNovelChaptersFilter: (
-    filters: Record<string, NovelChaptersFilter["value"]>
-  ) => void;
-}) {
+function renderFilterSection() {
+  const [novelChaptersFilter, setNovelChaptersFilter] = useConfig<
+    Record<string, NovelChaptersFilter["value"]>
+  >("novelChaptersFilter", {});
+
   function handleChange(key: string) {
     const current = novelChaptersFilter[key] ?? "unchecked";
     const next: NovelChaptersFilter["value"] =
@@ -116,13 +113,15 @@ function renderFilterSection({
   );
 }
 
-function renderSortSection({
-  novelChaptersSort,
-  setNovelChaptersSort,
-}: {
-  novelChaptersSort: NovelChaptersSortUI;
-  setNovelChaptersSort: (sort: NovelChaptersSortUI) => void;
-}) {
+function renderSortSection() {
+  const [novelChaptersSort, setNovelChaptersSort] = useConfig<
+    NovelChaptersSortUI
+  >("novelChaptersSort", {
+    key: "by_chapter",
+    label: "By Chapter",
+    order: "asc",
+  });
+
   function handleChange(option: {
     key: NovelChaptersSortUI["key"];
     label: string;
@@ -187,18 +186,8 @@ function renderSortSection({
 
 export default function NovelChaptersFilterDrawer({
   bottomDrawerRef,
-  novelChaptersFilter,
-  setNovelChaptersFilter,
-  novelChaptersSort,
-  setNovelChaptersSort,
 }: {
   bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
-  novelChaptersFilter: Record<string, NovelChaptersFilter["value"]>;
-  setNovelChaptersFilter: (
-    filters: Record<string, NovelChaptersFilter["value"]>
-  ) => void;
-  novelChaptersSort: NovelChaptersSortUI;
-  setNovelChaptersSort: (sort: NovelChaptersSortUI) => void;
 }) {
   const [index, setIndex] = useState(0);
   const { width } = useWindowDimensions();
@@ -211,10 +200,8 @@ export default function NovelChaptersFilterDrawer({
   const sceneRenderers = SECTIONS.reduce(
     (acc) => ({
       ...acc,
-      filter: () =>
-        renderFilterSection({ novelChaptersFilter, setNovelChaptersFilter }),
-      sort: () =>
-        renderSortSection({ novelChaptersSort, setNovelChaptersSort }),
+      filter: renderFilterSection,
+      sort: renderSortSection,
     }),
     {} as Record<string, () => React.ReactNode>
   );

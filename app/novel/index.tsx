@@ -54,16 +54,17 @@ export default function NovelScreen() {
   const [chaptersToDelete, setChaptersToDelete] = React.useState<
     DownloadChapter[]
   >([]);
-  const [novelChaptersFilter, setNovelChaptersFilter] = useConfig<
+  const [novelChaptersFilter] = useConfig<
     Record<string, NovelChaptersFilter["value"]>
   >("novelChaptersFilter", {});
-  const [novelChaptersSort, setNovelChaptersSort] = useConfig<
-    NovelChaptersSortUI
-  >("novelChaptersSort", {
-    key: "by_chapter",
-    label: "By Chapter",
-    order: "asc",
-  });
+  const [novelChaptersSort] = useConfig<NovelChaptersSortUI>(
+    "novelChaptersSort",
+    {
+      key: "by_chapter",
+      label: "By Chapter",
+      order: "asc",
+    }
+  );
   const hasChaptersFilterApplied = React.useMemo(() => {
     return Object.values(novelChaptersFilter).some(
       (v) => v === "checked" || v === "indeterminate"
@@ -437,10 +438,6 @@ export default function NovelScreen() {
 
       <NovelChaptersFilterDrawer
         bottomDrawerRef={bottomDrawerChaptersFilterRef}
-        novelChaptersFilter={novelChaptersFilter}
-        setNovelChaptersFilter={setNovelChaptersFilter}
-        novelChaptersSort={novelChaptersSort}
-        setNovelChaptersSort={setNovelChaptersSort}
       />
     </View>
   );
