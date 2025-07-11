@@ -1,7 +1,7 @@
 import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, eq, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
@@ -12,10 +12,10 @@ export const novelRepository = {
       const novelRows = await db_client
         .select({
           title: novels.title,
-          url: novels.url,
           imageUrl: novels.imageUrl,
           description: novels.description,
           rating: novels.rating,
+          rank: novels.rank,
           author: novels.author,
           genres: novels.genres,
           status: novels.status,
@@ -36,7 +36,6 @@ export const novelRepository = {
           id: novelChapters.id,
           number: novelChapters.number,
           title: novelChapters.title,
-          url: novelChapters.url,
           progress: novelChapters.progress,
           bookMarked: novelChapters.bookMarked,
           downloaded: novelChapters.downloaded,
@@ -49,10 +48,10 @@ export const novelRepository = {
 
       const novelInfo: NovelInfo & { chapters: Chapter[] } = {
         title: novelRow.title,
-        url: novelRow.url,
         imageUrl: novelRow.imageUrl,
         description: novelRow.description,
         rating: novelRow.rating,
+        rank: novelRow.rank,
         author: novelRow.author,
         genres: novelRow.genres,
         status: novelRow.status,
@@ -62,7 +61,6 @@ export const novelRepository = {
           novelTitle: novelTitle,
           number: Number(c.number),
           title: String(c.title),
-          url: String(c.url),
           progress: Number(c.progress),
           bookMarked: Boolean(c.bookMarked),
           downloaded: Boolean(c.downloaded),
@@ -86,10 +84,10 @@ export const novelRepository = {
       await db_client.transaction(async (tx) => {
         await tx.insert(novels).values({
           title: novel.title,
-          url: novel.url,
           imageUrl: novel.imageUrl,
           description: novel.description,
-          rating: novel.rating,
+          rank: novel.rank ?? 0,
+          rating: novel.rating ?? 0,
           author: novel.author,
           genres: novel.genres,
           status: novel.status,
@@ -99,7 +97,6 @@ export const novelRepository = {
           novelTitle: novel.title,
           number: chap.number,
           title: chap.title,
-          url: chap.url,
         }));
 
         const BATCH_SIZE = 1000;
@@ -173,16 +170,16 @@ export const novelRepository = {
           .insert(novels)
           .values({
             title: novel.title,
-            url: novel.url,
             imageUrl: novel.imageUrl,
             description: novel.description,
-            rating: novel.rating,
+            rating: novel.rating ?? 0,
+            rank: novel.rank ?? 0,
             author: novel.author,
             genres: novel.genres,
             status: novel.status,
           })
           .onConflictDoUpdate({
-            target: novels.url,
+            target: novels.title,
             set: {
               imageUrl: novel.imageUrl,
               description: novel.description,
@@ -198,7 +195,6 @@ export const novelRepository = {
           novelTitle: novel.title,
           number: chap.number,
           title: chap.title,
-          url: chap.url,
         }));
 
         for (let i = 0; i < insertPayload.length; i += BATCH) {
@@ -236,7 +232,6 @@ export const novelRepository = {
           novelTitle: novelChapters.novelTitle,
           number: novelChapters.number,
           title: novelChapters.title,
-          url: novelChapters.url,
           progress: novelChapters.progress,
           bookMarked: novelChapters.bookMarked,
           downloaded: novelChapters.downloaded,
@@ -251,19 +246,35 @@ export const novelRepository = {
         )
         .get();
 
-      if (!row) {
-        return null;
-      }
+      if (!row) return null;
+
+      const next = await db_client
+        .select({
+          number: novelChapters.number,
+          title: novelChapters.title,
+        })
+        .from(novelChapters)
+        .where(
+          and(
+            eq(novelChapters.novelTitle, novelTitle),
+            gt(novelChapters.number, chapterNumber)
+          )
+        )
+        .orderBy(asc(novelChapters.number))
+        .limit(1)
+        .get();
 
       const chapter: Chapter = {
         novelTitle: row.novelTitle,
         number: row.number,
         title: row.title,
-        url: row.url,
         progress: row.progress,
         bookMarked: Boolean(row.bookMarked),
         downloaded: Boolean(row.downloaded),
         content: String(row.content),
+        nextChapter: next
+          ? { number: next.number, title: next.title }
+          : undefined,
       };
 
       return chapter;

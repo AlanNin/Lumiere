@@ -13,8 +13,6 @@ export default function NovelReaderScreen() {
   const {
     novelTitle,
     chapterNumber,
-    chapterTitle,
-    chapterUrl,
     totalChapters,
     downloaded,
   } = useLocalSearchParams();
@@ -42,13 +40,11 @@ export default function NovelReaderScreen() {
   }, [bottom]);
 
   const { data: novelChapter, isFetching, isError } = useQuery({
-    queryKey: ["novel-chapter", novelTitle, chapterNumber, chapterUrl],
+    queryKey: ["novel-chapter", novelTitle, chapterNumber],
     queryFn: () =>
       novelController.getNovelChapter({
         novelTitle: String(novelTitle),
         chapterNumber: Number(chapterNumber),
-        chapterTitle: String(chapterTitle),
-        chapterUrl: String(chapterUrl),
       }),
   });
 

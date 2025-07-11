@@ -9,9 +9,9 @@ export const libraryRepository = {
     const savedNovels = await db_client
       .select({
         title: novels.title,
-        url: novels.url,
         imageUrl: novels.imageUrl,
         description: novels.description,
+        rank: novels.rank,
         rating: novels.rating,
         author: novels.author,
         genres: novels.genres,
@@ -57,9 +57,9 @@ export const libraryRepository = {
     for (const n of savedNovels) {
       const info: NovelInfo = {
         title: n.title,
-        url: n.url,
         imageUrl: n.imageUrl,
         description: n.description,
+        rank: n.rank,
         rating: n.rating,
         author: n.author,
         genres: n.genres,

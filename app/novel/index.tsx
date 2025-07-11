@@ -140,13 +140,9 @@ export default function NovelScreen() {
   const handleChapterPress = React.useCallback(
     ({
       chapterNumber,
-      chapterTitle,
-      chapterUrl,
       downloaded,
     }: {
       chapterNumber: number;
-      chapterTitle: string;
-      chapterUrl: string;
       downloaded?: boolean;
     }) => {
       router.push({
@@ -154,8 +150,6 @@ export default function NovelScreen() {
         params: {
           novelTitle: novelInfo?.title ?? "",
           chapterNumber,
-          chapterTitle,
-          chapterUrl,
           totalChapters: novelInfo?.chapters.length ?? 0,
           downloaded: downloaded ? 1 : 0,
         },
@@ -283,13 +277,13 @@ export default function NovelScreen() {
         <NovelDetails
           author={novelInfo?.author}
           imageUrl={novelInfo.imageUrl}
-          rating={novelInfo.rating}
+          rating={novelInfo.rating ?? 0}
+          rank={novelInfo.rank ?? 0}
           status={novelInfo.status}
           title={novelInfo.title}
         />
         <View className="px-5 gap-y-5">
           <NovelTopButtons
-            novelUrl={novelInfo.url}
             novelTitle={novelInfo.title}
             novelIsSaved={novelInfo.isSaved ?? false}
           />

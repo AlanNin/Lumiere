@@ -19,8 +19,8 @@ import {
   Telescope,
   Heart,
   BadgeAlert,
-  Check,
   Search,
+  ClockPlus,
 } from "lucide-react-native";
 import useDebounce from "@/hooks/useDebounce";
 import Quote from "@/components/statics/quote";
@@ -137,19 +137,19 @@ export default function ExploreScreen() {
         ]
       : []),
     {
+      key: "new",
+      label: "New",
+      Icon: ClockPlus,
+    },
+    {
       key: "popular",
       label: "Popular",
       Icon: Heart,
     },
     {
       key: "latest-releases",
-      label: "Latest",
+      label: "Latest Releases",
       Icon: BadgeAlert,
-    },
-    {
-      key: "completed",
-      label: "Completed",
-      Icon: Check,
     },
   ];
 

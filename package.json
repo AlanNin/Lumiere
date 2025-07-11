@@ -5,6 +5,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "start": "expo start",
+    "start-go": "expo start --go",
+    "start-dev": "expo start --dev-client",
     "prebuild": "expo prebuild",
     "build-dev": "npx drizzle-kit generate && npx expo prebuild -p android && npx expo run:android",
     "build-prod": "npx drizzle-kit generate &&  npx expo prebuild -p android && npx expo run:android --variant release",
@@ -69,6 +71,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@dev-plugins/react-query": "^0.3.1",
     "@types/cheerio": "^1.0.0",
     "@types/lodash.debounce": "^4.0.9",
     "@types/react": "~19.0.10",

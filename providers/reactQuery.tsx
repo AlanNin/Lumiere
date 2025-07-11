@@ -1,5 +1,6 @@
 import { ReactNode, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useReactQueryDevTools } from "@dev-plugins/react-query";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,8 @@ export function invalidateQueries(...keys: Array<string | readonly unknown[]>) {
 
 function ReactQueryProvider({ children }: { children: ReactNode }) {
   const [, _setClient] = useState<QueryClient>(queryClient);
+
+  useReactQueryDevTools(queryClient);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

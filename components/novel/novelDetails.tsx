@@ -1,8 +1,16 @@
 import { colors } from "@/lib/constants";
-import { CheckCheck, History, Star, StarHalf, User } from "lucide-react-native";
+import {
+  CheckCheck,
+  Crown,
+  History,
+  Star,
+  StarHalf,
+  User,
+} from "lucide-react-native";
 import { Image, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { Text } from "@/components/defaults";
+import { cn } from "@/lib/cn";
 
 export default function NovelDetails({
   imageUrl,
@@ -10,18 +18,22 @@ export default function NovelDetails({
   author,
   status,
   rating,
+  rank,
 }: {
   imageUrl: string;
   title: string;
   author: string;
   status: string;
   rating: number;
+  rank: number;
 }) {
   function getDifumColor(opacity: number) {
     const difuminationColor = "18, 18, 18";
 
     return `rgba(${difuminationColor}, ${opacity})`;
   }
+
+  const isTopRanking = rank <= 3;
 
   return (
     <View className="relative min-h-[276px] w-full mb-6">
@@ -56,12 +68,15 @@ export default function NovelDetails({
 
           <View className="flex flex-row items-center gap-x-3">
             <User color={colors.muted_foreground} size={16} strokeWidth={1.4} />
-            <Text className="text-sm text-muted_foreground flex-1">
+            <Text
+              className="text-sm text-muted_foreground flex-1"
+              numberOfLines={2}
+            >
               {author}
             </Text>
           </View>
           <View className="flex flex-row items-center gap-x-3">
-            {status === "Completed" ? (
+            {status === "new" ? (
               <CheckCheck
                 color={colors.muted_foreground}
                 size={16}
@@ -79,39 +94,57 @@ export default function NovelDetails({
             </Text>
           </View>
           <View className="flex flex-row items-center gap-x-3">
-            <View className="flex flex-row gap-x-2">
-              {Math.floor(rating) === 0 ? (
-                <Star
-                  key="star-0"
-                  color={colors.muted_foreground}
+            <View className="flex flex-row items-center gap-x-3">
+              <Crown
+                color={
+                  isTopRanking ? colors.highlight : colors.muted_foreground
+                }
+                size={16}
+                strokeWidth={1.4}
+              />
+
+              <Text
+                className={cn(
+                  "text-sm text-muted_foreground flex-1",
+                  isTopRanking && "text-highlight"
+                )}
+              >
+                Rank {rank}
+              </Text>
+            </View>
+          </View>
+          <View className="flex flex-row gap-x-1.5">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const fullStars = Math.floor(rating);
+              const fraction = rating % 1;
+
+              const isFull = i < fullStars;
+              const isHalf =
+                i === fullStars && fraction >= 0.4 && fraction < 0.7;
+              const color =
+                isFull || isHalf
+                  ? colors.primary_dark
+                  : colors.muted_foreground;
+              const fill = isFull || isHalf ? colors.primary_dark : undefined;
+
+              return isHalf ? (
+                <StarHalf
+                  key={`star-${i}`}
+                  color={color}
+                  fill={fill}
                   size={16}
                   strokeWidth={1.4}
                 />
               ) : (
-                <>
-                  {Array.from({
-                    length: Math.floor(rating),
-                  }).map((_, index) => (
-                    <Star
-                      key={`star-${index}`}
-                      color={colors.muted_foreground}
-                      size={16}
-                      strokeWidth={1.4}
-                    />
-                  ))}
-                  {rating % 1 >= 0.4 && rating % 1 < 0.7 && (
-                    <StarHalf
-                      color={colors.muted_foreground}
-                      size={16}
-                      strokeWidth={1.4}
-                    />
-                  )}
-                </>
-              )}
-            </View>
-            <Text className="text-sm text-muted_foreground flex-1">
-              {rating}
-            </Text>
+                <Star
+                  key={`star-${i}`}
+                  color={color}
+                  fill={fill}
+                  size={16}
+                  strokeWidth={1.4}
+                />
+              );
+            })}
           </View>
         </View>
       </View>

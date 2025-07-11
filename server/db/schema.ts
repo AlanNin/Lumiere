@@ -25,9 +25,9 @@ export const novelCategories = sqliteTable(
 
 export const novels = sqliteTable("novels", {
   title: text().primaryKey(),
-  url: text().notNull().unique(),
   imageUrl: text("image_url").notNull(),
   description: text().notNull(),
+  rank: int().notNull(),
   rating: int().notNull(),
   author: text().notNull(),
   genres: text().notNull(),
@@ -46,7 +46,6 @@ export const novelChapters = sqliteTable(
       .references(() => novels.title, { onDelete: "cascade" }),
     number: int().notNull(),
     title: text().notNull(),
-    url: text().notNull(),
     progress: int()
       .notNull()
       .default(sql`0`),

@@ -57,8 +57,6 @@ export default function ReaderBottomBar({
       params: {
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number + 1,
-        chapterTitle: chapter.title,
-        chapterUrl: chapter.url,
         totalChapters,
       },
     });
@@ -71,8 +69,6 @@ export default function ReaderBottomBar({
       params: {
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number + 1,
-        chapterTitle: chapter.title,
-        chapterUrl: chapter.url,
       },
     });
   }

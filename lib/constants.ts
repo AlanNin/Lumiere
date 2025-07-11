@@ -9,6 +9,7 @@ export const colors = {
   primary_dark: "#cf1d5d",
   secondary: "#3B82F6",
   secondary_foreground: "#ffffff",
+  highlight: "#f0ba32",
   grayscale: "#828282",
   grayscale_foreground: "#bdbdbd",
   layout_background: "#2A1A2E",

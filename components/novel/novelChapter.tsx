@@ -23,13 +23,9 @@ export default React.memo(
     onSelectChapter: (chapter: Chapter) => void;
     onChapterPress: ({
       chapterNumber,
-      chapterTitle,
-      chapterUrl,
       downloaded,
     }: {
       chapterNumber: number;
-      chapterTitle: string;
-      chapterUrl: string;
       downloaded?: boolean;
     }) => void;
     onDownloadPress: ({
@@ -54,7 +50,6 @@ export default React.memo(
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number,
         chapterTitle: chapter.title,
-        chapterUrl: chapter.url,
         readingProgress: chapter.progress,
       }),
       [chapter.novelTitle, chapter.number, chapter.progress]
@@ -66,8 +61,6 @@ export default React.memo(
       } else {
         onChapterPress({
           chapterNumber: chapter.number,
-          chapterTitle: chapter.title,
-          chapterUrl: chapter.url,
           downloaded: chapter.downloaded,
         });
       }

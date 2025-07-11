@@ -180,7 +180,6 @@ export default function NovelActionsBar({
       novelTitle: c.novelTitle,
       chapterNumber: c.number,
       chapterTitle: c.title,
-      chapterUrl: c.url,
       readingProgress: c.progress ?? 0,
     }));
     shouldDownload ? queueDownload(chapters) : removeDownload(chapters);

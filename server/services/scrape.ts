@@ -1,8 +1,13 @@
 import { Chapter, Novel, NovelInfo } from "@/types/novel";
 import cheerio from "cheerio";
-import { ExploreSection } from "../controllers/novel";
 import { extractChapterTitle, insertTitleHtml, sanitizeHtml } from "@/lib/html";
 import { colors } from "@/lib/constants";
+import {
+  ScrapeNovelChapter,
+  ScrapeNovelInfo,
+  ScrapeNovelsExplore,
+  ScrapeNovelsSearch,
+} from "@/types/scrape";
 
 const DEFAULT_HEADERS = {
   "User-Agent": "Mozilla/5.0",
@@ -10,86 +15,93 @@ const DEFAULT_HEADERS = {
   "Content-Type": "application/x-www-form-urlencoded",
 };
 
-const EXPLORE_SECTION_MAP: Record<ExploreSection, string> = {
-  popular: "most-popular-novels",
-  "latest-releases": "latest-release-novels",
-  completed: "completed-novels",
-  search: "",
-};
-
-export async function scrapeNovelsExplore(
-  section: ExploreSection,
-  pageNumber: number
-): Promise<{ novels: Novel[]; totalPages: number }> {
-  const url = `https://lightnovelpub.me/list/${EXPLORE_SECTION_MAP[section]}/${pageNumber}`;
-
-  const response = await fetch(url, { headers: DEFAULT_HEADERS });
+export async function scrapeNovelsExplore({
+  novelsExploreUrl,
+}: ScrapeNovelsExplore): Promise<{ novels: Novel[]; totalPages: number }> {
+  const response = await fetch(novelsExploreUrl, { headers: DEFAULT_HEADERS });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch explore page: ${response.statusText}`);
+  }
 
   const html = await response.text();
-
   const $ = cheerio.load(html);
+
   const novels: Novel[] = [];
 
-  $(".ul-list1 .li-row").each((_: number, el: cheerio.Element) => {
-    const titleElement = $(el).find(".txt h3.tit a");
-    const imageElement = $(el).find(".pic a img");
-    const ratingElement = $(el).find(".core span");
+  // Each novel-item under #list-novel
+  $("#list-novel .novel-item").each((_: number, el: cheerio.Element) => {
+    const anchor = $(el).find("a").first();
+    const title =
+      anchor.attr("title")?.trim() || anchor.find(".novel-title").text().trim();
+    const url = anchor.attr("href") || "";
 
-    const title = titleElement.text().trim();
-    const url = titleElement.attr("href");
-    const imageUrl = imageElement.attr("src");
-    const rating = ratingElement.text().trim();
+    // Fetch Image
+    const imgEl = anchor.find("figure.novel-cover img").first();
+    const dataSrc = imgEl.attr("data-src")?.trim();
+    const src = imgEl.attr("src")?.trim();
+    const imageUrl = dataSrc
+      ? dataSrc
+      : src && !src.startsWith("data:")
+      ? src
+      : "";
+
+    // Rank badge: <span class="badge _bl">R 11774</span>
+    const rankText = anchor.find("span.badge._bl").text().trim();
+    const rankMatch = rankText.match(/(\d+)/);
+    const rank = rankMatch ? parseInt(rankMatch[1], 10) : undefined;
 
     if (title && url) {
-      novels.push({
-        title,
-        imageUrl,
-        rating,
-      });
+      novels.push({ title, imageUrl, rank });
     }
   });
 
+  // Determine totalPages by scanning all pagination links for ?page=N
   let totalPages = 1;
-  const lastPageHref = $("li.last a").attr("href");
-  const match = lastPageHref?.match(/\/(\d+)(\/)?$/);
-  if (match?.[1]) {
-    totalPages = parseInt(match[1], 10);
-  }
+  $('.pagination a.page-link[href*="?page="]').each(
+    (_: number, link: cheerio.Element) => {
+      const href = $(link).attr("href")!;
+      const m = href.match(/[?&]page=(\d+)/);
+      if (m) {
+        totalPages = Math.max(totalPages, parseInt(m[1], 10));
+      }
+    }
+  );
 
   return { novels, totalPages };
 }
 
-export async function scrapeNovelsSearch(
-  searchQuery: string
-): Promise<{ novels: Novel[] }> {
-  const url = "https://lightnovelpub.me/search/";
-
-  const response = await fetch(url, {
+export async function scrapeNovelsSearch({
+  searchNovelsUrl,
+}: ScrapeNovelsSearch): Promise<{ novels: Novel[] }> {
+  const response = await fetch(searchNovelsUrl, {
     headers: DEFAULT_HEADERS,
-    method: "POST",
-    body: `searchkey=${encodeURIComponent(searchQuery)}`,
+    method: "GET",
   });
 
-  const html = await response.text();
+  if (!response.ok) {
+    throw new Error(`Failed to fetch search results for "${searchNovelsUrl}"`);
+  }
 
-  const $ = cheerio.load(html);
+  const { html: rawHtml } = (await response.json()) as { html: string };
+  const $ = cheerio.load(rawHtml);
+
   const novels: Novel[] = [];
 
-  $(".ul-list1 .li-row").each((_: number, el: cheerio.Element) => {
-    const titleElement = $(el).find(".txt h3.tit a");
-    const imageElement = $(el).find(".pic a img");
-    const ratingElement = $(el).find(".core span");
+  $(".novel-item").each((_: number, el: cheerio.Element) => {
+    const anchor = $(el).find("a").first();
+    const title = anchor.find(".novel-title").text().trim();
+    const novelUrl = anchor.attr("href") ?? "";
+    const imageUrl = anchor.find(".novel-cover img").attr("src") ?? "";
+    // extract rank from the first .novel-stats strong, e.g. "Rank 98"
+    const rankText = anchor.find(".novel-stats strong").text().trim();
+    const rankMatch = rankText.match(/Rank\s+(\d+)/i);
+    const rank = rankMatch ? parseInt(rankMatch[1], 10) : undefined;
 
-    const title = titleElement.text().trim();
-    const url = titleElement.attr("href");
-    const imageUrl = imageElement.attr("src");
-    const rating = ratingElement.text().trim();
-
-    if (title && url) {
+    if (title && novelUrl) {
       novels.push({
         title,
         imageUrl,
-        rating,
+        rank: rank,
       });
     }
   });
@@ -97,134 +109,156 @@ export async function scrapeNovelsSearch(
   return { novels };
 }
 
-export async function scrapeNovelInfo(
-  novelTitleSlug: string
-): Promise<NovelInfo | null> {
-  const novelInfoUrl = `https://lightnovelpub.me/book/${novelTitleSlug}`;
-  const novelChaptersUrl = `https://novelbin.com/ajax/chapter-archive?novelId=${novelTitleSlug}`;
-  const [novelInfoHtml, novelChaptersHtml] = await Promise.all([
+export async function scrapeNovelInfo({
+  novelInfoUrl,
+  novelChaptersUrl,
+}: ScrapeNovelInfo): Promise<NovelInfo | null> {
+  // Fetch both the info page and the chapters list in parallel
+  const [htmlInfo, htmlChapters] = await Promise.all([
     fetch(novelInfoUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text()),
     fetch(novelChaptersUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text()),
   ]);
-  if (!novelInfoHtml || !novelChaptersHtml) {
+
+  if (!htmlInfo || !htmlChapters) {
     throw new Error("Novel not found");
   }
-  const NI$ = cheerio.load(novelInfoHtml);
-  const NC$ = cheerio.load(novelChaptersHtml);
 
-  // ——— Novel metadata —————————————————————————————————————————————————
-  const rawTitle = NI$(".m-info h3.tit").text().trim();
-  const fullTitle = rawTitle.replace(/\.+$/, "");
-  if (!fullTitle) return null;
+  const $ = cheerio.load(htmlInfo);
+  const $$ = cheerio.load(htmlChapters);
 
+  // ——— Novel metadata —————————————————————————————————————————————
+  // Full title from the header
+  const title = $("header.novel-header h1.novel-title").text().trim();
+  if (!title) return null;
+
+  // Cover image URL (prefers lazy-loaded data-src)
+  const imageUrl =
+    $("header.novel-header .cover img").attr("data-src") ||
+    $("header.novel-header .cover img").attr("src") ||
+    "";
+
+  // Collect all authors (there may be more than one)
+  const authors = $(
+    'header.novel-header .author a.property-item span[itemprop="author"]'
+  )
+    .map((_: number, el: cheerio.Element) => $(el).text().trim())
+    .get()
+    .join(", ");
+
+  // Star rating from the data-rating attribute
   const ratingRaw = parseFloat(
-    NI$(".score p.vote").first().text().split("/")[0]
+    $(".rating-star .my-rating").attr("data-rating") || "0"
   );
   const rating = Number.isFinite(ratingRaw) ? ratingRaw : 0;
 
-  const rawDesc = NI$(".m-desc .txt .inner").text().trim();
-  const description = rawDesc
-    .replace(/You['']?re reading[\s\S]*?free on [^\.!?]+[\.!?]?/i, "")
-    .replace(/\s*com !$/i, "")
-    .trim();
+  // Rank from the rank text
+  const rankText = $(".rating .rank strong").text().trim();
+  const rankMatch = rankText.match(/\d+/);
+  const rank = rankMatch ? parseInt(rankMatch[0], 10) : 0;
 
-  const genresArray = NI$(".m-book1 .txt .glyphicon-th-list")
-    .next(".right")
-    .find("a")
-    .map((_: number, a: cheerio.Element) => NI$(a).text().trim())
-    .get();
+  // Status (Completed, Ongoing, etc.)
+  const status =
+    $(".header-stats .completed").text().trim() ||
+    $('.header-stats span small:contains("Status")')
+      .prev("strong")
+      .text()
+      .trim() ||
+    "";
 
-  const author = NI$(".m-book1 .txt .glyphicon-user")
-    .next(".right")
-    .find("a")
-    .first()
-    .text()
-    .trim();
+  // Genres list
+  const genres = $(".categories ul li a.property-item")
+    .map((_: number, el: cheerio.Element) => $(el).text().trim())
+    .get()
+    .join(",");
 
-  const status = NI$(".m-book1 .txt .glyphicon-time")
-    .next(".right")
-    .text()
-    .trim();
+  // Short description under the info section
+  const description = $("section#info p.description").text().trim();
 
-  const imageUrl = NI$(".m-book1 .pic img").attr("src") || "";
-
-  // ——— Chapters —————————————————————————————————————————————————————
-  const items = NC$(".list-chapter li").toArray();
+  // ——— Chapters parsing —————————————————————————————————————————————————————
+  const items = $$(".list-chapter li").toArray();
   const chapters: Chapter[] = items
     .map((liEl: cheerio.Element, idx: number) => {
-      const li = NC$(liEl);
+      const li = $$(liEl);
+      // Raw text may come from different selectors
       const rawText = li.find(".nchr-text, .chapter-title").text().trim();
       const url = li.find("a").attr("href") || "";
 
-      const numberMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
-      let number: number;
-      if (numberMatch) {
-        number = parseInt(numberMatch[1], 10);
-      } else {
-        number = idx + 1;
-      }
+      // Try to pull out the chapter number
+      const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
+      const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
 
+      // Extract subtitle if present
       const title = extractChapterTitle(rawText);
-
       return { number, title, url };
     })
-    .filter((ch: Chapter): ch is Chapter => ch.number > 0)
+    .filter((ch: Chapter) => ch.number > 0)
     .sort((a: Chapter, b: Chapter) => a.number - b.number);
 
-  // ——— Build and return —————————————————————————————————————————————
-  const novelInfo: NovelInfo = {
-    title: fullTitle,
-    url: novelInfoUrl,
+  // ——— Build and return the result —————————————————————————————————————————————
+  return {
+    title,
     imageUrl,
     rating,
-    genres: genresArray.join(","),
+    rank,
+    genres,
     status,
-    author,
+    author: authors,
     description,
     chapters,
   };
-  return novelInfo;
 }
 
-export async function scrapeNovelChapter(
-  chapterUrl: string,
-  chapterNumber: number
-): Promise<Chapter | null> {
-  const res = await fetch(chapterUrl, { headers: DEFAULT_HEADERS });
-  if (!res.ok) throw new Error(`Failed to fetch chapter ${chapterNumber}`);
+export async function scrapeNovelChapter({
+  novelChapterUrl,
+}: ScrapeNovelChapter): Promise<Chapter | null> {
+  const res = await fetch(novelChapterUrl, { headers: DEFAULT_HEADERS });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch chapter from ${novelChapterUrl}`);
+  }
+
   const html = await res.text();
-
-  if (!html) throw new Error("Novel chapter not found");
-
   const $ = cheerio.load(html);
-  const chr = $("#chapter");
-  if (chr.length === 0) return null;
 
+  // --- 1) Novel title ---
+  const $titleLink = $(".titles a.booktitle").first();
   const novelTitle =
-    $(".col-xs-12 a.novel-title").first().attr("title")?.trim() ||
-    $(".col-xs-12 a.novel-title").first().text().trim();
+    $titleLink.attr("title")?.trim() || $titleLink.text().trim() || "";
 
-  const rawTitle = chr
-    .find("h2 a.chr-title span.chr-text")
-    .first()
-    .text()
-    .trim();
+  // --- 2) Raw chapter title, e.g. "Chapter 1 Just an old Book" ---
+  const rawTitle = $(".titles .chapter-title").first().text().trim();
 
-  const onlyNumberMatch = rawTitle.match(/^Chapter\s*(\d+)\s*$/i);
+  // --- 3) Parse out number & subtitle safely ---
+  let number: number;
+  let title: string;
 
-  const sepMatch = rawTitle.match(/^Chapter\s*(\d+)\s*(?:[:\-])\s*(.+)$/i);
-  const number = sepMatch ? parseInt(sepMatch[1], 10) : chapterNumber;
-  const title = sepMatch
-    ? sepMatch[2].trim()
-    : rawTitle.replace(/^[^A-Za-z0-9]+/, "").trim();
+  const onlyNum = rawTitle.match(/^Chapter\s*(\d+)\s*$/i);
+  const withSub = rawTitle.match(/^Chapter\s*(\d+)[\s:-]+\s*(.+)$/i);
 
-  const dirtyHtml = chr.find("#chr-content").html()?.trim() ?? "";
+  if (onlyNum) {
+    number = parseInt(onlyNum[1], 10);
+    title = "";
+  } else if (withSub) {
+    number = parseInt(withSub[1], 10);
+    title = withSub[2].trim();
+  } else {
+    // fallback if the site changed format
+    const fallback = rawTitle.match(/^(\d+)/);
+    number = fallback ? parseInt(fallback[1], 10) : NaN;
+    title = rawTitle.replace(/^Chapter\s*\d+/, "").trim();
+  }
 
+  // --- 4) Chapter content ---
+  // pick up only the reader HTML
+  const $contentDiv = $("#chapter-container #content");
+  if (!$contentDiv.length) {
+    throw new Error("Couldn't find the chapter content container");
+  }
+  const dirtyHtml = $contentDiv.html()!.trim();
+
+  // sanitize & wrap
   const cleanHtml = sanitizeHtml(dirtyHtml);
-
-  const htmlWithTitle = insertTitleHtml(title, chapterNumber, cleanHtml);
-
-  const htmlContent = `
+  const htmlWithTitle = insertTitleHtml(title, number, cleanHtml);
+  const body = `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -242,21 +276,10 @@ export async function scrapeNovelChapter(
       </body>
     </html>`;
 
-  if (onlyNumberMatch) {
-    return {
-      novelTitle,
-      number: parseInt(onlyNumberMatch[1], 10),
-      title: "",
-      url: chapterUrl,
-      content: htmlContent,
-    };
-  }
-
   return {
     novelTitle,
     number,
     title,
-    url: chapterUrl,
-    content: htmlContent,
+    content: body,
   };
 }

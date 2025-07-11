@@ -17,9 +17,8 @@ export type StyleConfig = {
 
 export type Style = StyleConfig & {
   body: {
-    padding: number;
+    paddingHorizontal: number;
     paddingTop: number;
-    paddingBottom: number;
   };
   h4: {
     fontWeight: number;

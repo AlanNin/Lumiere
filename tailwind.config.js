@@ -16,6 +16,7 @@ module.exports = {
         primary_dark: colors.primary_dark,
         secondary: colors.secondary,
         secondary_foreground: colors.secondary_foreground,
+        highlight: colors.highlight,
         grayscale: colors.grayscale,
         grayscale_foreground: colors.grayscale_foreground,
         muted: colors.muted,

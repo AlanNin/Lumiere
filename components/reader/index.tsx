@@ -7,6 +7,8 @@ import {
   NativeSyntheticEvent,
   Pressable,
   ScrollView,
+  TouchableOpacity,
+  View,
   useWindowDimensions,
 } from "react-native";
 import {
@@ -23,6 +25,8 @@ import ReaderLayout from "./layout";
 import { useMutation } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { invalidateQueries } from "@/providers/reactQuery";
+import { Text } from "../defaults";
+import ReaderFooter from "./footer";
 
 export default function ReaderComponent({
   chapter,
@@ -215,8 +219,13 @@ export default function ReaderComponent({
           paddingTop: insets.top,
         }}
       >
-        <Pressable style={{ flex: 1 }} onPress={toggleBars}>
+        <Pressable
+          style={{ flex: 1, paddingBottom: insets.bottom + 12 }}
+          onPress={toggleBars}
+          className="flex flex-col gap-y-4"
+        >
           {renderContent}
+          <ReaderFooter chapter={chapter} styles={styles} />
         </Pressable>
       </ScrollView>
     </ReaderLayout>
@@ -254,9 +263,8 @@ function getReaderStyles({
       body: {
         ...defaultReaderStyle.body,
         ...readerStyleConfig.body,
-        padding: 20,
+        paddingHorizontal: 20,
         paddingTop: insets.top,
-        paddingBottom: insets.bottom,
       },
       h4: {
         ...defaultReaderStyle.h4,

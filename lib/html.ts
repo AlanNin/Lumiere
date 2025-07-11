@@ -18,6 +18,9 @@ export function sanitizeHtml(dirtyHtml: string) {
     // 5.1 Remove any <p> that contains “TL Notes:”
     .replace(/<p>[\s\S]*?TL Notes:[\s\S]*?<\/p>/gi, "")
 
+    // 5.2 Remove any <p> that contains the "NovelFire Notes"
+    .replace(/<p[^>]*>\s*Search the NovelFire\.net[\s\S]*?<\/p>/gi, "")
+
     // 6. Delete any empty <p> tags (including those containing only whitespace or &nbsp;).
     .replace(/<p>(?:\s|&nbsp;)*<\/p>/gi, "")
 
@@ -73,7 +76,10 @@ export function sanitizeHtml(dirtyHtml: string) {
         }
       }
       return match;
-    });
+    })
+
+    // 12. Normalize any run of 4+ dots into exactly three ellipsis "..."
+    .replace(/\.{4,}/g, "...");
 
   return cleanHtml;
 }

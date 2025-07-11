@@ -6,16 +6,16 @@ import { useMutation } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { cn } from "@/lib/cn";
 import { invalidateQueries } from "@/providers/reactQuery";
+import { getNovelUrl } from "@/lib/novel";
 
 export default function NovelTopButtons({
-  novelUrl,
   novelTitle,
   novelIsSaved,
 }: {
-  novelUrl: string;
   novelTitle: string;
   novelIsSaved: boolean;
 }) {
+  const novelUrl = getNovelUrl(novelTitle);
   function openInBrowser() {
     Linking.openURL(novelUrl);
   }

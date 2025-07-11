@@ -8,7 +8,6 @@ import {
   scrapeNovelsSearch,
 } from "./scrape";
 import { novelRepository } from "../repositories/novel";
-import { tryAndReTryNovelInfo, tryAndReTryNovelChapter } from "@/lib/retry";
 import { DownloadChapter } from "@/types/download";
 import slugify from "@/lib/slug";
 
@@ -24,10 +23,11 @@ export const novelService = {
       throw new Error("Use scrapeExploreSearch() for search section.");
     }
 
-    const { novels, totalPages } = await scrapeNovelsExplore(
-      section,
-      pageNumber
-    );
+    const novelsExploreUrl = getNovelsExploreUrl(section, pageNumber);
+
+    const { novels, totalPages } = await scrapeNovelsExplore({
+      novelsExploreUrl,
+    });
 
     return {
       items: novels,
@@ -46,7 +46,9 @@ export const novelService = {
       throw new Error("Search query cannot be empty.");
     }
 
-    const { novels } = await scrapeNovelsSearch(searchQuery);
+    const searchNovelsUrl = getNovelSearchUrl(searchQuery);
+
+    const { novels } = await scrapeNovelsSearch({ searchNovelsUrl });
 
     return {
       items: novels,
@@ -66,10 +68,15 @@ export const novelService = {
         return info;
       }
 
-      info = await tryAndReTryNovelInfo<NovelInfo>(
-        novelTitleSlug,
-        scrapeNovelInfo
-      );
+      const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
+      const novelChaptersUrl = getNovelChaptersUrl(novelTitleSlug);
+
+      info = await scrapeNovelInfo({ novelInfoUrl, novelChaptersUrl });
+
+      if (!info) {
+        throw new Error("Failed to scrape novel info");
+      }
+
       await novelRepository.saveNovel(info);
 
       return info;
@@ -84,18 +91,12 @@ export const novelService = {
   async getNovelChapter({
     novelTitle,
     chapterNumber,
-    chapterTitle,
-    chapterUrl,
   }: {
     novelTitle: string;
     chapterNumber: number;
-    chapterTitle: string;
-    chapterUrl: string;
   }): Promise<Chapter | null> {
     try {
       const novelTitleSlug = slugify(novelTitle);
-
-      const chapterTitleSlug = slugify(chapterTitle);
 
       let chapterData = await novelRepository.getNovelChapter(
         novelTitle,
@@ -110,13 +111,13 @@ export const novelService = {
         return chapterData;
       }
 
-      const scrapedChapter = await tryAndReTryNovelChapter<Chapter>(
-        chapterUrl,
-        novelTitleSlug,
-        chapterNumber,
-        chapterTitleSlug,
-        scrapeNovelChapter
-      );
+      const novelChapterUrl = getNovelChapterUrl(novelTitleSlug, chapterNumber);
+
+      const scrapedChapter = await scrapeNovelChapter({ novelChapterUrl });
+
+      if (!scrapedChapter) {
+        throw new Error("Failed to scrape novel chapter");
+      }
 
       chapterData.content = scrapedChapter.content;
 
@@ -156,10 +157,15 @@ export const novelService = {
     try {
       const novelTitleSlug = slugify(title);
 
-      const info = await tryAndReTryNovelInfo<NovelInfo>(
-        novelTitleSlug,
-        scrapeNovelInfo
-      );
+      const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
+      const novelChaptersUrl = getNovelChaptersUrl(novelTitleSlug);
+
+      const info = await scrapeNovelInfo({ novelInfoUrl, novelChaptersUrl });
+
+      if (!info) {
+        throw new Error("Failed to scrape novel info");
+      }
+
       await novelRepository.refreshNovel(info);
 
       return info;
@@ -204,19 +210,15 @@ export const novelService = {
 
       const chapterTitle = chapter.chapterTitle;
 
-      const chapterUrl = chapter.chapterUrl;
-
       const novelTitleSlug = slugify(novelTitle);
 
-      const chapterTitleSlug = slugify(chapterTitle);
+      const novelChapterUrl = getNovelChapterUrl(novelTitleSlug, chapterNumber);
 
-      const scrapedChapter = await tryAndReTryNovelChapter<Chapter>(
-        chapterUrl,
-        novelTitleSlug,
-        chapterNumber,
-        chapterTitleSlug,
-        scrapeNovelChapter
-      );
+      const scrapedChapter = await scrapeNovelChapter({ novelChapterUrl });
+
+      if (!scrapedChapter) {
+        throw new Error("Failed to scrape novel chapter");
+      }
 
       const content = scrapedChapter.content;
       if (!content) return false;
@@ -225,7 +227,6 @@ export const novelService = {
         novelTitle,
         chapterNumber,
         chapterTitle,
-        chapterUrl,
         chapterContent: content,
       };
 
@@ -375,3 +376,34 @@ export const novelService = {
     }
   },
 };
+
+// Helper functions
+
+function getNovelsExploreUrl(section: ExploreSection, pageNumber: number) {
+  const EXPLORE_SECTION_MAP: Record<ExploreSection, string> = {
+    new: "new",
+    popular: "popular",
+    "latest-releases": "latest-release",
+    search: "",
+  };
+
+  return `https://novelfire.net/genre-all/sort-${EXPLORE_SECTION_MAP[section]}/status-all/all-novel?page=${pageNumber}`;
+}
+
+function getNovelSearchUrl(searchQuery: string) {
+  return `https://novelfire.net/ajax/searchLive?inputContent=${encodeURIComponent(
+    searchQuery
+  )}`;
+}
+
+function getNovelInfoUrl(novelTitleSlug: string) {
+  return `https://novelfire.net/book/${novelTitleSlug}`;
+}
+
+function getNovelChaptersUrl(novelTitleSlug: string) {
+  return `https://novelbin.com/ajax/chapter-archive?novelId=${novelTitleSlug}`;
+}
+
+function getNovelChapterUrl(novelTitleSlug: string, chapterNumber: number) {
+  return `https://novelfire.net/book/${novelTitleSlug}/chapter-${chapterNumber}`;
+}

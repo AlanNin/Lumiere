@@ -3,11 +3,7 @@ import { Chapter, NovelInfo } from "@/types/novel";
 import { novelService } from "../services/novel";
 import { DownloadChapter } from "@/types/download";
 
-export type ExploreSection =
-  | "popular"
-  | "latest-releases"
-  | "completed"
-  | "search";
+export type ExploreSection = "new" | "popular" | "latest-releases" | "search";
 
 export const novelController = {
   async exploreNovels({
@@ -57,13 +53,9 @@ export const novelController = {
   async getNovelChapter({
     novelTitle,
     chapterNumber,
-    chapterTitle,
-    chapterUrl,
   }: {
     novelTitle: string;
     chapterNumber: number;
-    chapterTitle: string;
-    chapterUrl: string;
   }): Promise<Chapter | null> {
     try {
       let data: Chapter | null;
@@ -71,8 +63,6 @@ export const novelController = {
       data = await novelService.getNovelChapter({
         novelTitle,
         chapterNumber,
-        chapterTitle,
-        chapterUrl,
       });
 
       return data;

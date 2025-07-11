@@ -3,22 +3,25 @@ export type Chapter = {
   novelTitle: string;
   number: number;
   title: string;
-  url: string;
   progress?: number;
   content?: string;
   bookMarked?: boolean;
   downloaded?: boolean;
   updatedAt?: string;
+  nextChapter?: {
+    number: number;
+    title: string;
+  };
 };
 
 export type Novel = {
   title: string;
   imageUrl: string;
-  rating: number;
+  rating?: number;
+  rank?: number;
 };
 
 export type NovelInfo = Novel & {
-  url: string;
   description: string;
   author: string;
   genres: string;
