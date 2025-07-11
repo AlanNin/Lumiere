@@ -22,11 +22,11 @@ export function applyNovelChaptersFiltersAndSort(
     if (value === "checked") {
       if (key === "downloaded") list = list.filter((c) => c.downloaded);
       if (key === "bookmarked") list = list.filter((c) => c.bookMarked);
-      if (key === "unread") list = list.filter((c) => c.progress === 0);
+      if (key === "unread") list = list.filter((c) => c.progress! < 100);
     } else if (value === "indeterminate") {
       if (key === "downloaded") list = list.filter((c) => !c.downloaded);
       if (key === "bookmarked") list = list.filter((c) => !c.bookMarked);
-      if (key === "unread") list = list.filter((c) => c.progress! > 0);
+      if (key === "unread") list = list.filter((c) => c.progress === 100);
     }
   }
 
