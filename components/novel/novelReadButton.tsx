@@ -68,10 +68,11 @@ export default function NovelReadButton({
 
   const handlePress = useCallback(() => {
     const chapter = resumeFromNovelChapter ?? 1;
+
     router.push({
       pathname: `/novel/reader`,
       params: {
-        title: novelTitle,
+        novelTitle,
         chapterNumber: chapter,
         totalChapters: novelTotalChapters,
       },

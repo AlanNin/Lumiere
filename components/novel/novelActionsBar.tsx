@@ -133,8 +133,9 @@ export default function NovelActionsBar({
 
   const { mutate: queueDownload } = useMutation({
     mutationKey: ["queueDownload", selectedChapters.map((c) => c.number)],
-    mutationFn: async (chapters: DownloadChapter[]) => {
-      return await enqueueDownload(chapters);
+    mutationFn: (chapters: DownloadChapter[]) => {
+      enqueueDownload(chapters);
+      return Promise.resolve();
     },
     onSuccess,
   });

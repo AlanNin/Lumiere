@@ -16,6 +16,7 @@ export default function NovelReaderScreen() {
     totalChapters,
     downloaded,
   } = useLocalSearchParams();
+
   const isDownloaded = downloaded ? downloaded === "1" : false;
   const { top, bottom } = useSafeAreaInsets();
   const [staticInsets, setStaticInsets] = useState(() => ({

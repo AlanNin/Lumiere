@@ -12,7 +12,7 @@ import {
   NovelChaptersFilter,
   NovelChaptersSortUI,
 } from "@/types/novel";
-import { Frown, Library, ListFilter, Telescope } from "lucide-react-native";
+import { Library, ListFilter, Telescope } from "lucide-react-native";
 import { Text } from "@/components/defaults";
 import { useRouter } from "expo-router";
 import NovelChapter from "@/components/novel/novelChapter";
@@ -35,6 +35,7 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import NovelChaptersFilterDrawer from "@/components/novel/novelChaptersFilterDrawer";
 import { useConfig } from "@/providers/appConfig";
 import { applyNovelChaptersFiltersAndSort } from "@/lib/novel";
+import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -98,19 +99,10 @@ export default function NovelScreen() {
   }, [novelInfo, novelChaptersFilter, novelChaptersSort]);
 
   const { vibration } = useHaptics();
-  const { enqueue, queue } = useChapterDownloadQueue();
+  const { enqueueDownload, queueDownload } = useChapterDownloadQueue();
+  const { enqueueRefresh, isRefreshing } = useNovelRefreshQueue();
 
-  const prevQueueLengthRef = useRef<number>(queue.length);
-
-  const { mutate: refreshNovel, isPending: isRefreshing } = useMutation({
-    mutationFn: () =>
-      novelController.refreshNovel({
-        title: String(title),
-      }),
-    onSuccess: () => {
-      refetchNovelInfo();
-    },
-  });
+  const prevQueueDownloadLengthRef = useRef<number>(queueDownload.length);
 
   const scrollYHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -118,21 +110,42 @@ export default function NovelScreen() {
     },
   });
 
+  const allChaptersCompleted = React.useMemo(() => {
+    const chapters = novelInfo?.chapters;
+    if (!chapters?.length) return false;
+    return chapters.every((c) => (c.progress ?? 0) === 100);
+  }, [novelInfo]);
+
   const resumeChapter = React.useMemo<Chapter | null>(() => {
     const chapters = novelInfo?.chapters;
     if (!chapters?.length) return null;
 
-    const incomplete = chapters.filter((c) => (c.progress ?? 0) < 100);
-    if (!incomplete.length) return null;
+    // 1) Find the highest-numbered chapter that is fully read (progress === 100)
+    const fullyRead = chapters.filter((c) => (c.progress ?? 0) === 100);
+    const maxReadNumber = fullyRead.length
+      ? Math.max(...fullyRead.map((c) => c.number))
+      : 0;
 
-    const candidate = incomplete.reduce((min, c) =>
-      c.number < min.number ? c : min
+    // 2) If there is a next chapter after the last fully read, and it's not finished, resume there
+    const nextAfterRead = chapters.find(
+      (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) < 100
     );
+    if (nextAfterRead) {
+      return nextAfterRead;
+    }
 
-    const anyRead = chapters.some((c) => (c.progress ?? 0) > 0);
-    if (!anyRead) return null;
+    // 3) Otherwise, fall back to any chapter in progress (1–99%), picking the highest number
+    const inProgress = chapters.filter(
+      (c) => (c.progress ?? 0) > 0 && (c.progress ?? 0) < 100
+    );
+    if (inProgress.length > 0) {
+      return inProgress.reduce((prev, c) =>
+        c.number > prev.number ? c : prev
+      );
+    }
 
-    return candidate;
+    // 4) If nothing applies (all at 0% or all at 100%), return null
+    return null;
   }, [novelInfo]);
 
   const handleChapterPress = React.useCallback(
@@ -172,7 +185,7 @@ export default function NovelScreen() {
   }) {
     if (isDownloading) return;
     if (!isDownloaded) {
-      enqueue([chapter]);
+      enqueueDownload([chapter]);
     } else {
       handleOpenDeleteChaptersDrawer([chapter]);
     }
@@ -192,7 +205,7 @@ export default function NovelScreen() {
         }
       });
     },
-    [selectedChapters.length, queue.length]
+    [selectedChapters.length, queueDownload.length]
   );
 
   const handleClearSelectedChapters = React.useCallback(() => {
@@ -226,7 +239,7 @@ export default function NovelScreen() {
 
   const renderItem = React.useCallback(
     ({ item }: { item: Chapter }) => {
-      const isDownloading = queue.some(
+      const isDownloading = queueDownload.some(
         (c) =>
           c.novelTitle === item.novelTitle && c.chapterNumber === item.number
       );
@@ -242,7 +255,7 @@ export default function NovelScreen() {
         />
       );
     },
-    [queue, selectedChapters, handleChapterPress, handleDownloadPress]
+    [queueDownload, selectedChapters, handleChapterPress, handleDownloadPress]
   );
 
   const keyExtractor = React.useCallback(
@@ -314,11 +327,11 @@ export default function NovelScreen() {
   }, [novelChapters, hasChaptersFilterApplied]);
 
   React.useEffect(() => {
-    if (prevQueueLengthRef.current > queue.length) {
+    if (prevQueueDownloadLengthRef.current > queueDownload.length) {
       refetchNovelInfo();
     }
-    prevQueueLengthRef.current = queue.length;
-  }, [queue, refetchNovelInfo]);
+    prevQueueDownloadLengthRef.current = queueDownload.length;
+  }, [queueDownload, refetchNovelInfo]);
 
   if (isLoadingNovel) {
     return <Loading title="The ink is still drying on this novel..." />;
@@ -351,7 +364,7 @@ export default function NovelScreen() {
       <AnimatedFlashList
         ListHeaderComponent={ListHeader}
         data={novelChapters}
-        extraData={[queue.length, selectedChapters.length]}
+        extraData={[queueDownload.length, selectedChapters.length]}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         estimatedItemSize={44}
@@ -362,8 +375,8 @@ export default function NovelScreen() {
         onLoad={() => setListLoaded(true)}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={refreshNovel}
+            refreshing={isRefreshing(String(title))}
+            onRefresh={() => enqueueRefresh([String(title)])}
             progressBackgroundColor={colors.primary}
             colors={[colors.primary_foreground]}
           />
@@ -371,7 +384,7 @@ export default function NovelScreen() {
         ListEmptyComponent={EmptyChaptersComponent}
       />
 
-      {listLoaded && selectedChapters.length === 0 && (
+      {listLoaded && !allChaptersCompleted && selectedChapters.length === 0 && (
         <NovelReadButton
           scrollY={scrollY}
           novelTitle={novelInfo.title}
@@ -387,7 +400,7 @@ export default function NovelScreen() {
         selectedChapters={selectedChapters}
         setSelectedChapters={setSelectedChapters}
         refetchNovelInfo={refetchNovelInfo}
-        enqueueDownload={enqueue}
+        enqueueDownload={enqueueDownload}
         onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
         isSortAsc={novelChaptersSort.order === "asc"}
       />
