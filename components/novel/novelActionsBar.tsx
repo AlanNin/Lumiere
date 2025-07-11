@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation } from "@tanstack/react-query";
 import {
   ArrowDown,
+  ArrowUp,
   BookmarkMinus,
   BookmarkPlus,
   CheckCheck,
@@ -33,6 +34,7 @@ type Props = {
   refetchNovelInfo: () => void;
   enqueueDownload: (chapters: DownloadChapter[]) => Promise<void>;
   onOpenDeleteChaptersDrawer: (chapters: DownloadChapter[]) => void;
+  isSortAsc: boolean;
 };
 
 export default function NovelActionsBar({
@@ -42,6 +44,7 @@ export default function NovelActionsBar({
   refetchNovelInfo,
   enqueueDownload,
   onOpenDeleteChaptersDrawer,
+  isSortAsc,
 }: Props) {
   // ─── Hooks & Refs ─────────────────────────────────────────────────────────
   const insets = useSafeAreaInsets();
@@ -68,6 +71,8 @@ export default function NovelActionsBar({
   const shouldDownload = selectedChapters.some((c) => !c.downloaded);
   const shouldCenterActions =
     hasMultipleSelected && (shouldMarkAsRead || shouldUnMarkAsRead);
+  const singularSelectedChapterNumber =
+    selectedChapters.length > 0 ? selectedChapters[0].number : null;
 
   // Mutations (all hooks)
   const { mutate: markBook } = useMutation({
@@ -83,6 +88,7 @@ export default function NovelActionsBar({
       }),
     onSuccess,
   });
+
   const { mutate: unmarkBook } = useMutation({
     mutationKey: [
       "unbookmark",
@@ -96,6 +102,7 @@ export default function NovelActionsBar({
       }),
     onSuccess,
   });
+
   const { mutate: markRead } = useMutation({
     mutationKey: [
       "markRead",
@@ -109,6 +116,7 @@ export default function NovelActionsBar({
       }),
     onSuccess,
   });
+
   const { mutate: unmarkRead } = useMutation({
     mutationKey: [
       "unmarkRead",
@@ -136,6 +144,20 @@ export default function NovelActionsBar({
     mutationFn: (chapters: DownloadChapter[]) => {
       onOpenDeleteChaptersDrawer(chapters);
       return Promise.resolve(chapters);
+    },
+    onSuccess,
+  });
+
+  const { mutate: markBeforeRead } = useMutation({
+    mutationKey: ["markBeforeRead", novelTitle, singularSelectedChapterNumber],
+    mutationFn: () => {
+      if (singularSelectedChapterNumber === null) {
+        return Promise.resolve(false);
+      }
+      return novelController.markChaptersBeforeAsRead({
+        novelTitle,
+        uptoChapter: singularSelectedChapterNumber,
+      });
     },
     onSuccess,
   });
@@ -257,14 +279,26 @@ export default function NovelActionsBar({
 
       {/* Single-chapter extra action */}
       {selectedChapters.length === 1 && (
-        <TouchableOpacity className="relative p-2">
+        <TouchableOpacity
+          className="relative p-2"
+          onPress={() => markBeforeRead()}
+        >
           <CheckCheck size={24} color={colors.foreground} strokeWidth={1} />
-          <ArrowDown
-            size={12}
-            color={colors.foreground}
-            strokeWidth={1}
-            style={{ position: "absolute", bottom: 2, right: 0 }}
-          />
+          {isSortAsc ? (
+            <ArrowUp
+              size={12}
+              color={colors.foreground}
+              strokeWidth={1}
+              style={{ position: "absolute", bottom: 2, right: 0 }}
+            />
+          ) : (
+            <ArrowDown
+              size={12}
+              color={colors.foreground}
+              strokeWidth={1}
+              style={{ position: "absolute", bottom: 2, right: 0 }}
+            />
+          )}
         </TouchableOpacity>
       )}
 

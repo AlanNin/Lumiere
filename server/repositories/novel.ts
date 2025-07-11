@@ -518,4 +518,27 @@ export const novelRepository = {
     }
     return true;
   },
+
+  async markChaptersBeforeAsRead({
+    novelTitle,
+    uptoChapter,
+  }: {
+    novelTitle: string;
+    uptoChapter: number;
+  }): Promise<boolean> {
+    if (uptoChapter <= 1) return true;
+
+    const { changes } = await db_client
+      .update(novelChapters)
+      .set({ progress: 100 })
+      .where(
+        and(
+          eq(novelChapters.novelTitle, novelTitle),
+          lt(novelChapters.number, uptoChapter)
+        )
+      )
+      .run();
+
+    return changes > 0;
+  },
 };

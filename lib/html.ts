@@ -97,7 +97,7 @@ export function extractChapterTitle(rawText: string): string {
 
   cleanText = cleanText.replace(/^\d+\s+/, "");
 
-  return cleanText.trim();
+  return /^\d+$/.test(cleanText) ? "" : cleanText.trim();
 }
 
 export function insertTitleHtml(

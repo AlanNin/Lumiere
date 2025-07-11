@@ -1,10 +1,5 @@
 import { Explore } from "@/types/explore";
-import {
-  Chapter,
-  NovelChaptersFilter,
-  NovelChaptersSort,
-  NovelInfo,
-} from "@/types/novel";
+import { Chapter, NovelInfo } from "@/types/novel";
 import { ExploreSection } from "../controllers/novel";
 import {
   scrapeNovelChapter,
@@ -344,10 +339,29 @@ export const novelService = {
       throw new Error("An unknown error occurred.");
     }
   },
+
+  async markChaptersBeforeAsRead({
+    novelTitle,
+    uptoChapter,
+  }: {
+    novelTitle: string;
+    uptoChapter: number;
+  }): Promise<boolean> {
+    try {
+      return await novelRepository.markChaptersBeforeAsRead({
+        novelTitle,
+        uptoChapter,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
 };
 
 // Helper functions
-
 function getNovelsExploreUrl(section: ExploreSection, pageNumber: number) {
   const EXPLORE_SECTION_MAP: Record<ExploreSection, string> = {
     new: "new",

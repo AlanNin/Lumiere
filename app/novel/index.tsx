@@ -279,7 +279,10 @@ export default function NovelScreen() {
           </Text>
           <TouchableOpacity
             className="p-2 -mr-2"
-            onPress={() => bottomDrawerChaptersFilterRef.current?.present()}
+            onPress={() => {
+              setSelectedChapters([]);
+              bottomDrawerChaptersFilterRef.current?.present();
+            }}
           >
             <ListFilter
               color={
@@ -345,6 +348,7 @@ export default function NovelScreen() {
         handleSelectAllChapters={handleSelectAllChapters}
         handleSelectRemainingChapters={handleSelectRemainingChapters}
       />
+
       <AnimatedFlashList
         ListHeaderComponent={ListHeader}
         data={novelChapters}
@@ -386,6 +390,7 @@ export default function NovelScreen() {
         refetchNovelInfo={refetchNovelInfo}
         enqueueDownload={enqueue}
         onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
+        isSortAsc={novelChaptersSort.order === "asc"}
       />
 
       <NovelRemoveDownloadDrawer

@@ -1,10 +1,5 @@
 import { Explore } from "@/types/explore";
-import {
-  Chapter,
-  NovelChaptersFilter,
-  NovelChaptersSort,
-  NovelInfo,
-} from "@/types/novel";
+import { Chapter, NovelInfo } from "@/types/novel";
 import { novelService } from "../services/novel";
 import { DownloadChapter } from "@/types/download";
 
@@ -241,6 +236,26 @@ export const novelController = {
       return await novelService.unMarkChaptersAsRead({
         novelTitle,
         chapterNumbers,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async markChaptersBeforeAsRead({
+    novelTitle,
+    uptoChapter,
+  }: {
+    novelTitle: string;
+    uptoChapter: number;
+  }): Promise<boolean> {
+    try {
+      return await novelService.markChaptersBeforeAsRead({
+        novelTitle,
+        uptoChapter,
       });
     } catch (error) {
       if (error instanceof Error) {
