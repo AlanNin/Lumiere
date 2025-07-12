@@ -260,6 +260,23 @@ export const novelService = {
     }
   },
 
+  async removeAllDownloadedChaptersFromNovels({
+    novelTitles,
+  }: {
+    novelTitles: NovelInfo["title"][];
+  }): Promise<boolean> {
+    try {
+      return await novelRepository.removeAllDownloadedChaptersFromNovels(
+        novelTitles
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
   async markChaptersAsBookmarked({
     novelTitle,
     chapterNumbers,

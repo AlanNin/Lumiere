@@ -37,6 +37,8 @@ import { useConfig } from "@/providers/appConfig";
 import { applyNovelChaptersFiltersAndSort } from "@/lib/novel";
 import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
 import NovelFindChapterDrawer from "@/components/novel/novelFindChapterDrawer";
+import NovelDownloadChaptersDrawer from "@/components/novel/novelDownloadChaptersDrawer";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -49,6 +51,7 @@ export default function NovelScreen() {
   const { title } = useLocalSearchParams();
 
   // States
+  const insets = useSafeAreaInsets();
   const listRef = useRef<FlashList<Chapter>>(null);
   const scrollY = useSharedValue(0);
   const [listLoaded, setListLoaded] = React.useState(false);
@@ -78,7 +81,7 @@ export default function NovelScreen() {
   const bottomDrawerRemoveDownloadRef = useRef<BottomSheetModal>(null);
   const bottomDrawerChaptersFilterRef = useRef<BottomSheetModal>(null);
   const bottomDrawerSearchChapterRef = useRef<BottomSheetModal>(null);
-  const bottomDrawerDownloadRef = useRef<BottomSheetModal>(null);
+  const bottomDraweChaptersDownloadRef = useRef<BottomSheetModal>(null);
   const bottomDrawerMoreRef = useRef<BottomSheetModal>(null);
 
   // Fetch novel info data and apply filters and sorts to chapters
@@ -105,6 +108,10 @@ export default function NovelScreen() {
   const { enqueueDownload, queueDownload } = useChapterDownloadQueue();
   const { enqueueRefresh, isRefreshing } = useNovelRefreshQueue();
 
+  const isDownloadingFromThisNovel = queueDownload.some(
+    (c) => c.novelTitle === novelInfo?.title
+  );
+
   const prevQueueDownloadLengthRef = useRef<number>(queueDownload.length);
 
   const scrollYHandler = useAnimatedScrollHandler({
@@ -117,6 +124,12 @@ export default function NovelScreen() {
     const chapters = novelInfo?.chapters;
     if (!chapters?.length) return false;
     return chapters.every((c) => (c.progress ?? 0) === 100);
+  }, [novelInfo]);
+
+  const hasDownloadedChapters = React.useMemo(() => {
+    const chapters = novelInfo?.chapters;
+    if (!chapters?.length) return false;
+    return chapters.some((c) => c.downloaded);
   }, [novelInfo]);
 
   const resumeChapter = React.useMemo<Chapter | null>(() => {
@@ -383,11 +396,15 @@ export default function NovelScreen() {
         scrollY={scrollY}
         novelTitle={novelInfo.title}
         selectedChapters={selectedChapters.length}
+        isDownloadingFromThisNovel={isDownloadingFromThisNovel}
         handleClearSelectedChapters={handleClearSelectedChapters}
         handleSelectAllChapters={handleSelectAllChapters}
         handleSelectRemainingChapters={handleSelectRemainingChapters}
         handleOpenSearchChapterDrawer={() =>
           bottomDrawerSearchChapterRef.current?.present()
+        }
+        handleOpenDownloadChaptersDrawer={() =>
+          bottomDraweChaptersDownloadRef.current?.present()
         }
       />
 
@@ -401,7 +418,9 @@ export default function NovelScreen() {
         estimatedItemSize={44}
         onScroll={scrollYHandler}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + (allChaptersCompleted ? 12 : 84),
+        }}
         removeClippedSubviews={true}
         onLoad={() => setListLoaded(true)}
         refreshControl={
@@ -451,6 +470,19 @@ export default function NovelScreen() {
         bottomDrawerRef={bottomDrawerSearchChapterRef}
         maxChapters={novelChapters.length}
         handleFindChapter={handleFindChapter}
+      />
+
+      <NovelDownloadChaptersDrawer
+        bottomDrawerRef={bottomDraweChaptersDownloadRef}
+        novelTitle={novelInfo.title}
+        chapters={novelInfo?.chapters ?? []}
+        currentChapter={
+          resumeChapter ? Math.max(resumeChapter.number - 1, 1) : 1
+        }
+        maxChapters={novelChapters.length}
+        allChaptersCompleted={allChaptersCompleted}
+        hasDownloadedChapters={hasDownloadedChapters}
+        refetchNovelInfo={refetchNovelInfo}
       />
     </View>
   );

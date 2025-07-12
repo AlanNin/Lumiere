@@ -19,23 +19,28 @@ import Animated, {
   SharedValue,
 } from "react-native-reanimated";
 import { Text } from "../defaults";
+import { cn } from "@/lib/cn";
 
 export default function NovelHeader({
   novelTitle,
   scrollY,
   selectedChapters,
+  isDownloadingFromThisNovel,
   handleClearSelectedChapters,
   handleSelectAllChapters,
   handleSelectRemainingChapters,
   handleOpenSearchChapterDrawer,
+  handleOpenDownloadChaptersDrawer,
 }: {
   novelTitle: string;
   scrollY: SharedValue<number>;
   selectedChapters: number;
+  isDownloadingFromThisNovel: boolean;
   handleClearSelectedChapters: () => void;
   handleSelectAllChapters: () => void;
   handleSelectRemainingChapters: () => void;
   handleOpenSearchChapterDrawer: () => void;
+  handleOpenDownloadChaptersDrawer: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -104,7 +109,6 @@ export default function NovelHeader({
                   color={colors.muted_foreground}
                   size={20}
                   strokeWidth={1.6}
-                  className="p-2"
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -115,7 +119,6 @@ export default function NovelHeader({
                   color={colors.muted_foreground}
                   size={20}
                   strokeWidth={1.6}
-                  className="p-2"
                 />
               </TouchableOpacity>
             </View>
@@ -147,15 +150,20 @@ export default function NovelHeader({
                   color={colors.muted_foreground}
                   size={20}
                   strokeWidth={1.6}
-                  className="p-2"
                 />
               </TouchableOpacity>
-              <TouchableOpacity className="p-2">
+              <TouchableOpacity
+                className={cn(
+                  "p-2",
+                  isDownloadingFromThisNovel && "opacity-50"
+                )}
+                onPress={handleOpenDownloadChaptersDrawer}
+                disabled={isDownloadingFromThisNovel}
+              >
                 <Download
                   color={colors.muted_foreground}
                   size={20}
                   strokeWidth={1.6}
-                  className="p-2"
                 />
               </TouchableOpacity>
               <TouchableOpacity className="p-2">
@@ -163,7 +171,6 @@ export default function NovelHeader({
                   color={colors.muted_foreground}
                   size={20}
                   strokeWidth={1.6}
-                  className="p-2"
                 />
               </TouchableOpacity>
             </View>

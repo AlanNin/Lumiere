@@ -1,7 +1,7 @@
 import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, asc, eq, gt, inArray, lt } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, lt } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
@@ -409,6 +409,34 @@ export const novelRepository = {
       return totalChanges > 0;
     } catch (e) {
       console.error("Failed to reset downloaded chapters:", e);
+      throw e;
+    }
+  },
+
+  async removeAllDownloadedChaptersFromNovels(
+    novelTitles: NovelInfo["title"][]
+  ): Promise<boolean> {
+    const uniqueNovels = Array.from(new Set(novelTitles)).sort();
+
+    try {
+      const result = await db_client.transaction(async (tx) => {
+        const res = await tx
+          .update(novelChapters)
+          .set({ downloaded: 0, content: null })
+          .where(
+            and(
+              eq(novelChapters.downloaded, 1),
+              inArray(novelChapters.novelTitle, uniqueNovels)
+            )
+          )
+          .run();
+
+        return res;
+      });
+
+      return result.changes > 0;
+    } catch (e) {
+      console.error("Failed to remove downloaded chapters:", e);
       throw e;
     }
   },
