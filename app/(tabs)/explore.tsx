@@ -126,36 +126,43 @@ export default function ExploreScreen() {
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const { keyboardShown } = useKeyboard();
 
-  const filterOptions: FilterOption[] = [
-    ...(isSearchOpen
-      ? [
-          {
-            key: "search" as ExploreSection,
-            label: "Search",
-            Icon: Search,
-          },
-        ]
-      : []),
-    {
-      key: "new",
-      label: "New",
-      Icon: ClockPlus,
-    },
-    {
-      key: "popular",
-      label: "Popular",
-      Icon: Heart,
-    },
-    {
-      key: "latest-releases",
-      label: "Latest Releases",
-      Icon: BadgeAlert,
-    },
-  ];
+  const allFilterOptions: FilterOption[] = React.useMemo(
+    () => [
+      {
+        key: "search" as ExploreSection,
+        label: "Search",
+        Icon: Search,
+      },
+      {
+        key: "new",
+        label: "New",
+        Icon: ClockPlus,
+      },
+      {
+        key: "popular",
+        label: "Popular",
+        Icon: Heart,
+      },
+      {
+        key: "latest-releases",
+        label: "Latest Releases",
+        Icon: BadgeAlert,
+      },
+    ],
+    []
+  );
 
   const [selectedFilter, setSelectedFilter] = React.useState<FilterOption>(
-    filterOptions[0]
+    allFilterOptions[1]
   );
+
+  const filterOptions = React.useMemo(() => {
+    if (isSearchOpen) {
+      return allFilterOptions;
+    } else {
+      return allFilterOptions.filter((option) => option.key !== "search");
+    }
+  }, [isSearchOpen, allFilterOptions]);
 
   function handleChangeFilter(filter: FilterOption) {
     setSelectedFilter(filter);
