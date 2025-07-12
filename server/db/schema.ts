@@ -2,11 +2,16 @@ import { sql } from "drizzle-orm";
 import { int, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
 
-export const categories = sqliteTable("categories", {
-  id: int().primaryKey({ autoIncrement: true }),
-  label: text().notNull(),
-  sortOrder: int("sort_order").notNull(),
-});
+export const categories = sqliteTable(
+  "categories",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    label: text().notNull(),
+    sortOrder: int("sort_order").notNull(),
+  },
+
+  (table) => [uniqueIndex("categories_pk").on(table.id)]
+);
 
 export const novelCategories = sqliteTable(
   "novel_categories",
@@ -23,19 +28,24 @@ export const novelCategories = sqliteTable(
   ]
 );
 
-export const novels = sqliteTable("novels", {
-  title: text().primaryKey(),
-  imageUrl: text("image_url").notNull(),
-  description: text().notNull(),
-  rank: int().notNull(),
-  rating: int().notNull(),
-  author: text().notNull(),
-  genres: text().notNull(),
-  status: text().notNull(),
-  isSaved: int("is_saved")
-    .notNull()
-    .default(sql`0`),
-});
+export const novels = sqliteTable(
+  "novels",
+  {
+    title: text().primaryKey(),
+    imageUrl: text("image_url").notNull(),
+    customImageUri: text("custom_image_uri"),
+    description: text().notNull(),
+    rank: int().notNull(),
+    rating: int().notNull(),
+    author: text().notNull(),
+    genres: text().notNull(),
+    status: text().notNull(),
+    isSaved: int("is_saved")
+      .notNull()
+      .default(sql`0`),
+  },
+  (table) => [uniqueIndex("novels_pk").on(table.title)]
+);
 
 export const novelChapters = sqliteTable(
   "novel_chapters",
@@ -56,10 +66,7 @@ export const novelChapters = sqliteTable(
       .notNull()
       .default(sql`0`),
     content: text(),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`)
-      .$onUpdate(() => sql`CURRENT_TIMESTAMP`),
+    readAt: text("read_at"),
   },
   (table) => [
     uniqueIndex("novel_chapters_pk").on(table.novelTitle, table.number),

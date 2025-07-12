@@ -1,7 +1,7 @@
 import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, asc, count, eq, gt, inArray, lt } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
@@ -42,7 +42,7 @@ export const novelRepository = {
           bookMarked: novelChapters.bookMarked,
           downloaded: novelChapters.downloaded,
           content: novelChapters.content,
-          updatedAt: novelChapters.updatedAt,
+          readAt: novelChapters.readAt,
         })
         .from(novelChapters)
         .where(eq(novelChapters.novelTitle, novelTitle))
@@ -67,7 +67,7 @@ export const novelRepository = {
           bookMarked: Boolean(c.bookMarked),
           downloaded: Boolean(c.downloaded),
           content: c.content === null ? "" : String(c.content),
-          updatedAt: String(c.updatedAt),
+          readAt: String(c.readAt),
         })),
       };
 
@@ -313,6 +313,27 @@ export const novelRepository = {
     } catch (e) {
       throw e;
     }
+  },
+
+  async updateNovelChapterReadAt({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    const { changes } = await db_client
+      .update(novelChapters)
+      .set({ readAt: sql`CURRENT_TIMESTAMP` })
+      .where(
+        and(
+          eq(novelChapters.novelTitle, novelTitle),
+          eq(novelChapters.number, chapterNumber)
+        )
+      )
+      .run();
+
+    return changes > 0;
   },
 
   async downloadChapter(chapter: DownloadChapter): Promise<boolean> {

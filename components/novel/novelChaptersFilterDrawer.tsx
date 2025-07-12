@@ -13,7 +13,11 @@ import { Text } from "../defaults";
 import { cn } from "@/lib/cn";
 import { ArrowDown, ArrowUp } from "lucide-react-native";
 import Checkbox from "../checkbox";
-import { NovelChaptersFilter, NovelChaptersSortUI } from "@/types/novel";
+import {
+  NovelChaptersFilter,
+  NovelChaptersSortUI,
+  NovelInfo,
+} from "@/types/novel";
 import { useConfig } from "@/providers/appConfig";
 
 const SECTIONS: { key: string; label: string }[] = [
@@ -56,10 +60,14 @@ const renderTabBar = (props: any) => (
   />
 );
 
-function renderFilterSection() {
+function renderFilterSection({
+  novelTitle,
+}: {
+  novelTitle: NovelInfo["title"];
+}) {
   const [novelChaptersFilter, setNovelChaptersFilter] = useConfig<
     Record<string, NovelChaptersFilter["value"]>
-  >("novelChaptersFilter", {});
+  >(`novelChaptersFilter-${novelTitle}`, {});
 
   function handleChange(key: string) {
     const current = novelChaptersFilter[key] ?? "unchecked";
@@ -113,10 +121,10 @@ function renderFilterSection() {
   );
 }
 
-function renderSortSection() {
+function renderSortSection({ novelTitle }: { novelTitle: NovelInfo["title"] }) {
   const [novelChaptersSort, setNovelChaptersSort] = useConfig<
     NovelChaptersSortUI
-  >("novelChaptersSort", {
+  >(`novelChaptersSort-${novelTitle}`, {
     key: "by_chapter",
     label: "By Chapter",
     order: "asc",
@@ -186,8 +194,10 @@ function renderSortSection() {
 
 export default function NovelChaptersFilterDrawer({
   bottomDrawerRef,
+  novelTitle,
 }: {
   bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  novelTitle: NovelInfo["title"];
 }) {
   const [index, setIndex] = useState(0);
   const { width } = useWindowDimensions();
@@ -200,8 +210,8 @@ export default function NovelChaptersFilterDrawer({
   const sceneRenderers = SECTIONS.reduce(
     (acc) => ({
       ...acc,
-      filter: renderFilterSection,
-      sort: renderSortSection,
+      filter: () => renderFilterSection({ novelTitle }),
+      sort: () => renderSortSection({ novelTitle }),
     }),
     {} as Record<string, () => React.ReactNode>
   );

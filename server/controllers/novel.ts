@@ -139,6 +139,26 @@ export const novelController = {
     }
   },
 
+  async updateNovelChapterReadAt({
+    novelTitle,
+    chapterNumber,
+  }: {
+    novelTitle: string;
+    chapterNumber: number;
+  }): Promise<boolean> {
+    try {
+      return await novelService.updateNovelChapterReadAt({
+        novelTitle,
+        chapterNumber,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
   async downloadNovelChapter(chapter: DownloadChapter): Promise<boolean> {
     try {
       return await novelService.downloadNovelChapter(chapter);

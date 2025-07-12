@@ -61,9 +61,9 @@ export default function NovelScreen() {
   >([]);
   const [novelChaptersFilter] = useConfig<
     Record<string, NovelChaptersFilter["value"]>
-  >("novelChaptersFilter", {});
+  >(`novelChaptersFilter-${String(title)}`, {});
   const [novelChaptersSort] = useConfig<NovelChaptersSortUI>(
-    "novelChaptersSort",
+    `novelChaptersSort-${String(title)}`,
     {
       key: "by_chapter",
       label: "By Chapter",
@@ -435,6 +435,7 @@ export default function NovelScreen() {
           />
         }
         ListEmptyComponent={EmptyChaptersComponent}
+        showsVerticalScrollIndicator={false}
       />
 
       {listLoaded && !allChaptersCompleted && selectedChapters.length === 0 && (
@@ -467,6 +468,7 @@ export default function NovelScreen() {
 
       <NovelChaptersFilterDrawer
         bottomDrawerRef={bottomDrawerChaptersFilterRef}
+        novelTitle={novelInfo.title}
       />
 
       <NovelFindChapterDrawer

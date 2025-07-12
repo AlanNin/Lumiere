@@ -7,7 +7,7 @@ export type Chapter = {
   content?: string;
   bookMarked?: boolean;
   downloaded?: boolean;
-  updatedAt?: string;
+  readAt?: string;
   nextChapter?: {
     number: number;
     title: string;

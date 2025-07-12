@@ -72,6 +72,17 @@ export default function ReaderComponent({
     },
   });
 
+  const { mutate: updateNovelChapterReadAt } = useMutation({
+    mutationFn: () =>
+      novelController.updateNovelChapterReadAt({
+        novelTitle: chapter.novelTitle,
+        chapterNumber: chapter.number,
+      }),
+    onSuccess: () => {
+      invalidateQueries(["history"]);
+    },
+  });
+
   const renderContent = useMemo(
     () => (
       <RenderHTML
@@ -160,7 +171,10 @@ export default function ReaderComponent({
     return () => {
       NavigationBar.setVisibilityAsync("visible");
       StatusBar.setStatusBarHidden(false);
-      updateNovelChapterProgress();
+      if ((chapter.progress ?? 0) < 100) {
+        updateNovelChapterProgress();
+      }
+      updateNovelChapterReadAt();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
