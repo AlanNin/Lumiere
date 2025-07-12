@@ -142,9 +142,12 @@ export default function NovelScreen() {
       ? Math.max(...fullyRead.map((c) => c.number))
       : 0;
 
-    // 2) If there is a next chapter after the last fully read, and it's not finished, resume there
+    // 2) If there is a next chapter after the last fully read, and it has some progress (<100 but >0), resume there
     const nextAfterRead = chapters.find(
-      (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) < 100
+      (c) =>
+        c.number === maxReadNumber + 1 &&
+        (c.progress ?? 0) > 0 &&
+        (c.progress ?? 0) < 100
     );
     if (nextAfterRead) {
       return nextAfterRead;

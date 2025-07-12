@@ -95,7 +95,7 @@ export default function ReaderTopBar({
             <TouchableOpacity onPress={() => toggleBookMarked()}>
               <Bookmark
                 color={bookMarked ? colors.secondary : colors.foreground}
-                fill={bookMarked ? colors.secondary : undefined}
+                fill={bookMarked ? colors.secondary : "transparent"}
                 size={24}
                 strokeWidth={1.6}
               />
