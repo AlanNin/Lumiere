@@ -13,6 +13,7 @@ export default React.memo(
     chapter,
     isDownloading,
     selectedChapters,
+    isHighlighted,
     onSelectChapter,
     onChapterPress,
     onDownloadPress,
@@ -20,6 +21,7 @@ export default React.memo(
     chapter: Chapter;
     isDownloading: boolean;
     selectedChapters: Chapter[];
+    isHighlighted: boolean;
     onSelectChapter: (chapter: Chapter) => void;
     onChapterPress: ({
       chapterNumber,
@@ -75,7 +77,11 @@ export default React.memo(
       <TouchableOpacity
         className={cn(
           "flex flex-row items-center justify-between px-5 gap-x-8 ",
-          isSelected ? "bg-layout_background/65" : "bg-background"
+          isSelected
+            ? "bg-layout_background/65"
+            : isHighlighted
+            ? "bg-secondary/15"
+            : "bg-background"
         )}
         onPress={handlePress}
         onLongPress={handleLongPress}
@@ -138,6 +144,7 @@ export default React.memo(
       prevProps.chapter.bookMarked === nextProps.chapter.bookMarked &&
       prevProps.chapter.downloaded === nextProps.chapter.downloaded &&
       prevProps.isDownloading === nextProps.isDownloading &&
+      prevProps.isHighlighted === nextProps.isHighlighted &&
       prevSelected === nextSelected &&
       prevProps.selectedChapters.length === nextProps.selectedChapters.length
     );

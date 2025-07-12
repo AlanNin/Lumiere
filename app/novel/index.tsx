@@ -5,7 +5,7 @@ import Animated, {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
-import React, { useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { RefreshControl, TouchableOpacity, View } from "react-native";
 import {
   Chapter,
@@ -36,6 +36,7 @@ import NovelChaptersFilterDrawer from "@/components/novel/novelChaptersFilterDra
 import { useConfig } from "@/providers/appConfig";
 import { applyNovelChaptersFiltersAndSort } from "@/lib/novel";
 import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
+import NovelFindChapterDrawer from "@/components/novel/novelFindChapterDrawer";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -48,6 +49,7 @@ export default function NovelScreen() {
   const { title } = useLocalSearchParams();
 
   // States
+  const listRef = useRef<FlashList<Chapter>>(null);
   const scrollY = useSharedValue(0);
   const [listLoaded, setListLoaded] = React.useState(false);
   const [selectedChapters, setSelectedChapters] = React.useState<Chapter[]>([]);
@@ -70,13 +72,14 @@ export default function NovelScreen() {
       (v) => v === "checked" || v === "indeterminate"
     );
   }, [novelChaptersFilter]);
+  const [highlightChapter, setHighlightChapter] = useState<number | null>(null);
 
   // Drawers
   const bottomDrawerRemoveDownloadRef = useRef<BottomSheetModal>(null);
   const bottomDrawerChaptersFilterRef = useRef<BottomSheetModal>(null);
-  const bottomDrawerMoreRef = useRef<BottomSheetModal>(null);
-  const bottomDrawerDownloadRef = useRef<BottomSheetModal>(null);
   const bottomDrawerSearchChapterRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerDownloadRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerMoreRef = useRef<BottomSheetModal>(null);
 
   // Fetch novel info data and apply filters and sorts to chapters
   const {
@@ -237,12 +240,29 @@ export default function NovelScreen() {
     }
   }, [novelInfo?.chapters, selectedChapters]);
 
+  const handleFindChapter = useCallback((chapterNumber: number) => {
+    const index = chapterNumber - 1;
+    const viewOffset = index <= 5 ? 200 : 0;
+    setHighlightChapter(chapterNumber);
+    listRef.current?.scrollToIndex({
+      index,
+      animated: true,
+      viewPosition: 0.5,
+      viewOffset,
+    });
+    setTimeout(() => {
+      setHighlightChapter(null);
+    }, 2000);
+  }, []);
+
   const renderItem = React.useCallback(
     ({ item }: { item: Chapter }) => {
       const isDownloading = queueDownload.some(
         (c) =>
           c.novelTitle === item.novelTitle && c.chapterNumber === item.number
       );
+
+      const isHighlighted = highlightChapter === item.number;
 
       return (
         <NovelChapter
@@ -252,10 +272,17 @@ export default function NovelScreen() {
           onDownloadPress={handleDownloadPress}
           selectedChapters={selectedChapters}
           onSelectChapter={handleSelectChapter}
+          isHighlighted={isHighlighted}
         />
       );
     },
-    [queueDownload, selectedChapters, handleChapterPress, handleDownloadPress]
+    [
+      queueDownload,
+      selectedChapters,
+      highlightChapter,
+      handleChapterPress,
+      handleDownloadPress,
+    ]
   );
 
   const keyExtractor = React.useCallback(
@@ -359,9 +386,13 @@ export default function NovelScreen() {
         handleClearSelectedChapters={handleClearSelectedChapters}
         handleSelectAllChapters={handleSelectAllChapters}
         handleSelectRemainingChapters={handleSelectRemainingChapters}
+        handleOpenSearchChapterDrawer={() =>
+          bottomDrawerSearchChapterRef.current?.present()
+        }
       />
 
       <AnimatedFlashList
+        ref={listRef}
         ListHeaderComponent={ListHeader}
         data={novelChapters}
         extraData={[queueDownload.length, selectedChapters.length]}
@@ -414,6 +445,12 @@ export default function NovelScreen() {
 
       <NovelChaptersFilterDrawer
         bottomDrawerRef={bottomDrawerChaptersFilterRef}
+      />
+
+      <NovelFindChapterDrawer
+        bottomDrawerRef={bottomDrawerSearchChapterRef}
+        maxChapters={novelChapters.length}
+        handleFindChapter={handleFindChapter}
       />
     </View>
   );

@@ -27,6 +27,7 @@ export default function NovelHeader({
   handleClearSelectedChapters,
   handleSelectAllChapters,
   handleSelectRemainingChapters,
+  handleOpenSearchChapterDrawer,
 }: {
   novelTitle: string;
   scrollY: SharedValue<number>;
@@ -34,6 +35,7 @@ export default function NovelHeader({
   handleClearSelectedChapters: () => void;
   handleSelectAllChapters: () => void;
   handleSelectRemainingChapters: () => void;
+  handleOpenSearchChapterDrawer: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -137,7 +139,10 @@ export default function NovelHeader({
               </Animated.Text>
             </View>
             <View className="flex flex-row items-center gap-x-2">
-              <TouchableOpacity className="p-2">
+              <TouchableOpacity
+                className="p-2"
+                onPress={handleOpenSearchChapterDrawer}
+              >
                 <FileSearch
                   color={colors.muted_foreground}
                   size={20}

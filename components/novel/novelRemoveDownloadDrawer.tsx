@@ -41,7 +41,7 @@ export default function NovelRemoveDownloadDrawer({
 
   return (
     <BottomDrawer ref={bottomDrawerRef}>
-      <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-8 flex-1">
+      <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-4 flex-1">
         <Text className="text-lg font-medium text-center">
           Delete Downloaded{" "}
           {chaptersToDelete.length > 1 ? "Chapters" : "Chapter"}
