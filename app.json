@@ -42,15 +42,19 @@
       ],
       "./patches/withAndroidDisplayCutout",
       "expo-sqlite",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Lumiere needs permission to access your photos so you can add custom pictures to your reading experience."
+        }
+      ]
     ],
     "scheme": "lumiere-scheme",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },

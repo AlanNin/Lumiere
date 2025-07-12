@@ -31,6 +31,7 @@ export default function NovelHeader({
   handleSelectRemainingChapters,
   handleOpenSearchChapterDrawer,
   handleOpenDownloadChaptersDrawer,
+  handleOpenMoreChapterDrawer,
 }: {
   novelTitle: string;
   scrollY: SharedValue<number>;
@@ -41,6 +42,7 @@ export default function NovelHeader({
   handleSelectRemainingChapters: () => void;
   handleOpenSearchChapterDrawer: () => void;
   handleOpenDownloadChaptersDrawer: () => void;
+  handleOpenMoreChapterDrawer: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -166,7 +168,10 @@ export default function NovelHeader({
                   strokeWidth={1.6}
                 />
               </TouchableOpacity>
-              <TouchableOpacity className="p-2">
+              <TouchableOpacity
+                className="p-2"
+                onPress={handleOpenMoreChapterDrawer}
+              >
                 <EllipsisVertical
                   color={colors.muted_foreground}
                   size={20}

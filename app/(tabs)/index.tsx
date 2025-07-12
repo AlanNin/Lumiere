@@ -3,7 +3,7 @@ import NovelCard from "@/components/novel/novelCard";
 import TabHeader from "@/components/tabHeader";
 import { FlatList, View, useWindowDimensions } from "react-native";
 import { Novel } from "@/types/novel";
-import { TabView, SceneMap, TabBar } from "react-native-tab-view";
+import { TabView, TabBar } from "react-native-tab-view";
 import { colors } from "@/lib/constants";
 import { Telescope } from "lucide-react-native";
 import Quote from "@/components/statics/quote";
@@ -51,7 +51,7 @@ const renderNovels = (novels: Novel[], width: number) => {
           return (
             <NovelCard
               title={item.title}
-              imageUri={item.imageUrl}
+              imageUri={item.customImageUri ?? item.imageUrl}
               containerClassName={index && index % 2 ? "ml-2" : "mr-2"}
               containerStyle={{ maxWidth }}
               href={{
@@ -109,7 +109,10 @@ export default function HomeScreen() {
       <TabHeader title="Library" containerClassName="mb-1" />
       <TabView
         navigationState={{ index, routes }}
-        renderScene={SceneMap(renderScenes)}
+        renderScene={({ route }) => {
+          const scene = renderScenes[route.key];
+          return scene ? scene() : null;
+        }}
         onIndexChange={setIndex}
         initialLayout={{ width: width }}
         renderTabBar={renderTabBar}

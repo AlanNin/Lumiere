@@ -7,10 +7,11 @@ import {
   StarHalf,
   User,
 } from "lucide-react-native";
-import { Image, View } from "react-native";
+import { View, Image as NativeImage } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { Text } from "@/components/defaults";
 import { cn } from "@/lib/cn";
+import { Image } from "expo-image";
 
 const TOP_RANK_THRESHOLD = 10;
 
@@ -39,7 +40,7 @@ export default function NovelDetails({
 
   return (
     <View className="relative min-h-[276px] w-full mb-6">
-      <Image
+      <NativeImage
         alt={`Background of ${title}`}
         source={{ uri: imageUrl }}
         className="flex-1"
@@ -60,8 +61,8 @@ export default function NovelDetails({
         <Image
           alt={`Cover of ${title}`}
           source={{ uri: imageUrl }}
-          style={{ aspectRatio: 1 / 1.5 }}
-          className="h-52 object-cover rounded-lg"
+          style={{ aspectRatio: 1 / 1.5, height: 182, borderRadius: 8 }}
+          contentFit="cover"
         />
         <View className="flex-1 flex flex-col gap-y-2.5">
           <Text className="text-xl font-bold tracking-wide" numberOfLines={3}>

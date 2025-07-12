@@ -10,6 +10,7 @@ export const libraryRepository = {
       .select({
         title: novels.title,
         imageUrl: novels.imageUrl,
+        customImageUri: novels.customImageUri,
         description: novels.description,
         rank: novels.rank,
         rating: novels.rating,
@@ -58,6 +59,7 @@ export const libraryRepository = {
       const info: NovelInfo = {
         title: n.title,
         imageUrl: n.imageUrl,
+        customImageUri: n.customImageUri,
         description: n.description,
         rank: n.rank,
         rating: n.rating,

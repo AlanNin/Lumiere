@@ -1,9 +1,12 @@
-import React from "react";
 import { cn } from "@/lib/cn";
-import { Image, StyleProp, TouchableOpacity, ViewStyle } from "react-native";
+import { StyleProp, TouchableOpacity, View, ViewStyle } from "react-native";
 import { LinearGradient } from "react-native-linear-gradient";
 import { useRouter } from "expo-router";
 import { Text } from "@/components/defaults";
+import { Image } from "expo-image";
+import { useState } from "react";
+import { BookMarked } from "lucide-react-native";
+import { colors } from "@/lib/constants";
 
 export default function NovelCard({
   title,
@@ -11,6 +14,7 @@ export default function NovelCard({
   href,
   containerClassName,
   containerStyle,
+  showSavedBadge,
 }: {
   title: string;
   imageUri: string;
@@ -20,10 +24,10 @@ export default function NovelCard({
   };
   containerClassName?: string;
   containerStyle?: StyleProp<ViewStyle>;
+  showSavedBadge?: boolean;
 }) {
   const router = useRouter();
-  const [imageError, setImageError] = React.useState(false);
-
+  const [imageError, setImageError] = useState(false);
   function handlePress() {
     if (href) {
       router.push({
@@ -31,6 +35,19 @@ export default function NovelCard({
         params: href.params,
       });
     }
+  }
+  function getGradientColors() {
+    if (showSavedBadge) {
+      return ["rgba(0, 0, 0, 0.6)", "rgba(0, 0, 0, 0.6)", "rgba(0, 0, 0, 0.6)"];
+    }
+
+    return [
+      "rgba(0, 0, 0, 0)",
+      "rgba(0, 0, 0, 0.2)",
+      "rgba(0, 0, 0, 0.4)",
+      "rgba(0, 0, 0, 0.7)",
+      "rgba(0, 0, 0, 0.9)",
+    ];
   }
 
   return (
@@ -41,33 +58,25 @@ export default function NovelCard({
       )}
       style={[
         {
-          width: "100%",
           aspectRatio: 1 / 1.5,
-          borderRadius: 8,
         },
         containerStyle,
       ]}
       onPress={handlePress}
     >
       <Image
+        cachePolicy="memory-disk"
         alt={`Cover of ${title}`}
         source={
-          imageError
-            ? require("@/assets/placeholders/novel.png")
-            : { uri: imageUri }
+          imageError ? require("@/assets/placeholders/novel.png") : imageUri
         }
-        className={cn(!imageError ? "absolute inset-0" : "size-20 m-auto")}
-        resizeMode="cover"
+        style={{ flex: 1 }}
+        contentFit={imageError ? "contain" : "cover"}
         onError={() => setImageError(true)}
       />
 
       <LinearGradient
-        colors={[
-          "rgba(0, 0, 0, 0)",
-          "rgba(0, 0, 0, 0.2)",
-          "rgba(0, 0, 0, 0.4)",
-          "rgba(0, 0, 0, 1)",
-        ]}
+        colors={getGradientColors()}
         style={{
           position: "absolute",
           top: 0,
@@ -76,6 +85,16 @@ export default function NovelCard({
           bottom: 0,
         }}
       />
+
+      {showSavedBadge && (
+        <View className="absolute top-3 left-3 bg-primary rounded-md p-1">
+          <BookMarked
+            color={colors.primary_foreground}
+            size={14}
+            strokeWidth={1.6}
+          />
+        </View>
+      )}
 
       <Text className="absolute bottom-3 left-3 right-3 text-sm tracking-wide text-muted_foreground">
         {title}

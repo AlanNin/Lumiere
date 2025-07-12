@@ -159,6 +159,26 @@ export const novelController = {
     }
   },
 
+  async updateNovelCustomImage({
+    novelTitle,
+    customImageUri,
+  }: {
+    novelTitle: NovelInfo["title"];
+    customImageUri: string;
+  }): Promise<boolean> {
+    try {
+      return await novelService.updateNovelCustomImage({
+        novelTitle,
+        customImageUri,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
   async downloadNovelChapter(chapter: DownloadChapter): Promise<boolean> {
     try {
       return await novelService.downloadNovelChapter(chapter);

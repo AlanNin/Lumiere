@@ -27,7 +27,11 @@ export default function NovelTopButtons({
         saved: !novelIsSaved,
       }),
     onSuccess: () => {
-      invalidateQueries("library", ["novel-info", novelTitle]);
+      invalidateQueries(
+        "library",
+        ["novel-info", novelTitle],
+        ["explore-novels"]
+      );
     },
   });
 

@@ -1,5 +1,5 @@
 import { Explore } from "@/types/explore";
-import { Chapter, NovelInfo } from "@/types/novel";
+import { Chapter, Novel, NovelInfo } from "@/types/novel";
 import { ExploreSection } from "../controllers/novel";
 import {
   scrapeNovelChapter,
@@ -10,6 +10,7 @@ import {
 import { novelRepository } from "../repositories/novel";
 import { DownloadChapter } from "@/types/download";
 import slugify from "@/lib/slug";
+import { saveImage } from "@/lib/file-system";
 
 export const novelService = {
   async getExploreSection({
@@ -25,9 +26,11 @@ export const novelService = {
 
     const novelsExploreUrl = getNovelsExploreUrl(section, pageNumber);
 
-    const { novels, totalPages } = await scrapeNovelsExplore({
+    const { novels: scrapedNovels, totalPages } = await scrapeNovelsExplore({
       novelsExploreUrl,
     });
+
+    const novels = await mergeNovelsScrapedWithStored(scrapedNovels);
 
     return {
       items: novels,
@@ -48,7 +51,11 @@ export const novelService = {
 
     const searchNovelsUrl = getNovelSearchUrl(searchQuery);
 
-    const { novels } = await scrapeNovelsSearch({ searchNovelsUrl });
+    const { novels: scrapedNovels } = await scrapeNovelsSearch({
+      searchNovelsUrl,
+    });
+
+    const novels = await mergeNovelsScrapedWithStored(scrapedNovels);
 
     return {
       items: novels,
@@ -80,6 +87,12 @@ export const novelService = {
       if (!info) {
         throw new Error("Failed to scrape novel info");
       }
+
+      const { uri: savedImageUri } = await saveImage({
+        sourceUri: info.imageUrl,
+      });
+
+      info.imageUrl = savedImageUri;
 
       await novelRepository.saveNovel(info);
 
@@ -216,6 +229,26 @@ export const novelService = {
         novelTitle,
         chapterNumber,
       });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
+
+  async updateNovelCustomImage({
+    novelTitle,
+    customImageUri,
+  }: {
+    novelTitle: NovelInfo["title"];
+    customImageUri: string;
+  }): Promise<boolean> {
+    try {
+      return await novelRepository.updateNovelCustomImage(
+        novelTitle,
+        customImageUri
+      );
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
@@ -446,4 +479,38 @@ function getNovelChaptersUrl(novelTitleSlug: string) {
 
 function getNovelChapterUrl(novelTitleSlug: string, chapterNumber: number) {
   return `https://novelfire.net/book/${novelTitleSlug}/chapter-${chapterNumber}`;
+}
+
+function mergeNovelsScrapedWithStored(
+  scrapedNovels: Novel[]
+): Promise<Novel[]> {
+  return Promise.all(
+    scrapedNovels.map(
+      async (scraped): Promise<Novel> => {
+        const stored = await novelRepository.findNovel({
+          novelTitle: scraped.title,
+        });
+
+        if (stored) {
+          return {
+            title: stored.title,
+            imageUrl: stored.imageUrl,
+            customImageUri: stored.customImageUri,
+            rating: stored.rating ?? 0,
+            rank: stored.rank ?? 0,
+            isSaved: stored.isSaved,
+          };
+        }
+
+        return {
+          title: scraped.title,
+          imageUrl: scraped.imageUrl,
+          customImageUri: null,
+          rating: scraped.rating ?? 0,
+          rank: scraped.rank ?? 0,
+          isSaved: false,
+        };
+      }
+    )
+  );
 }

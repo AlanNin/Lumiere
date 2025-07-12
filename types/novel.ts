@@ -17,8 +17,10 @@ export type Chapter = {
 export type Novel = {
   title: string;
   imageUrl: string;
+  customImageUri?: string | null;
   rating?: number;
   rank?: number;
+  isSaved?: boolean;
 };
 
 export type NovelInfo = Novel & {
@@ -28,7 +30,6 @@ export type NovelInfo = Novel & {
   status: string;
   chapters: Chapter[];
   categoryId?: number | null;
-  isSaved?: boolean;
 };
 
 export type NovelChaptersFilter = {

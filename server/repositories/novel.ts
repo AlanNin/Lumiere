@@ -1,7 +1,7 @@
 import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, asc, count, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
@@ -15,6 +15,7 @@ export const novelRepository = {
         .select({
           title: novels.title,
           imageUrl: novels.imageUrl,
+          customImageUri: novels.customImageUri,
           description: novels.description,
           rating: novels.rating,
           rank: novels.rank,
@@ -51,6 +52,7 @@ export const novelRepository = {
       const novelInfo: NovelInfo & { chapters: Chapter[] } = {
         title: novelRow.title,
         imageUrl: novelRow.imageUrl,
+        customImageUri: novelRow.customImageUri,
         description: novelRow.description,
         rating: novelRow.rating,
         rank: novelRow.rank,
@@ -334,6 +336,30 @@ export const novelRepository = {
       .run();
 
     return changes > 0;
+  },
+
+  async updateNovelCustomImage(
+    novelTitle: NovelInfo["title"],
+    customImageUri: string
+  ): Promise<boolean> {
+    try {
+      await db_client.transaction(async (tx) => {
+        await tx
+          .update(novels)
+          .set({
+            customImageUri: customImageUri === "" ? null : customImageUri,
+          })
+          .where(eq(novels.title, novelTitle))
+          .run();
+
+        return true;
+      });
+
+      return true;
+    } catch (e) {
+      console.error("Failed to update novel cover:", e);
+      throw e;
+    }
   },
 
   async downloadChapter(chapter: DownloadChapter): Promise<boolean> {

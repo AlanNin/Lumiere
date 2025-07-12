@@ -39,6 +39,7 @@ import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
 import NovelFindChapterDrawer from "@/components/novel/novelFindChapterDrawer";
 import NovelDownloadChaptersDrawer from "@/components/novel/novelDownloadChaptersDrawer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import NovelMoreChapterDrawer from "@/components/novel/novelMoreChapterDrawer";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -312,7 +313,7 @@ export default function NovelScreen() {
       <View className="flex flex-col gap-y-5 pb-4">
         <NovelDetails
           author={novelInfo?.author}
-          imageUrl={novelInfo.imageUrl}
+          imageUrl={novelInfo.customImageUri ?? novelInfo.imageUrl}
           rating={novelInfo.rating ?? 0}
           rank={novelInfo.rank ?? 0}
           status={novelInfo.status}
@@ -409,6 +410,9 @@ export default function NovelScreen() {
         handleOpenDownloadChaptersDrawer={() =>
           bottomDraweChaptersDownloadRef.current?.present()
         }
+        handleOpenMoreChapterDrawer={() =>
+          bottomDrawerMoreRef.current?.present()
+        }
       />
 
       <AnimatedFlashList
@@ -487,6 +491,14 @@ export default function NovelScreen() {
         maxChapters={novelChapters.length}
         allChaptersCompleted={allChaptersCompleted}
         hasDownloadedChapters={hasDownloadedChapters}
+        refetchNovelInfo={refetchNovelInfo}
+      />
+
+      <NovelMoreChapterDrawer
+        bottomDrawerRef={bottomDrawerMoreRef}
+        novelTitle={novelInfo.title}
+        novelImageUrl={novelInfo.imageUrl}
+        novelCustomImageUri={novelInfo.customImageUri}
         refetchNovelInfo={refetchNovelInfo}
       />
     </View>

@@ -92,13 +92,14 @@ function RenderNovels({
           return (
             <NovelCard
               title={item.title}
-              imageUri={item.imageUrl}
+              imageUri={item.customImageUri ?? item.imageUrl}
               containerClassName={index && index % 2 ? "ml-2" : "mr-2"}
               containerStyle={{ maxWidth }}
               href={{
                 pathname: "/novel",
                 params: { title: item.title, isLocal: "false" },
               }}
+              showSavedBadge={item.isSaved}
             />
           );
         }}
