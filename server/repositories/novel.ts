@@ -1,7 +1,7 @@
 import { Chapter, NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, asc, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { DownloadChapter } from "@/types/download";
 
 export const novelRepository = {
@@ -257,6 +257,7 @@ export const novelRepository = {
         .select({
           number: novelChapters.number,
           title: novelChapters.title,
+          downloaded: novelChapters.downloaded,
         })
         .from(novelChapters)
         .where(
@@ -269,6 +270,23 @@ export const novelRepository = {
         .limit(1)
         .get();
 
+      const previous = await db_client
+        .select({
+          number: novelChapters.number,
+          title: novelChapters.title,
+          downloaded: novelChapters.downloaded,
+        })
+        .from(novelChapters)
+        .where(
+          and(
+            eq(novelChapters.novelTitle, novelTitle),
+            lt(novelChapters.number, chapterNumber)
+          )
+        )
+        .orderBy(desc(novelChapters.number))
+        .limit(1)
+        .get();
+
       const chapter: Chapter = {
         novelTitle: row.novelTitle,
         number: row.number,
@@ -277,8 +295,19 @@ export const novelRepository = {
         bookMarked: Boolean(row.bookMarked),
         downloaded: Boolean(row.downloaded),
         content: String(row.content),
+        previousChapter: previous
+          ? {
+              number: previous.number,
+              title: previous.title,
+              downloaded: Boolean(previous.downloaded),
+            }
+          : undefined,
         nextChapter: next
-          ? { number: next.number, title: next.title }
+          ? {
+              number: next.number,
+              title: next.title,
+              downloaded: Boolean(next.downloaded),
+            }
           : undefined,
       };
 
@@ -326,7 +355,7 @@ export const novelRepository = {
   }): Promise<boolean> {
     const { changes } = await db_client
       .update(novelChapters)
-      .set({ readAt: sql`CURRENT_TIMESTAMP` })
+      .set({ readAt: sql`DATETIME('now', 'localtime')` })
       .where(
         and(
           eq(novelChapters.novelTitle, novelTitle),

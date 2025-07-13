@@ -84,6 +84,10 @@ export default function HomeScreen() {
     queryFn: () => libraryController.getLibrary(),
   });
 
+  const hasAnyNovels = libraryCategories.some(
+    (cat) => Array.isArray(cat.novels) && cat.novels.length > 0
+  );
+
   const sortedCategories = React.useMemo(() => {
     const source = !libraryCategories ? defaultLibrary : libraryCategories;
 
@@ -106,7 +110,11 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <TabHeader title="Library" containerClassName="mb-1" />
+      <TabHeader
+        title="Library"
+        showSearch={hasAnyNovels}
+        containerClassName="mb-1"
+      />
       <TabView
         navigationState={{ index, routes }}
         renderScene={({ route }) => {

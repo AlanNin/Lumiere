@@ -43,7 +43,7 @@ export default function NovelDetails({
       <NativeImage
         alt={`Background of ${title}`}
         source={{ uri: imageUrl }}
-        className="flex-1"
+        className="flex-1 object-cover"
         blurRadius={1.5}
       />
       <View className="absolute inset-0 opacity-20" />

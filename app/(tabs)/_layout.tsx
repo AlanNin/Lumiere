@@ -4,10 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   return (
-    <SafeAreaView
-      className="flex-1 bg-background"
-      edges={["right", "left", "top"]}
-    >
+    <SafeAreaView className="flex-1 bg-background" edges={["right", "left"]}>
       <Tabs
         tabBarStyle={{ backgroundColor: colors.layout_background }}
         activeIndicatorColor={colors.primary}

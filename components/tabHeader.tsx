@@ -6,23 +6,50 @@ import { useFocusEffect } from "@react-navigation/native";
 import { usePathname } from "expo-router";
 import { Text } from "@/components/defaults";
 import { cn } from "@/lib/cn";
+import Animated, {
+  SharedValue,
+  interpolateColor,
+  useAnimatedStyle,
+  useDerivedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabHeader({
   title,
+  showSearch,
   searchQuery,
   setSearchQuery,
   isSearchOpen,
   setIsSearchOpen,
   containerClassName,
+  scrollY,
 }: {
   title: string;
+  showSearch?: boolean;
   searchQuery?: string;
   setSearchQuery?: (query: string) => void;
   isSearchOpen?: boolean;
   setIsSearchOpen?: (isOpen: boolean) => void;
   containerClassName?: string;
+  scrollY?: SharedValue<number>;
 }) {
+  const insets = useSafeAreaInsets();
+
   const pathname = usePathname();
+
+  // Optional animated background
+  const bgProgress = useDerivedValue(() =>
+    withTiming((scrollY?.value ?? 0) > 0 ? 1 : 0, { duration: 300 })
+  );
+  const backgroundStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      bgProgress.value,
+      [0, 1],
+      ["transparent", colors.layout_background]
+    ),
+  }));
+  //...
 
   useFocusEffect(
     React.useCallback(() => {
@@ -58,7 +85,7 @@ export default function TabHeader({
   }, [pathname]);
 
   return (
-    <>
+    <Animated.View style={[{ paddingTop: insets.top }, backgroundStyle]}>
       {isSearchOpen &&
       searchQuery != undefined &&
       setSearchQuery != undefined ? (
@@ -96,18 +123,20 @@ export default function TabHeader({
           )}
         >
           <Text className="text-2xl text-muted_foreground">{title}</Text>
-          <TouchableOpacity
-            onPress={() => {
-              if (setIsSearchOpen) {
-                setIsSearchOpen(true);
-              }
-            }}
-            className="p-2 -mr-2"
-          >
-            <Search color={colors.muted_foreground} size={20} />
-          </TouchableOpacity>
+          {showSearch && (
+            <TouchableOpacity
+              onPress={() => {
+                if (setIsSearchOpen) {
+                  setIsSearchOpen(true);
+                }
+              }}
+              className="p-2 -mr-2"
+            >
+              <Search color={colors.muted_foreground} size={20} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
-    </>
+    </Animated.View>
   );
 }

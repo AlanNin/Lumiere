@@ -8,9 +8,15 @@ export type Chapter = {
   bookMarked?: boolean;
   downloaded?: boolean;
   readAt?: string;
+  previousChapter?: {
+    number: number;
+    title: string;
+    downloaded?: boolean;
+  };
   nextChapter?: {
     number: number;
     title: string;
+    downloaded?: boolean;
   };
 };
 

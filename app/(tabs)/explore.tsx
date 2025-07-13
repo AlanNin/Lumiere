@@ -205,6 +205,7 @@ export default function ExploreScreen() {
         setSearchQuery={setSearchQuery}
         isSearchOpen={isSearchOpen}
         setIsSearchOpen={setIsSearchOpen}
+        showSearch={true}
       />
       <View className="flex flex-col gap-y-2 border-b-[0.5px] border-muted pb-4">
         <FlatList

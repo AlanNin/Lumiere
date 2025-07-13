@@ -2,7 +2,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
 } from "react-native-reanimated";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
@@ -154,7 +154,15 @@ export default function NovelScreen() {
       return nextAfterRead;
     }
 
-    // 3) Otherwise, fall back to any chapter in progress (1–99%), picking the highest number
+    // 3) If no chapter in progress after last read, return the next unread chapter (0% progress)
+    const nextUnread = chapters.find(
+      (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) === 0
+    );
+    if (nextUnread) {
+      return nextUnread;
+    }
+
+    // 4) Otherwise, fall back to any chapter in progress (1–99%), picking the highest number
     const inProgress = chapters.filter(
       (c) => (c.progress ?? 0) > 0 && (c.progress ?? 0) < 100
     );
@@ -164,7 +172,7 @@ export default function NovelScreen() {
       );
     }
 
-    // 4) If nothing applies (all at 0% or all at 100%), return null
+    // 5) If nothing applies, return null
     return null;
   }, [novelInfo]);
 
@@ -181,7 +189,6 @@ export default function NovelScreen() {
         params: {
           novelTitle: novelInfo?.title ?? "",
           chapterNumber,
-          totalChapters: novelInfo?.chapters.length ?? 0,
           downloaded: downloaded ? 1 : 0,
         },
       });

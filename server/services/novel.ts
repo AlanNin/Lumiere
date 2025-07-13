@@ -130,7 +130,10 @@ export const novelService = {
 
       const novelChapterUrl = getNovelChapterUrl(novelTitleSlug, chapterNumber);
 
-      const scrapedChapter = await scrapeNovelChapter({ novelChapterUrl });
+      const scrapedChapter = await scrapeNovelChapter({
+        novelChapterUrl,
+        chapterNumber,
+      });
 
       if (!scrapedChapter) {
         throw new Error("Failed to scrape novel chapter");
@@ -271,7 +274,10 @@ export const novelService = {
 
       const novelChapterUrl = getNovelChapterUrl(novelTitleSlug, chapterNumber);
 
-      const scrapedChapter = await scrapeNovelChapter({ novelChapterUrl });
+      const scrapedChapter = await scrapeNovelChapter({
+        novelChapterUrl,
+        chapterNumber,
+      });
 
       if (!scrapedChapter) {
         throw new Error("Failed to scrape novel chapter");

@@ -103,6 +103,7 @@ export default function NovelMoreChapterDrawer({
           alt={`Cover of ${novelTitle}`}
           source={imageUrl}
           style={{ aspectRatio: 1 / 1.5, height: 182, borderRadius: 8 }}
+          contentFit="cover"
         />
         <Text className="text-muted_foreground/75 text-center mb-2">
           {hasCustomImage ? "Custom" : "Default"}

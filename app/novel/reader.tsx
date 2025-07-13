@@ -10,14 +10,10 @@ import { useEffect, useRef, useState } from "react";
 
 export default function NovelReaderScreen() {
   const router = useRouter();
-  const {
-    novelTitle,
-    chapterNumber,
-    totalChapters,
-    downloaded,
-  } = useLocalSearchParams();
+  const { novelTitle, chapterNumber, downloaded } = useLocalSearchParams();
 
   const isDownloaded = downloaded ? downloaded === "1" : false;
+
   const { top, bottom } = useSafeAreaInsets();
   const [staticInsets, setStaticInsets] = useState(() => ({
     top: 0,
@@ -73,11 +69,7 @@ export default function NovelReaderScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ReaderComponent
-        chapter={novelChapter}
-        totalChapters={Number(totalChapters)}
-        insets={staticInsets}
-      />
+      <ReaderComponent chapter={novelChapter} insets={staticInsets} />
     </View>
   );
 }

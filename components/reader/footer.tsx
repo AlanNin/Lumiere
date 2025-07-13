@@ -22,6 +22,7 @@ export default function ReaderFooter({
       params: {
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.nextChapter.number,
+        downloaded: chapter.nextChapter.downloaded ? 1 : 0,
       },
     });
   }

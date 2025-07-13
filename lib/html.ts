@@ -1,4 +1,6 @@
 export function sanitizeHtml(dirtyHtml: string) {
+  let pCounter = 0;
+
   const cleanHtml = dirtyHtml
     // 1. Remove all <script>…</script> blocks to prevent embedded JavaScript.
     .replace(/<script[\s\S]*?<\/script>/gi, "")
@@ -6,20 +8,52 @@ export function sanitizeHtml(dirtyHtml: string) {
     // 2. Strip out any <div> with an id like "pf-…" (e.g. page-fragments injected by some renderers).
     .replace(/<div\s+id="pf-[^"]+"[\s\S]*?<\/div>/gi, "")
 
-    // 3. Unescape any “\u003c…\u003e” sequences back into plain HTML tags.
+    // 3. Unescape any "\u003c…\u003e" sequences back into plain HTML tags.
     .replace(/\\u003c([^>]+)\\u003e/g, "$1")
 
-    // 4. Ensure punctuation before a quote has a space after it (e.g. “Hello.”&quot;World” → “Hello.”&quot; World”).
+    // 4. Ensure punctuation before a quote has a space after it (e.g. "Hello."&quot;World" → "Hello."&quot; World").
     .replace(/([.!?])\s*&quot;([A-ZÀ-Ú])/g, "$1&quot; $2")
 
-    // 5. Remove translator credits at the start of paragraphs (“Translator: …”).
+    // 5. Remove translator credits at the start of paragraphs ("Translator: …").
     .replace(/<p>\s*<strong>\s*Translator:[\s\S]*?<\/p>/gi, "")
 
-    // 5.1 Remove any <p> that contains “TL Notes:”
+    .replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, (match) => {
+      pCounter++;
+      if (pCounter <= 2 && /(Translator:|TL:)/i.test(match)) {
+        return "";
+      }
+      return match;
+    })
+
+    // 5.1 Remove any <p> that contains "TL Notes:"
     .replace(/<p>[\s\S]*?TL Notes:[\s\S]*?<\/p>/gi, "")
 
     // 5.2 Remove any <p> that contains the "NovelFire Notes"
     .replace(/<p[^>]*>\s*Search the NovelFire\.net[\s\S]*?<\/p>/gi, "")
+
+    // 5.3 Remove any paragraphs containing "http"
+    .replace(
+      /<p[^>]*>(?:(?!<\/p>)[\s\S])*?http(?:(?!<\/p>)[\s\S])*?<\/p>/gi,
+      ""
+    )
+
+    // 5.4 Remove donation link paragraphs
+    .replace(/<p\b[^>]*>[^<]*Link to donations[^<]*<\/p>/gi, "")
+
+    // 5.5 Remove paragraphs with "box-notification" class containing NovelFire search text
+    .replace(
+      /<p[^>]*class="[^"]*box-notification[^"]*"[^>]*>\s*Search the\s*<b>NovelFire\.net<\/b>\s*website[\s\S]*?<\/p>/gi,
+      ""
+    )
+
+    // 5.6 Remove other NovelFire search instruction paragraphs
+    .replace(
+      /<p[^>]*>\s*Search the\s*(?:<b>)?NovelFire\.net(?:<\/b>)?\s*website[\s\S]*?<\/p>/gi,
+      ""
+    )
+
+    // 5.7 Remove paragraphs that contain "Chapter n:" where n is any number
+    .replace(/<p[^>]*>\s*Chapter\s+\d+:\s*[\s\S]*?<\/p>/gi, "")
 
     // 6. Delete any empty <p> tags (including those containing only whitespace or &nbsp;).
     .replace(/<p>(?:\s|&nbsp;)*<\/p>/gi, "")
@@ -27,7 +61,7 @@ export function sanitizeHtml(dirtyHtml: string) {
     // 7. Delete any empty <div> tags (including those containing only whitespace or &nbsp;).
     .replace(/<div>(?:\s|&nbsp;)*<\/div>/gi, "")
 
-    // 8. Collapse stray text between </p> and <p> into its own <p> if it’s substantial.
+    // 8. Collapse stray text between </p> and <p> into its own <p> if it's substantial.
     .replace(
       /(<\/p>\s*)((?:[^<\r\n]+(?:\r?\n[^<\r\n]*)*)+)(\s*<p>)/gi,
       (match, prefix, content, suffix) => {
@@ -39,7 +73,7 @@ export function sanitizeHtml(dirtyHtml: string) {
       }
     )
 
-    // 9. Similarly, wrap stray text after closing headings or divs into a new <p> if it’s substantial.
+    // 9. Similarly, wrap stray text after closing headings or divs into a new <p> if it's substantial.
     .replace(
       /(<\/(?:h[1-6]|div)>\s*)((?:[^<\r\n]+(?:\r?\n[^<\r\n]*)*)+)(\s*<(?:h[1-6]|div|p))/gi,
       (match, prefix, content, suffix) => {
@@ -80,6 +114,35 @@ export function sanitizeHtml(dirtyHtml: string) {
 
     // 12. Normalize any run of 4+ dots into exactly three ellipsis "..."
     .replace(/\.{4,}/g, "...");
+
+  // 13. Remove translator notes from the last paragraphs
+  const paragraphs = cleanHtml.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];
+
+  if (paragraphs.length > 0) {
+    const lastFourStart = Math.max(0, paragraphs.length - 4);
+    let foundTranslatorNoteIndex = -1;
+
+    for (let i = lastFourStart; i < paragraphs.length; i++) {
+      if (/(Translator Notes:|TL:)/i.test(paragraphs[i])) {
+        foundTranslatorNoteIndex = i;
+        break;
+      }
+    }
+
+    if (foundTranslatorNoteIndex !== -1) {
+      const paragraphsToKeep = paragraphs.slice(0, foundTranslatorNoteIndex);
+      const beforeParagraphs = cleanHtml.split(/<p\b[^>]*>[\s\S]*?<\/p>/gi)[0];
+      const afterParagraphs = cleanHtml
+        .split(/<p\b[^>]*>[\s\S]*?<\/p>/gi)
+        .slice(-1)[0];
+
+      return (
+        beforeParagraphs +
+        paragraphsToKeep.join("") +
+        (paragraphsToKeep.length > 0 ? afterParagraphs : "")
+      );
+    }
+  }
 
   return cleanHtml;
 }

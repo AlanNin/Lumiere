@@ -19,7 +19,6 @@ export default function ReaderBottomBar({
   layoutVisible,
   postponeHide,
   chapter,
-  totalChapters,
   insets,
   isAtBottom,
   isAtTop,
@@ -30,7 +29,6 @@ export default function ReaderBottomBar({
   layoutVisible: boolean;
   postponeHide: () => void;
   chapter: Chapter;
-  totalChapters: number;
   insets: { top: number; bottom: number };
   isAtBottom: boolean;
   isAtTop: boolean;
@@ -50,25 +48,27 @@ export default function ReaderBottomBar({
   }));
 
   function handlePreviousChapter() {
-    if (chapter.number === 1) return;
+    if (!chapter.previousChapter) return;
 
     router.replace({
       pathname: "/novel/reader",
       params: {
         novelTitle: chapter.novelTitle,
-        chapterNumber: chapter.number + 1,
-        totalChapters,
+        chapterNumber: chapter.previousChapter.number,
+        downloaded: chapter.previousChapter.downloaded ? 1 : 0,
       },
     });
   }
 
   function handleNextChapter() {
-    if (chapter.number === totalChapters) return;
+    if (!chapter.nextChapter) return;
+
     router.replace({
       pathname: "/novel/reader",
       params: {
         novelTitle: chapter.novelTitle,
-        chapterNumber: chapter.number + 1,
+        chapterNumber: chapter.nextChapter.number,
+        downloaded: chapter.nextChapter.downloaded ? 1 : 0,
       },
     });
   }
@@ -88,12 +88,14 @@ export default function ReaderBottomBar({
         }}
       >
         <TouchableOpacity
-          disabled={chapter.number === 1}
+          disabled={!chapter.previousChapter}
           onPress={handlePreviousChapter}
           className="p-2 -m-2"
         >
           <ChevronLeft
-            color={chapter.number === 1 ? colors.grayscale : colors.foreground}
+            color={
+              !chapter.previousChapter ? colors.grayscale : colors.foreground
+            }
             size={24}
             strokeWidth={1.6}
           />
@@ -131,16 +133,12 @@ export default function ReaderBottomBar({
         </TouchableOpacity>
 
         <TouchableOpacity
-          disabled={chapter.number === totalChapters}
+          disabled={!chapter.nextChapter}
           onPress={handleNextChapter}
           className="p-2 -m-2"
         >
           <ChevronRight
-            color={
-              chapter.number === totalChapters
-                ? colors.grayscale
-                : colors.foreground
-            }
+            color={!chapter.nextChapter ? colors.grayscale : colors.foreground}
             size={24}
             strokeWidth={1.6}
           />

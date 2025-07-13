@@ -47,7 +47,7 @@ export default function NovelHeader({
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Animate from fully transparent → your layout background
+  // Animate from fully transparent → to layout background
   const bgProgress = useDerivedValue(() =>
     withTiming(selectedChapters || scrollY.value > 0 ? 1 : 0, { duration: 300 })
   );

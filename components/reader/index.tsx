@@ -27,11 +27,9 @@ import ReaderFooter from "./footer";
 
 export default function ReaderComponent({
   chapter,
-  totalChapters,
   insets,
 }: {
   chapter: Chapter;
-  totalChapters: number;
   insets: { top: number; bottom: number };
 }) {
   const { width } = useWindowDimensions();
@@ -79,7 +77,7 @@ export default function ReaderComponent({
         chapterNumber: chapter.number,
       }),
     onSuccess: () => {
-      invalidateQueries(["history"]);
+      invalidateQueries("history");
     },
   });
 
@@ -215,7 +213,6 @@ export default function ReaderComponent({
       layoutVisible={layoutVisible || holdHide}
       postponeHide={postponeHide}
       chapter={chapter}
-      totalChapters={totalChapters}
       scrollToTop={scrollToTop}
       scrollToBottom={scrollToBottom}
       insets={insets}

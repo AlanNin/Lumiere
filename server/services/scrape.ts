@@ -224,6 +224,7 @@ export async function scrapeNovelInfo({
 
 export async function scrapeNovelChapter({
   novelChapterUrl,
+  chapterNumber,
 }: ScrapeNovelChapter): Promise<Chapter | null> {
   const res = await fetch(novelChapterUrl, { headers: DEFAULT_HEADERS });
   if (!res.ok) {
@@ -257,7 +258,7 @@ export async function scrapeNovelChapter({
   } else {
     // fallback if the site changed format
     const fallback = rawTitle.match(/^(\d+)/);
-    number = fallback ? parseInt(fallback[1], 10) : NaN;
+    number = fallback ? parseInt(fallback[1], 10) : chapterNumber;
     title = rawTitle.replace(/^Chapter\s*\d+/, "").trim();
   }
 

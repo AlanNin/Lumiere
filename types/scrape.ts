@@ -13,4 +13,5 @@ export type ScrapeNovelInfo = {
 
 export type ScrapeNovelChapter = {
   novelChapterUrl: string;
+  chapterNumber: number;
 };
