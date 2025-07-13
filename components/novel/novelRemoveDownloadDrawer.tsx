@@ -43,8 +43,7 @@ export default function NovelRemoveDownloadDrawer({
     <BottomDrawer ref={bottomDrawerRef}>
       <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-4 flex-1">
         <Text className="text-lg font-medium text-center">
-          Delete Downloaded{" "}
-          {chaptersToDelete.length > 1 ? "Chapters" : "Chapter"}
+          Remove {chaptersToDelete.length > 1 ? "Chapters" : "Chapter"}
         </Text>
         <Text className="text-muted_foreground/85 text-center mx-2 mb-4">
           You won't be able to read{" "}
@@ -56,7 +55,7 @@ export default function NovelRemoveDownloadDrawer({
             className="bg-primary text-primary_foreground px-6 py-3 rounded-lg w-full flex items-center justify-center"
             onPress={handleDeleteChapters}
           >
-            <Text>I Understand, Delete</Text>
+            <Text>Remove</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="px-4 py-1 rounded-lg w-full flex items-center justify-center"

@@ -99,4 +99,18 @@ export const historyRepository = {
       throw e;
     }
   },
+
+  async removeAllHistory(): Promise<boolean> {
+    try {
+      const { changes } = await db_client
+        .update(novelChapters)
+        .set({ readAt: null })
+        .run();
+
+      return changes > 0;
+    } catch (e) {
+      console.error("Failed to remove all history:", e);
+      throw e;
+    }
+  },
 };

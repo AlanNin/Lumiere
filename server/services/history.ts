@@ -47,4 +47,15 @@ export const historyService = {
       throw new Error("An unknown error occurred.");
     }
   },
+
+  async removeAllHistory(): Promise<boolean> {
+    try {
+      return await historyRepository.removeAllHistory();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
 };

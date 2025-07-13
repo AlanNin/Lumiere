@@ -22,7 +22,7 @@ const DEFAULT_DOWNLOAD_MODE_OPTIONS: {
   { label: "Unread", value: "unread" },
   { label: "All", value: "all" },
   { label: "Custom", value: "custom" },
-  { label: "Delete Downloads", value: "delete-downloads" },
+  { label: "Remove All", value: "remove-all" },
 ];
 
 export default function NovelDownloadChaptersDrawer({
@@ -69,12 +69,12 @@ export default function NovelDownloadChaptersDrawer({
       }
     }
 
-    if (!hasDownloadedChapters && opt.value === "delete-downloads") {
+    if (!hasDownloadedChapters && opt.value === "remove-all") {
       return false;
     }
 
     const allDownloaded = chapters.every((chapter) => chapter.downloaded);
-    if (allDownloaded && opt.value !== "delete-downloads") {
+    if (allDownloaded && opt.value !== "remove-all") {
       return false;
     }
 
@@ -115,7 +115,7 @@ export default function NovelDownloadChaptersDrawer({
   });
 
   const [selectedDownloadMode, setSelectedDownloadMode] = useState<string>(
-    DOWNLOAD_MODE_OPTIONS[0]?.value || "delete-downloads"
+    DOWNLOAD_MODE_OPTIONS[0]?.value || "remove-all"
   );
   const [customFrom, setCustomFrom] = useState<number | null>(null);
   const [customTo, setCustomTo] = useState<number | null>(null);
@@ -174,13 +174,11 @@ export default function NovelDownloadChaptersDrawer({
     }
   }
 
-  const isDeleteDownloads = selectedDownloadMode === "delete-downloads";
+  const isDeleteDownloads = selectedDownloadMode === "remove-all";
   const isCustom = selectedDownloadMode === "custom";
 
   function handleReset() {
-    setSelectedDownloadMode(
-      DOWNLOAD_MODE_OPTIONS[0]?.value || "delete-downloads"
-    );
+    setSelectedDownloadMode(DOWNLOAD_MODE_OPTIONS[0]?.value || "remove-all");
     setCustomFrom(null);
     setCustomTo(null);
   }
@@ -264,9 +262,7 @@ export default function NovelDownloadChaptersDrawer({
     <BottomDrawer ref={bottomDrawerRef} onClose={handleReset}>
       <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-4 flex-1">
         <Text className="text-lg font-medium text-center">
-          {!isDeleteDownloads
-            ? "Download Chapters"
-            : "Delete Download Chapters"}
+          {!isDeleteDownloads ? "Download Chapters" : "Remove Chapters"}
         </Text>
         <Text className="text-muted_foreground/85 text-center mx-2 mb-4">
           {!isDeleteDownloads
@@ -333,9 +329,7 @@ export default function NovelDownloadChaptersDrawer({
               )}
               onPress={handleConfirm}
             >
-              <Text>
-                {!isDeleteDownloads ? "Download" : "I Understand, Delete"}
-              </Text>
+              <Text>{!isDeleteDownloads ? "Download" : "Remove"}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               className="px-4 py-1 rounded-lg w-full flex items-center justify-center"

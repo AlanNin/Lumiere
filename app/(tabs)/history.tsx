@@ -1,18 +1,20 @@
 import HistoryBatchCard from "@/components/history/historyBatchCard";
+import HistoryRemoveAllModal from "@/components/history/historyRemoveAllModal";
 import HistoryRemoveEntriesModal from "@/components/history/historyRemoveEntriesModal";
 import Loading from "@/components/statics/loading";
 import Quote from "@/components/statics/quote";
 import TabHeader from "@/components/tabHeader";
 import { cn } from "@/lib/cn";
+import { colors } from "@/lib/constants";
 import { historyController } from "@/server/controllers/history";
 import { HistoryBatch } from "@/types/history";
 
 import { useKeyboard } from "@react-native-community/hooks";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { BookOpen } from "lucide-react-native";
+import { BookOpen, Shredder } from "lucide-react-native";
 import { useState } from "react";
-import { View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -32,6 +34,7 @@ export default function HistoryScreen() {
   const [removeAllChaptersFromEntry, setRemoveAllChaptersFromEntry] = useState(
     false
   );
+  const [removeAllHistoryModal, setRemoveAllHistoryModal] = useState(false);
 
   const {
     data: history,
@@ -82,6 +85,14 @@ export default function HistoryScreen() {
     },
   });
 
+  const { mutate: removeAllHistory } = useMutation({
+    mutationFn: () => historyController.removeAllHistory(),
+    onSuccess: () => {
+      refetchHistory();
+      setRemoveAllHistoryModal(false);
+    },
+  });
+
   function handleRemoveEntry() {
     if (!entryToRemove) return;
 
@@ -95,12 +106,26 @@ export default function HistoryScreen() {
     }
   }
 
+  function renderRemoveAllEntriesButton() {
+    if (history?.length === 0) return null;
+
+    return (
+      <TouchableOpacity
+        className="p-2"
+        onPress={() => setRemoveAllHistoryModal(true)}
+      >
+        <Shredder color={colors.muted_foreground} size={20} strokeWidth={1.6} />
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <View className="flex-1 bg-background">
       <TabHeader
         title="History"
-        showSearch={history !== null}
+        showSearch={history?.length !== 0}
         scrollY={scrollY}
+        customRightContent={renderRemoveAllEntriesButton()}
       />
       {isLoadingHistory ? (
         <View
@@ -150,6 +175,12 @@ export default function HistoryScreen() {
         removeAllChaptersFromEntry={removeAllChaptersFromEntry}
         setRemoveAllChaptersFromEntry={setRemoveAllChaptersFromEntry}
         handleRemoveEntry={handleRemoveEntry}
+      />
+
+      <HistoryRemoveAllModal
+        removeAllHistoryModal={removeAllHistoryModal}
+        handleClose={() => setRemoveAllHistoryModal(false)}
+        handleRemoveAllHistory={removeAllHistory}
       />
     </View>
   );

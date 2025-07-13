@@ -24,6 +24,7 @@ export default function TabHeader({
   setIsSearchOpen,
   containerClassName,
   scrollY,
+  customRightContent,
 }: {
   title: string;
   showSearch?: boolean;
@@ -33,6 +34,7 @@ export default function TabHeader({
   setIsSearchOpen?: (isOpen: boolean) => void;
   containerClassName?: string;
   scrollY?: SharedValue<number>;
+  customRightContent?: React.ReactNode;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -123,18 +125,21 @@ export default function TabHeader({
           )}
         >
           <Text className="text-2xl text-muted_foreground">{title}</Text>
-          {showSearch && (
-            <TouchableOpacity
-              onPress={() => {
-                if (setIsSearchOpen) {
-                  setIsSearchOpen(true);
-                }
-              }}
-              className="p-2 -mr-2"
-            >
-              <Search color={colors.muted_foreground} size={20} />
-            </TouchableOpacity>
-          )}
+          <View className="flex flex-row items-center gap-x-3 -mr-2">
+            {showSearch && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (setIsSearchOpen) {
+                    setIsSearchOpen(true);
+                  }
+                }}
+                className="p-2"
+              >
+                <Search color={colors.muted_foreground} size={20} />
+              </TouchableOpacity>
+            )}
+            {customRightContent}
+          </View>
         </View>
       )}
     </Animated.View>
