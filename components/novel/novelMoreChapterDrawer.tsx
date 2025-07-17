@@ -46,7 +46,7 @@ export default function NovelMoreChapterDrawer({
     onSuccess: () => {
       refetchNovelInfo();
       handleClose();
-      invalidateQueries(["library"], ["explore-novels"]);
+      invalidateQueries(["library"], ["explore-novels"], ["history"]);
     },
   });
 

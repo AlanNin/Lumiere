@@ -33,7 +33,6 @@ export const historyRepository = {
           novelImage: r.novelImage!,
           novelCustomImage: r.novelCustomImage,
           chapterNumber: r.chapterNumber,
-          chapterTitle: r.chapterTitle,
           readAt: r.readAt!,
           downloaded: Boolean(r.downloaded),
         });

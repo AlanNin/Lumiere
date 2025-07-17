@@ -7,13 +7,12 @@ import TabHeader from "@/components/tabHeader";
 import { cn } from "@/lib/cn";
 import { colors } from "@/lib/constants";
 import { historyController } from "@/server/controllers/history";
-import { HistoryBatch } from "@/types/history";
-
+import type { HistoryBatch } from "@/types/history";
 import { useKeyboard } from "@react-native-community/hooks";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { BookOpen, Shredder } from "lucide-react-native";
-import { useState } from "react";
+import { BookOpen, Shredder, Search } from "lucide-react-native";
+import { useState, useMemo } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
@@ -27,13 +26,19 @@ const AnimatedFlashList = Animated.createAnimatedComponent<
 export default function HistoryScreen() {
   const { keyboardShown } = useKeyboard();
   const scrollY = useSharedValue(0);
+
   const [entryToRemove, setEntryToRemove] = useState<{
     novelTitle: string;
     chapterNumber: number;
   } | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
   const [removeAllChaptersFromEntry, setRemoveAllChaptersFromEntry] = useState(
     false
   );
+
   const [removeAllHistoryModal, setRemoveAllHistoryModal] = useState(false);
 
   const {
@@ -44,6 +49,22 @@ export default function HistoryScreen() {
     queryKey: ["history"],
     queryFn: () => historyController.getHistory(),
   });
+
+  const filteredHistory = useMemo(() => {
+    if (!history) return [];
+    if (!searchQuery) return history;
+
+    return history
+      .map((batch) => {
+        const filteredChapters = batch.chaptersHistory.filter((h) =>
+          h.novelTitle.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        return filteredChapters.length > 0
+          ? { ...batch, chaptersHistory: filteredChapters }
+          : null;
+      })
+      .filter((b): b is HistoryBatch => b !== null);
+  }, [history, searchQuery]);
 
   const scrollYHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -107,7 +128,8 @@ export default function HistoryScreen() {
   }
 
   function renderRemoveAllEntriesButton() {
-    if (history?.length === 0) return null;
+    const list = searchQuery ? filteredHistory : history;
+    if (!list || list.length === 0) return null;
 
     return (
       <TouchableOpacity
@@ -123,10 +145,15 @@ export default function HistoryScreen() {
     <View className="flex-1 bg-background">
       <TabHeader
         title="History"
-        showSearch={history?.length !== 0}
+        showSearch={Boolean(history && history.length > 0)}
         scrollY={scrollY}
         customRightContent={renderRemoveAllEntriesButton()}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        isSearchOpen={isSearchOpen}
+        setIsSearchOpen={setIsSearchOpen}
       />
+
       {isLoadingHistory ? (
         <View
           className={cn(
@@ -138,22 +165,27 @@ export default function HistoryScreen() {
         </View>
       ) : (
         <>
-          {history?.length === 0 ? (
-            <Quote
-              quote="The timeline lies silent, your first chapter awaits."
-              Icon={BookOpen}
-            />
+          {(searchQuery ? filteredHistory : history)?.length === 0 ? (
+            <View
+              className={cn(
+                "items-center justify-center flex",
+                keyboardShown ? "h-[36%]" : "flex-1"
+              )}
+            >
+              <Quote
+                quote="The timeline lies silent, your first chapter awaits."
+                Icon={BookOpen}
+              />
+            </View>
           ) : (
             <AnimatedFlashList
-              data={history}
-              renderItem={({ item }) => {
-                return (
-                  <HistoryBatchCard
-                    history={item}
-                    openRemoveEntryDrawer={setEntryToRemove}
-                  />
-                );
-              }}
+              data={searchQuery ? filteredHistory : history!}
+              renderItem={({ item }) => (
+                <HistoryBatchCard
+                  history={item}
+                  openRemoveEntryDrawer={setEntryToRemove}
+                />
+              )}
               contentContainerStyle={{
                 padding: 16,
               }}
