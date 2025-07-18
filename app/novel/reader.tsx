@@ -47,7 +47,7 @@ export default function NovelReaderScreen() {
 
   if (!isDownloaded && isFetching) {
     return (
-      <Loading title="To wait is to hope. It is the seed of an action yet to be." />
+      <Loading title="Fate never repeats itself indefinitely. It always brings us some surprises." />
     );
   }
 

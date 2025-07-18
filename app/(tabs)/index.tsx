@@ -97,14 +97,15 @@ export default function HomeScreen() {
   const routes = React.useMemo(
     () =>
       sortedCategories.map((category) => ({
-        key: category.label,
+        key: category.id.toString(),
         title: category.label,
       })),
     [sortedCategories]
   );
 
   const renderScenes = sortedCategories.reduce((scenes, category) => {
-    scenes[category.label] = () => renderNovels(category.novels, width);
+    const key = category.id.toString();
+    scenes[key] = () => renderNovels(category.novels, width);
     return scenes;
   }, {} as { [key: string]: () => React.ReactNode });
 

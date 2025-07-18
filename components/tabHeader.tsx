@@ -3,7 +3,7 @@ import { BackHandler, TextInput, TouchableOpacity, View } from "react-native";
 import { ArrowLeft, Search } from "lucide-react-native";
 import { colors } from "@/lib/constants";
 import { useFocusEffect } from "@react-navigation/native";
-import { usePathname } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { Text } from "@/components/defaults";
 import { cn } from "@/lib/cn";
 import Animated, {
@@ -25,6 +25,7 @@ export default function TabHeader({
   containerClassName,
   scrollY,
   customRightContent,
+  renderBackButton,
 }: {
   title: string;
   showSearch?: boolean;
@@ -35,10 +36,11 @@ export default function TabHeader({
   containerClassName?: string;
   scrollY?: SharedValue<number>;
   customRightContent?: React.ReactNode;
+  renderBackButton?: boolean;
 }) {
-  const insets = useSafeAreaInsets();
-
+  const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
   // Optional animated background
   const bgProgress = useDerivedValue(() =>
@@ -124,17 +126,22 @@ export default function TabHeader({
             containerClassName
           )}
         >
-          <Text className="text-2xl text-muted_foreground">{title}</Text>
+          <View
+            className={cn(
+              "flex flex-row items-center gap-x-3",
+              renderBackButton && "-ml-2"
+            )}
+          >
+            {renderBackButton && (
+              <TouchableOpacity onPress={() => router.back()} className="p-2">
+                <ArrowLeft color={colors.muted_foreground} size={20} />
+              </TouchableOpacity>
+            )}
+            <Text className="text-2xl text-muted_foreground">{title}</Text>
+          </View>
           <View className="flex flex-row items-center gap-x-3 -mr-2">
             {showSearch && (
-              <TouchableOpacity
-                onPress={() => {
-                  if (setIsSearchOpen) {
-                    setIsSearchOpen(true);
-                  }
-                }}
-                className="p-2"
-              >
+              <TouchableOpacity onPress={() => router.back()} className="p-2">
                 <Search color={colors.muted_foreground} size={20} />
               </TouchableOpacity>
             )}

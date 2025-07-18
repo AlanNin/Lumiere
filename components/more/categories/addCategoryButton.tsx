@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import { TouchableOpacity } from "react-native";
 import Animated, {
   SharedValue,
@@ -9,35 +8,24 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
-import { Play } from "lucide-react-native";
+import { Plus } from "lucide-react-native";
 import { colors } from "@/lib/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 
-const FIXED_BUTTON_WIDTH = {
-  NOT_SCROLLING: {
-    START: 98,
-    RESUME: 120,
-  },
-  SCROLLING: 52,
-};
+const SCROLLING_WIDTH = 56;
+const NOT_SCROLLING_WIDTH = 99;
 const CLOSE_TO_MAX_THRESHOLD = 70;
 
-export default function NovelReadButton({
+export default function AddCategoryButton({
+  onPress,
   scrollY,
-  novelTitle,
-  resumeFromNovelChapter,
-  novelTotalChapters,
   maxScrollY,
 }: {
+  onPress: () => void;
   scrollY: SharedValue<number>;
-  novelTitle: string;
-  resumeFromNovelChapter?: number;
-  novelTotalChapters: number;
   maxScrollY?: number;
 }) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   const shrink = useDerivedValue(() => {
     const y = scrollY.value;
@@ -48,14 +36,10 @@ export default function NovelReadButton({
 
   // animate width when scrolling
   const widthAnim = useDerivedValue(() =>
-    withTiming(
-      shrink.value
-        ? FIXED_BUTTON_WIDTH.SCROLLING
-        : FIXED_BUTTON_WIDTH.NOT_SCROLLING[
-            resumeFromNovelChapter ? "RESUME" : "START"
-          ],
-      { duration: 300, easing: Easing.out(Easing.quad) }
-    )
+    withTiming(shrink.value ? SCROLLING_WIDTH : NOT_SCROLLING_WIDTH, {
+      duration: 300,
+      easing: Easing.out(Easing.quad),
+    })
   );
   const buttonStyle = useAnimatedStyle(() => ({
     width: widthAnim.value,
@@ -75,35 +59,22 @@ export default function NovelReadButton({
     opacity: textOpacityAnim.value,
   }));
 
-  const handlePress = useCallback(() => {
-    const chapter = resumeFromNovelChapter ?? 1;
-
-    router.push({
-      pathname: `/novel/reader`,
-      params: {
-        novelTitle,
-        chapterNumber: chapter,
-        totalChapters: novelTotalChapters,
-      },
-    });
-  }, [router, novelTitle, resumeFromNovelChapter, novelTotalChapters]);
-
   return (
     <Animated.View
       entering={FadeIn.duration(150)}
       exiting={FadeOut.duration(150)}
-      className="absolute z-10 overflow-hidden rounded-xl"
+      className="absolute z-10 overflow-hidden rounded-xl "
       style={buttonStyle}
     >
       <TouchableOpacity
         activeOpacity={0.8}
         className="flex flex-row items-center gap-x-3 py-4 px-5 bg-primary_dark"
-        onPress={handlePress}
+        onPress={onPress}
       >
-        <Play
+        <Plus
           color={colors.foreground}
           fill={colors.foreground}
-          size={16}
+          size={20}
           strokeWidth={1.6}
         />
 
@@ -112,7 +83,7 @@ export default function NovelReadButton({
           className="font-medium text-foreground text-lg"
           numberOfLines={1}
         >
-          {resumeFromNovelChapter ? "Resume" : "Start"}
+          Add
         </Animated.Text>
       </TouchableOpacity>
     </Animated.View>

@@ -61,7 +61,7 @@ export default function NovelFindChapterDrawer({
             onChangeText={(value) => handleInputChange(value)}
             placeholderTextColor={colors.muted_foreground + "90"}
             placeholder={`Enter Chapter (1 - ${maxChapters})`}
-            className="text-foreground border border-muted_foreground/75 bg-muted_foreground/15 py-4 w-56 text-center rounded-lg"
+            className="text-foreground border border-muted_foreground/25 bg-muted_foreground/15 py-4 w-56 text-center rounded-lg"
             maxLength={String(maxChapters).length}
             keyboardType="numeric"
           />

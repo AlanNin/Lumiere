@@ -6,7 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { RefreshControl, TouchableOpacity, View } from "react-native";
+import {
+  Dimensions,
+  RefreshControl,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import {
   Chapter,
   NovelChaptersFilter,
@@ -57,6 +62,9 @@ export default function NovelScreen() {
   const scrollY = useSharedValue(0);
   const [listLoaded, setListLoaded] = React.useState(false);
   const [selectedChapters, setSelectedChapters] = React.useState<Chapter[]>([]);
+  const windowHeight = Dimensions.get("window").height;
+  const [contentHeight, setContentHeight] = useState(0);
+  const maxScrollY = Math.max(0, contentHeight - windowHeight);
   const [chaptersToDelete, setChaptersToDelete] = React.useState<
     DownloadChapter[]
   >([]);
@@ -447,6 +455,7 @@ export default function NovelScreen() {
         }
         ListEmptyComponent={EmptyChaptersComponent}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={(_, height) => setContentHeight(height)}
       />
 
       {listLoaded && !allChaptersCompleted && selectedChapters.length === 0 && (
@@ -457,6 +466,7 @@ export default function NovelScreen() {
           resumeFromNovelChapter={
             resumeChapter ? resumeChapter.number : undefined
           }
+          maxScrollY={maxScrollY}
         />
       )}
 
