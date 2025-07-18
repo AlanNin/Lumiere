@@ -56,3 +56,5 @@ export const colors = {
     },
   },
 };
+
+export const keyboardShownContentHeight = "h-[36%]";

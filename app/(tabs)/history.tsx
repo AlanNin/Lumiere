@@ -5,7 +5,7 @@ import Loading from "@/components/statics/loading";
 import Quote from "@/components/statics/quote";
 import TabHeader from "@/components/tabHeader";
 import { cn } from "@/lib/cn";
-import { colors } from "@/lib/constants";
+import { colors, keyboardShownContentHeight } from "@/lib/constants";
 import { historyController } from "@/server/controllers/history";
 import type { HistoryBatch } from "@/types/history";
 import { useKeyboard } from "@react-native-community/hooks";
@@ -158,7 +158,7 @@ export default function HistoryScreen() {
         <View
           className={cn(
             "items-center justify-center flex",
-            keyboardShown ? "h-[36%]" : "flex-1"
+            keyboardShown ? keyboardShownContentHeight : "flex-1"
           )}
         >
           <Loading />
@@ -169,7 +169,7 @@ export default function HistoryScreen() {
             <View
               className={cn(
                 "items-center justify-center flex",
-                keyboardShown ? "h-[36%]" : "flex-1"
+                keyboardShown ? keyboardShownContentHeight : "flex-1"
               )}
             >
               <Quote

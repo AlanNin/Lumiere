@@ -79,7 +79,7 @@ export default function HomeScreen() {
     { id: 0, label: "Default", novels: [], sortOrder: 0 },
   ];
 
-  const { data: libraryCategories = defaultLibrary } = useQuery({
+  const { data: libraryCategories = defaultLibrary, isLoading } = useQuery({
     queryKey: ["library"],
     queryFn: () => libraryController.getLibrary(),
   });
@@ -90,7 +90,6 @@ export default function HomeScreen() {
 
   const sortedCategories = React.useMemo(() => {
     const source = !libraryCategories ? defaultLibrary : libraryCategories;
-
     return [...source].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [libraryCategories, defaultLibrary]);
 
@@ -103,21 +102,44 @@ export default function HomeScreen() {
     [sortedCategories]
   );
 
-  const renderScenes = sortedCategories.reduce((scenes, category) => {
-    const key = category.id.toString();
-    scenes[key] = () => renderNovels(category.novels, width);
-    return scenes;
-  }, {} as { [key: string]: () => React.ReactNode });
+  React.useEffect(() => {
+    if (routes.length > 0 && index >= routes.length) {
+      setIndex(0);
+    }
+  }, [routes.length, index]);
 
-  return (
-    <View className="flex-1 bg-background">
-      <TabHeader
-        title="Library"
-        showSearch={hasAnyNovels}
-        containerClassName="mb-1"
-      />
+  const renderScenes = React.useMemo(() => {
+    return sortedCategories.reduce((scenes, category) => {
+      const key = category.id.toString();
+      scenes[key] = () => renderNovels(category.novels, width);
+      return scenes;
+    }, {} as { [key: string]: () => React.ReactNode });
+  }, [sortedCategories, width]);
+
+  const validIndex = Math.min(
+    Math.max(index, 0),
+    Math.max(routes.length - 1, 0)
+  );
+
+  const renderContent = () => {
+    if (isLoading) {
+      return;
+    }
+
+    if (routes.length === 0) {
+      return (
+        <View className="flex-1">
+          <Quote
+            quote="No tales have wandered into this corner yet."
+            Icon={Telescope}
+          />
+        </View>
+      );
+    }
+
+    return (
       <TabView
-        navigationState={{ index, routes }}
+        navigationState={{ index: validIndex, routes }}
         renderScene={({ route }) => {
           const scene = renderScenes[route.key];
           return scene ? scene() : null;
@@ -126,6 +148,17 @@ export default function HomeScreen() {
         initialLayout={{ width: width }}
         renderTabBar={renderTabBar}
       />
+    );
+  };
+
+  return (
+    <View className="flex-1 bg-background">
+      <TabHeader
+        title="Library"
+        showSearch={hasAnyNovels && !isLoading}
+        containerClassName="mb-1"
+      />
+      {renderContent()}
     </View>
   );
 }
