@@ -1,18 +1,19 @@
 import AddCategoryButton from "@/components/more/categories/addCategoryButton";
-import CategoryAZModal from "@/components/more/categories/categoryAZModal";
+import CategoryAZDrawer from "@/components/more/categories/categoryAZDrawer";
 import CategoryCard from "@/components/more/categories/categoryCard";
-import CategoryRemoveModal from "@/components/more/categories/categoryRemoveModal";
-import CategoryUpsertModal from "@/components/more/categories/categoryUpsertModal";
+import CategoryRemoveDrawer from "@/components/more/categories/categoryRemoveDrawer";
+import CategoryUpsertDrawer from "@/components/more/categories/categoryUpsertDrawer";
 import Quote from "@/components/statics/quote";
 import TabHeader from "@/components/tabHeader";
 import { colors } from "@/lib/constants";
 import { invalidateQueries } from "@/providers/reactQuery";
 import { categoryController } from "@/server/controllers/category";
 import { Category } from "@/types/category";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowDownAZ, Tags } from "lucide-react-native";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dimensions, TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
@@ -30,12 +31,11 @@ export default function CategoriesScreen() {
   const windowHeight = Dimensions.get("window").height;
   const [contentHeight, setContentHeight] = useState(0);
   const maxScrollY = Math.max(0, contentHeight - windowHeight);
-  const [isUpsertCategoryModalOpen, setIsUpsertCategoryModalOpen] = useState(
-    false
-  );
   const [categoryToUpdate, setCategoryToUpdate] = useState<Category>();
   const [categoryToDelete, setCategoryToDelete] = useState<Category>();
-  const [categoryToAZ, setCategoryToAZ] = useState<boolean>(false);
+  const bottomDrawerUpsertRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerRemoveRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerAZRef = useRef<BottomSheetModal>(null);
 
   const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ["categories"],
@@ -50,12 +50,15 @@ export default function CategoriesScreen() {
 
   function handleUpdateCategory(category: Category) {
     setCategoryToUpdate(category);
-    setIsUpsertCategoryModalOpen(true);
+    bottomDrawerUpsertRef.current?.present();
   }
 
   function SortAZModalButton() {
     return (
-      <TouchableOpacity className="p-2" onPress={() => setCategoryToAZ(true)}>
+      <TouchableOpacity
+        className="p-2"
+        onPress={() => bottomDrawerAZRef.current?.present()}
+      >
         <ArrowDownAZ
           color={colors.muted_foreground}
           size={20}
@@ -122,7 +125,10 @@ export default function CategoriesScreen() {
                 isLastItem={lastItem}
                 handleUpdateCategory={handleUpdateCategory}
                 handleChangeCategorySortOrder={changeCategorySortOrder}
-                setCategoryToDelete={setCategoryToDelete}
+                setCategoryToDelete={(category) => {
+                  setCategoryToDelete(category);
+                  bottomDrawerRemoveRef.current?.present();
+                }}
               />
             );
           }}
@@ -142,28 +148,30 @@ export default function CategoriesScreen() {
       ) : (
         <Quote quote="No categories yet. Add some!" Icon={Tags} />
       )}
+
       <AddCategoryButton
-        onPress={() => setIsUpsertCategoryModalOpen(true)}
+        onPress={() => bottomDrawerUpsertRef.current?.present()}
         scrollY={scrollY}
         maxScrollY={maxScrollY}
       />
-      <CategoryUpsertModal
-        isOpen={isUpsertCategoryModalOpen}
-        handleClose={() => {
-          setIsUpsertCategoryModalOpen(false);
+
+      <CategoryUpsertDrawer
+        bottomDrawerRef={bottomDrawerUpsertRef}
+        onClose={() => {
           setTimeout(() => setCategoryToUpdate(undefined), 300);
         }}
         categoryToUpdate={categoryToUpdate}
       />
-      <CategoryRemoveModal
+
+      <CategoryRemoveDrawer
+        bottomDrawerRef={bottomDrawerRemoveRef}
         categoryToDelete={categoryToDelete}
-        handleClose={() => setCategoryToDelete(undefined)}
         handleRemoveCategory={removeCategory}
+        onClose={() => setCategoryToDelete(undefined)}
       />
 
-      <CategoryAZModal
-        isOpen={categoryToAZ}
-        handleClose={() => setCategoryToAZ(false)}
+      <CategoryAZDrawer
+        bottomDrawerRef={bottomDrawerAZRef}
         sortCategoriesAlphabetically={sortCategoriesAlphabetically}
       />
     </View>
