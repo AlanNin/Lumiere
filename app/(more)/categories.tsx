@@ -89,7 +89,7 @@ export default function CategoriesScreen() {
     mutationFn: ({ categoryId }: { categoryId: number }) =>
       categoryController.removeCategory(categoryId),
     onSuccess: () => {
-      invalidateQueries("library", "categories");
+      invalidateQueries("library", "categories", ["novel-info"]);
     },
   });
 

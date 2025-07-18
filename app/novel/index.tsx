@@ -45,6 +45,8 @@ import NovelFindChapterDrawer from "@/components/novel/novelFindChapterDrawer";
 import NovelDownloadChaptersDrawer from "@/components/novel/novelDownloadChaptersDrawer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import NovelMoreChapterDrawer from "@/components/novel/novelMoreChapterDrawer";
+import NovelCategoryDrawer from "@/components/novel/novelCategoryDrawer";
+import { categoryController } from "@/server/controllers/category";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -92,8 +94,9 @@ export default function NovelScreen() {
   const bottomDrawerSearchChapterRef = useRef<BottomSheetModal>(null);
   const bottomDraweChaptersDownloadRef = useRef<BottomSheetModal>(null);
   const bottomDrawerMoreRef = useRef<BottomSheetModal>(null);
+  const bottomDrawerCategoryRef = useRef<BottomSheetModal>(null);
 
-  // Fetch novel info data and apply filters and sorts to chapters
+  // Fetch novel info data and apply filters and sorts to chapters, and categories
   const {
     data: novelInfo,
     isLoading: isLoadingNovel,
@@ -102,6 +105,11 @@ export default function NovelScreen() {
     queryKey: ["novel-info", title],
     queryFn: () => novelController.getNovel({ novelTitle: String(title) }),
     staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => categoryController.getCategories(),
   });
 
   const novelChapters = React.useMemo<Chapter[]>(() => {
@@ -338,6 +346,10 @@ export default function NovelScreen() {
           <NovelTopButtons
             novelTitle={novelInfo.title}
             novelIsSaved={novelInfo.isSaved ?? false}
+            handleOpenCategoryDrawer={() =>
+              bottomDrawerCategoryRef.current?.present()
+            }
+            categories={categories}
           />
           <NovelDescription description={novelInfo.description} />
         </View>
@@ -517,6 +529,13 @@ export default function NovelScreen() {
         novelImageUrl={novelInfo.imageUrl}
         novelCustomImageUri={novelInfo.customImageUri}
         refetchNovelInfo={refetchNovelInfo}
+      />
+
+      <NovelCategoryDrawer
+        bottomDrawerRef={bottomDrawerCategoryRef}
+        categories={categories}
+        novelTitle={novelInfo.title}
+        novelCategories={novelInfo.categoriesIds}
       />
     </View>
   );

@@ -40,17 +40,6 @@ export const libraryRepository = {
       .from(novelCategories)
       .all();
 
-    if (!savedNovels.length) {
-      return [
-        {
-          id: 0,
-          label: "Default",
-          sortOrder: 0,
-          novels: [],
-        },
-      ];
-    }
-
     const categoryMap = new Map<number, NovelInfo[]>();
     dbCategories.forEach((cat) => categoryMap.set(cat.id, []));
 
@@ -75,22 +64,29 @@ export const libraryRepository = {
         rels.forEach((r) => {
           const arr = categoryMap.get(r.categoryId);
           if (arr) arr.push(info);
-          else novelsWithoutCategory.push(info);
         });
       } else {
         novelsWithoutCategory.push(info);
       }
     }
 
-    const result: LibraryCategory[] = [
-      { id: 0, label: "Default", sortOrder: 0, novels: novelsWithoutCategory },
-      ...dbCategories.map((cat) => ({
+    const result: LibraryCategory[] = [];
+    if (novelsWithoutCategory.length > 0) {
+      result.push({
+        id: 0,
+        label: "Default",
+        sortOrder: 0,
+        novels: novelsWithoutCategory,
+      });
+    }
+    dbCategories.forEach((cat) => {
+      result.push({
         id: cat.id,
         label: cat.label,
         sortOrder: cat.sortOrder,
-        novels: categoryMap.get(cat.id)!,
-      })),
-    ];
+        novels: categoryMap.get(cat.id) || [],
+      });
+    });
 
     return result;
   },

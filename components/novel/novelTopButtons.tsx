@@ -7,20 +7,28 @@ import { novelController } from "@/server/controllers/novel";
 import { cn } from "@/lib/cn";
 import { invalidateQueries } from "@/providers/reactQuery";
 import { getNovelUrl } from "@/lib/novel";
+import { Category } from "@/types/category";
 
 export default function NovelTopButtons({
   novelTitle,
   novelIsSaved,
+  handleOpenCategoryDrawer,
+  categories,
 }: {
   novelTitle: string;
   novelIsSaved: boolean;
+  handleOpenCategoryDrawer: () => void;
+  categories: Category[] | undefined;
 }) {
   const novelUrl = getNovelUrl(novelTitle);
   function openInBrowser() {
     Linking.openURL(novelUrl);
   }
 
-  const { mutate: setLibraryStatus } = useMutation({
+  const {
+    mutate: setLibraryStatus,
+    isPending: isPendingLibraryStatus,
+  } = useMutation({
     mutationFn: () =>
       novelController.setLibraryStatus({
         title: novelTitle,
@@ -32,6 +40,9 @@ export default function NovelTopButtons({
         ["novel-info", novelTitle],
         ["explore-novels"]
       );
+      if (!novelIsSaved && categories && categories.length > 0) {
+        handleOpenCategoryDrawer();
+      }
     },
   });
 
@@ -40,6 +51,8 @@ export default function NovelTopButtons({
       <TouchableOpacity
         className="flex flex-col items-center gap-y-2.5 w-28"
         onPress={() => setLibraryStatus()}
+        onLongPress={handleOpenCategoryDrawer}
+        disabled={isPendingLibraryStatus}
       >
         <Heart
           color={novelIsSaved ? colors.primary : colors.grayscale}

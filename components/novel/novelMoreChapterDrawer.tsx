@@ -9,6 +9,8 @@ import { useMutation } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { deleteImage } from "@/lib/file-system";
 import { invalidateQueries } from "@/providers/reactQuery";
+import { RotateCcw } from "lucide-react-native";
+import { colors } from "@/lib/constants";
 
 export default function NovelMoreChapterDrawer({
   bottomDrawerRef,
@@ -99,12 +101,23 @@ export default function NovelMoreChapterDrawer({
         <Text className="text-lg font-medium text-center">
           {OPTIONS[0].label}
         </Text>
-        <Image
-          alt={`Cover of ${novelTitle}`}
-          source={imageUrl}
-          style={{ aspectRatio: 1 / 1.5, height: 182, borderRadius: 8 }}
-          contentFit="cover"
-        />
+        <View className="relative rounded-lg overflow-hidden">
+          <Image
+            alt={`Cover of ${novelTitle}`}
+            source={imageUrl}
+            style={{ aspectRatio: 1 / 1.5, height: 182 }}
+            contentFit="cover"
+          />
+          {hasCustomImage && (
+            <TouchableOpacity
+              className="absolute top-0 right-0 p-3 bg-black/75 rounded-bl-lg"
+              onPress={handleDeleteCover}
+            >
+              <RotateCcw size={16} color={colors.muted_foreground} />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <Text className="text-muted_foreground/75 text-center mb-2">
           {hasCustomImage ? "Custom" : "Default"}
         </Text>
@@ -115,14 +128,6 @@ export default function NovelMoreChapterDrawer({
           >
             <Text className="text-center">Upload</Text>
           </TouchableOpacity>
-          {hasCustomImage && (
-            <TouchableOpacity
-              className="bg-secondary text-secondary_foreground px-6 py-3 rounded-lg w-full flex items-center justify-center"
-              onPress={handleDeleteCover}
-            >
-              <Text className="text-center">Reset</Text>
-            </TouchableOpacity>
-          )}
 
           <TouchableOpacity
             className="px-4 py-1 rounded-lg w-full flex items-center justify-center"

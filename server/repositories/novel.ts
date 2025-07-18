@@ -49,6 +49,11 @@ export const novelRepository = {
         .where(eq(novelChapters.novelTitle, novelTitle))
         .orderBy(novelChapters.number);
 
+      const categoryRows = await db_client
+        .select({ categoryId: novelCategories.categoryId })
+        .from(novelCategories)
+        .where(eq(novelCategories.novelTitle, novelTitle));
+
       const novelInfo: NovelInfo & { chapters: Chapter[] } = {
         title: novelRow.title,
         imageUrl: novelRow.imageUrl,
@@ -60,6 +65,7 @@ export const novelRepository = {
         genres: novelRow.genres,
         status: novelRow.status,
         isSaved: Boolean(novelRow.isSaved),
+        categoriesIds: categoryRows.map((c) => c.categoryId),
         chapters: chapterRows.map((c) => ({
           id: Number(c.id),
           novelTitle: novelTitle,
@@ -138,12 +144,20 @@ export const novelRepository = {
           throw new Error("NOVEL_NOT_FOUND");
         }
 
+        if (!saved) {
+          await tx
+            .delete(novelCategories)
+            .where(eq(novelCategories.novelTitle, title))
+            .run();
+          return;
+        }
+
         await tx
           .delete(novelCategories)
           .where(eq(novelCategories.novelTitle, title))
           .run();
 
-        if (saved && categoriesId && categoriesId.length > 0) {
+        if (categoriesId && categoriesId.length > 0) {
           const rows = categoriesId.map((catId) => ({
             novelTitle: title,
             categoryId: catId,

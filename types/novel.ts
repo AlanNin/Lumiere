@@ -35,7 +35,7 @@ export type NovelInfo = Novel & {
   genres: string;
   status: string;
   chapters: Chapter[];
-  categoryId?: number | null;
+  categoriesIds?: number[];
 };
 
 export type NovelChaptersFilter = {
