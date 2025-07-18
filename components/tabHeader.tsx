@@ -141,7 +141,14 @@ export default function TabHeader({
           </View>
           <View className="flex flex-row items-center gap-x-3 -mr-2">
             {showSearch && (
-              <TouchableOpacity onPress={() => router.back()} className="p-2">
+              <TouchableOpacity
+                onPress={() => {
+                  if (setIsSearchOpen) {
+                    setIsSearchOpen(true);
+                  }
+                }}
+                className="p-2"
+              >
                 <Search color={colors.muted_foreground} size={20} />
               </TouchableOpacity>
             )}
