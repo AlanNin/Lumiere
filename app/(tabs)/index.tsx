@@ -84,14 +84,17 @@ export default function HomeScreen() {
     queryFn: () => libraryController.getLibrary(),
   });
 
-  const hasAnyNovels = libraryCategories.some(
+  const selectedCategories = libraryCategories?.length
+    ? libraryCategories
+    : defaultLibrary;
+
+  const hasAnyNovels = selectedCategories.some(
     (cat) => Array.isArray(cat.novels) && cat.novels.length > 0
   );
 
   const sortedCategories = React.useMemo(() => {
-    const source = !libraryCategories ? defaultLibrary : libraryCategories;
-    return [...source].sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [libraryCategories, defaultLibrary]);
+    return [...selectedCategories].sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [selectedCategories]);
 
   const routes = React.useMemo(
     () =>

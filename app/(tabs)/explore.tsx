@@ -11,7 +11,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { colors, keyboardShownContentHeight } from "@/lib/constants";
+import { colors } from "@/lib/constants";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ExploreSection, novelController } from "@/server/controllers/novel";
 import {
@@ -54,7 +54,7 @@ function RenderNovels({
       <View
         className={cn(
           "items-center justify-center flex",
-          keyboardShown ? keyboardShownContentHeight : "flex-1"
+          keyboardShown ? "h-[36%]" : "flex-1"
         )}
       >
         <Quote quote="Archives empty. Try another search." Icon={Telescope} />
@@ -233,7 +233,7 @@ export default function ExploreScreen() {
         <View
           className={cn(
             "items-center justify-center flex",
-            keyboardShown ? keyboardShownContentHeight : "flex-1"
+            keyboardShown ? "h-[36%]" : "flex-1"
           )}
         >
           <Quote
@@ -247,7 +247,7 @@ export default function ExploreScreen() {
             <View
               className={cn(
                 "items-center justify-center flex",
-                keyboardShown ? keyboardShownContentHeight : "flex-1"
+                keyboardShown ? "h-[36%]" : "flex-1"
               )}
             >
               <Loading />

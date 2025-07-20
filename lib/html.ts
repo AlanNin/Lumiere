@@ -180,10 +180,14 @@ export function insertTitleHtml(
 
   if (h4Regex.test(html)) {
     return html.replace(h4Regex, (_match, content) => {
-      const cleanedContent = extractChapterTitle(content);
-      return `<h4>Chapter ${chapterNumber} - ${cleanedContent}</h4>`;
+      const cleanedTitle = extractChapterTitle(content);
+      return `<h4>Chapter ${chapterNumber} ${
+        cleanedTitle ? `- ${cleanedTitle}` : ""
+      }</h4>`;
     });
   } else {
-    return `<h4>Chapter ${chapterNumber} - ${title}</h4>\n` + html;
+    return (
+      `<h4>Chapter ${chapterNumber} ${title ? `- ${title}` : ""}</h4>\n` + html
+    );
   }
 }

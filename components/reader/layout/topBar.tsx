@@ -57,6 +57,11 @@ export default function ReaderTopBar({
     },
   });
 
+  function handleToggleBookMarked() {
+    postponeHide();
+    toggleBookMarked();
+  }
+
   return (
     <Animated.View
       style={animatedTopBarStyle}
@@ -92,7 +97,7 @@ export default function ReaderTopBar({
             <TouchableOpacity>
               <Volume1 color={colors.foreground} size={24} strokeWidth={1.6} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => toggleBookMarked()}>
+            <TouchableOpacity onPress={handleToggleBookMarked}>
               <Bookmark
                 color={bookMarked ? colors.secondary : colors.foreground}
                 fill={bookMarked ? colors.secondary : "transparent"}

@@ -193,19 +193,15 @@ export async function scrapeNovelInfo({
   const chapters: Chapter[] = items
     .map((liEl: cheerio.Element, idx: number) => {
       const li = $$(liEl);
-      // Raw text may come from different selectors
       const rawText = li.find(".nchr-text, .chapter-title").text().trim();
       const url = li.find("a").attr("href") || "";
 
-      // Try to pull out the chapter number
       const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
-      const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
+      const number = numMatch ? parseInt(numMatch[1], 10) : idx;
 
-      // Extract title if present
       const title = extractChapterTitle(rawText);
       return { number, title, url };
     })
-    .filter((ch: Chapter) => ch.number > 0)
     .sort((a: Chapter, b: Chapter) => a.number - b.number);
 
   // ——— Build and return the result —————————————————————————————————————————————
@@ -244,22 +240,19 @@ export async function scrapeNovelChapter({
 
   // --- 3) Parse out number & subtitle safely ---
   let number: number;
-  let title: string;
 
+  const title = extractChapterTitle(rawTitle);
   const onlyNum = rawTitle.match(/^Chapter\s*(\d+)\s*$/i);
   const withSub = rawTitle.match(/^Chapter\s*(\d+)[\s:-]+\s*(.+)$/i);
 
   if (onlyNum) {
     number = parseInt(onlyNum[1], 10);
-    title = "";
   } else if (withSub) {
     number = parseInt(withSub[1], 10);
-    title = withSub[2].trim();
   } else {
     // fallback if the site changed format
     const fallback = rawTitle.match(/^(\d+)/);
     number = fallback ? parseInt(fallback[1], 10) : chapterNumber;
-    title = rawTitle.replace(/^Chapter\s*\d+/, "").trim();
   }
 
   // --- 4) Chapter content ---

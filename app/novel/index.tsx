@@ -153,6 +153,9 @@ export default function NovelScreen() {
     const chapters = novelInfo?.chapters;
     if (!chapters?.length) return null;
 
+    // find the lowest chapter number in the list
+    const minChapterNumber = Math.min(...chapters.map((c) => c.number));
+
     // 1) Find the highest-numbered chapter that is fully read (progress === 100)
     const fullyRead = chapters.filter((c) => (c.progress ?? 0) === 100);
     const maxReadNumber = fullyRead.length
@@ -170,11 +173,18 @@ export default function NovelScreen() {
       return nextAfterRead;
     }
 
-    // 3) If no chapter in progress after last read, return the next unread chapter (0% progress)
+    // 3) If no chapter in progress after last read, return the next unread chapter,
+    //    but skip it if it's the very first one (lowest number) with 0 progress
     const nextUnread = chapters.find(
       (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) === 0
     );
-    if (nextUnread) {
+    if (
+      nextUnread &&
+      !(
+        nextUnread.number === minChapterNumber &&
+        (nextUnread.progress ?? 0) === 0
+      )
+    ) {
       return nextUnread;
     }
 

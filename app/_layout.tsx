@@ -1,7 +1,7 @@
 import "@/global.css";
 import "react-native-reanimated";
 import "react-native-gesture-handler";
-import ReactQueryProvider from "@/providers/reactQuery";
+import ReactQueryProvider, { queryClient } from "@/providers/reactQuery";
 import migrations from "@/drizzle/migrations";
 import * as SplashScreen from "expo-splash-screen";
 import { colors } from "@/lib/constants";
@@ -15,6 +15,7 @@ import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { useEffect } from "react";
 import { Frown } from "lucide-react-native";
 import Error from "@/components/statics/error";
+import { libraryController } from "@/server/controllers/library";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,11 +24,24 @@ SplashScreen.setOptions({
   fade: true,
 });
 
+async function PrefetchLibrary() {
+  try {
+    await queryClient.prefetchQuery({
+      queryKey: ["library"],
+      queryFn: () => libraryController.getLibrary(),
+    });
+  } catch (err) {
+    console.warn("Library prefetch failed:", err);
+  }
+}
+
 export default function RootLayout() {
   useDrizzleStudio(db_expo);
   const { success, error } = useMigrations(db_client, migrations);
 
   useEffect(() => {
+    PrefetchLibrary();
+
     if (success !== undefined) {
       SplashScreen.hideAsync();
     }
