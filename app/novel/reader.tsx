@@ -2,7 +2,7 @@ import { View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { novelController } from "@/server/controllers/novel";
-import ReaderComponent from "@/components/reader";
+import ReaderComponent, { getReaderStyles } from "@/components/reader";
 import Loading from "@/components/statics/loading";
 import Error from "@/components/statics/error";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
 export default function NovelReaderScreen() {
   const router = useRouter();
   const { novelTitle, chapterNumber, downloaded } = useLocalSearchParams();
-
   const isDownloaded = downloaded ? downloaded === "1" : false;
 
   const { top, bottom } = useSafeAreaInsets();
@@ -36,6 +35,8 @@ export default function NovelReaderScreen() {
     }
   }, [bottom]);
 
+  const { styles: readerStyles } = getReaderStyles({ insets: staticInsets });
+
   const { data: novelChapter, isFetching, isError } = useQuery({
     queryKey: ["novel-chapter", novelTitle, chapterNumber],
     queryFn: () =>
@@ -47,13 +48,25 @@ export default function NovelReaderScreen() {
 
   if (!isDownloaded && isFetching) {
     return (
-      <Loading title="Fate never repeats itself indefinitely. It always brings us some surprises." />
+      <Loading
+        title="Fate never repeats itself indefinitely. It always brings us some surprises."
+        backgroundStyle={{ backgroundColor: readerStyles.body.backgroundColor }}
+        textStyle={{ color: readerStyles.body.color, opacity: 0.8 }}
+        loaderColor={readerStyles.body.color}
+      />
     );
   }
 
   if (isError || !novelChapter || !novelChapter.content) {
     if (isDownloaded) {
-      return <View className="flex-1 bg-background" />;
+      return (
+        <View
+          className="flex-1"
+          style={{
+            backgroundColor: readerStyles.body.backgroundColor,
+          }}
+        />
+      );
     }
 
     return (
@@ -63,12 +76,20 @@ export default function NovelReaderScreen() {
           onPress: () => router.back(),
           title: "Go back to " + novelTitle,
         }}
+        backgroundStyle={{ backgroundColor: readerStyles.body.backgroundColor }}
+        textStyle={{ color: readerStyles.body.color, opacity: 0.8 }}
+        iconColor={readerStyles.body.color}
       />
     );
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View
+      className="flex-1"
+      style={{
+        backgroundColor: readerStyles.body.backgroundColor,
+      }}
+    >
       <ReaderComponent chapter={novelChapter} insets={staticInsets} />
     </View>
   );

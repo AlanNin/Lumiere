@@ -251,7 +251,7 @@ export default function ReaderComponent({
 }
 
 // handles reader styles, including default styles and user-defined styles (these are stored in the app config)
-function getReaderStyles({
+export function getReaderStyles({
   insets,
 }: {
   insets: { top: number; bottom: number };
