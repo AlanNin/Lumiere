@@ -1,10 +1,11 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
   ReactNode,
+  FC,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -54,7 +55,7 @@ type ConfigProviderProps = {
 };
 
 // ConfigProvider component
-export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
+export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
   const [config, setConfig] = useState<Record<string, ConfigType>>({});
 
   // Load all configs from AsyncStorage on mount

@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { Chapter } from "@/types/novel";
-import { useRef } from "react";
+import { ReactNode, useRef } from "react";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import ReaderStyleConfigDrawer from "./configDrawer";
 import { ReaderGeneralConfig, ReaderStyleConfig } from "@/types/appConfig";
@@ -25,7 +25,7 @@ export default function ReaderLayout({
   isAtBottom,
   seekTo,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   layoutVisible: boolean;
   postponeHide: () => void;
   chapter: Chapter;

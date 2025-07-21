@@ -2,7 +2,7 @@ import { TouchableOpacity, View } from "react-native";
 import BottomDrawer from "../bottomDrawer";
 import { Text } from "../defaults";
 import { BottomSheetModal, BottomSheetTextInput } from "@gorhom/bottom-sheet";
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { colors } from "@/lib/constants";
 import { cn } from "@/lib/cn";
 
@@ -11,7 +11,7 @@ export default function NovelFindChapterDrawer({
   maxChapters,
   handleFindChapter,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   maxChapters: number;
   handleFindChapter: (chapterNumber: number) => void;
 }) {

@@ -1,4 +1,4 @@
-import React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import FilterCategory from "@/components/filterCategory";
 import TabHeader from "@/components/tabHeader";
 import NovelCard from "@/components/novel/novelCard";
@@ -27,6 +27,7 @@ import Quote from "@/components/statics/quote";
 import Loading from "@/components/statics/loading";
 import { useKeyboard } from "@react-native-community/hooks";
 import { cn } from "@/lib/cn";
+import { useLocalSearchParams } from "expo-router";
 
 type FilterOption = {
   key: ExploreSection;
@@ -62,7 +63,7 @@ function RenderNovels({
     );
   }
 
-  const handleScroll = React.useCallback(
+  const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
       const scrollTop = contentOffset.y;
@@ -121,13 +122,14 @@ function RenderNovels({
 }
 
 export default function ExploreScreen() {
+  const { searchQuery: paramSearchQuery } = useLocalSearchParams();
   const { width } = useWindowDimensions();
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const { keyboardShown } = useKeyboard();
 
-  const allFilterOptions: FilterOption[] = React.useMemo(
+  const allFilterOptions: FilterOption[] = useMemo(
     () => [
       {
         key: "search" as ExploreSection,
@@ -153,11 +155,11 @@ export default function ExploreScreen() {
     []
   );
 
-  const [selectedFilter, setSelectedFilter] = React.useState<FilterOption>(
+  const [selectedFilter, setSelectedFilter] = useState<FilterOption>(
     allFilterOptions[1]
   );
 
-  const filterOptions = React.useMemo(() => {
+  const filterOptions = useMemo(() => {
     if (isSearchOpen) {
       return allFilterOptions;
     } else {
@@ -196,6 +198,13 @@ export default function ExploreScreen() {
   });
 
   const novels = novelsData?.pages.flatMap((p) => p.items) ?? [];
+
+  useEffect(() => {
+    if (paramSearchQuery) {
+      setSearchQuery(String(paramSearchQuery));
+      setIsSearchOpen(true);
+    }
+  }, [paramSearchQuery]);
 
   return (
     <View className="flex-1 bg-background">

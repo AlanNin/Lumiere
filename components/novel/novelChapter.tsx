@@ -6,9 +6,9 @@ import NovelDownloadChapter from "./novelDownloadChapter";
 import { DownloadChapter } from "@/types/download";
 import { Bookmark } from "lucide-react-native";
 import { colors } from "@/lib/constants";
-import React from "react";
+import { memo, useCallback, useMemo } from "react";
 
-export default React.memo(
+export default memo(
   function NovelChapter({
     chapter,
     isDownloading,
@@ -47,7 +47,7 @@ export default React.memo(
       (c) => c.number === chapter.number
     );
 
-    const chapterToDownloadChapter: DownloadChapter = React.useMemo(
+    const chapterToDownloadChapter: DownloadChapter = useMemo(
       () => ({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number,
@@ -57,7 +57,7 @@ export default React.memo(
       [chapter.novelTitle, chapter.number, chapter.progress]
     );
 
-    const handlePress = React.useCallback(() => {
+    const handlePress = useCallback(() => {
       if (selectedChapters.length > 0) {
         onSelectChapter(chapter);
       } else {
@@ -68,7 +68,7 @@ export default React.memo(
       }
     }, [selectedChapters.length, onSelectChapter, chapter, onChapterPress]);
 
-    const handleLongPress = React.useCallback(() => {
+    const handleLongPress = useCallback(() => {
       if (isDownloading) return;
       onSelectChapter(chapter);
     }, [onSelectChapter, chapter]);

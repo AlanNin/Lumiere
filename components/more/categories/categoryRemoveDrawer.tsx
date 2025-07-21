@@ -3,6 +3,7 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import BottomDrawer from "@/components/bottomDrawer";
 import { Text } from "@/components/defaults";
 import { Category } from "@/types/category";
+import { RefObject } from "react";
 
 export default function CategoryRemoveDrawer({
   bottomDrawerRef,
@@ -10,7 +11,7 @@ export default function CategoryRemoveDrawer({
   handleRemoveCategory,
   onClose,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   categoryToDelete: Category | undefined;
   handleRemoveCategory: ({ categoryId }: { categoryId: number }) => void;
   onClose: () => void;

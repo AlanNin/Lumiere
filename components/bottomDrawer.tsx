@@ -1,4 +1,4 @@
-import React from "react";
+import { ReactNode, RefObject, forwardRef, useCallback, useState } from "react";
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -9,11 +9,11 @@ import { colors } from "@/lib/constants";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const BottomDrawer = React.forwardRef<
+const BottomDrawer = forwardRef<
   BottomSheetModal,
   Omit<
     {
-      children: React.ReactNode;
+      children: ReactNode;
       paddingBottom?: number;
       onChange?: (boolean: number) => void;
       onClose?: () => void;
@@ -24,18 +24,16 @@ const BottomDrawer = React.forwardRef<
   const insets = useSafeAreaInsets();
 
   const closeDrawer = () => {
-    (ref as React.RefObject<BottomSheetModal>).current?.dismiss();
+    (ref as RefObject<BottomSheetModal>).current?.dismiss();
     if (onClose) {
       onClose();
     }
   };
 
-  const [sheetStatus, setSheetStatus] = React.useState<"open" | "close">(
-    "close"
-  );
+  const [sheetStatus, setSheetStatus] = useState<"open" | "close">("close");
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       const backAction = () => {
         if (sheetStatus === "open") {
           closeDrawer();

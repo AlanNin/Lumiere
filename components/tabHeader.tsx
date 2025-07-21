@@ -1,4 +1,4 @@
-import React from "react";
+import { ReactNode, useCallback, useLayoutEffect } from "react";
 import { BackHandler, TextInput, TouchableOpacity, View } from "react-native";
 import { ArrowLeft, Search } from "lucide-react-native";
 import { colors } from "@/lib/constants";
@@ -35,7 +35,7 @@ export default function TabHeader({
   setIsSearchOpen?: (isOpen: boolean) => void;
   containerClassName?: string;
   scrollY?: SharedValue<number>;
-  customRightContent?: React.ReactNode;
+  customRightContent?: ReactNode;
   renderBackButton?: boolean;
 }) {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function TabHeader({
   //...
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       if (!isSearchOpen || !setIsSearchOpen || !setSearchQuery) {
         return;
       }
@@ -81,7 +81,7 @@ export default function TabHeader({
     }, [isSearchOpen, setIsSearchOpen, setSearchQuery])
   );
 
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     if (setIsSearchOpen && setSearchQuery) {
       setIsSearchOpen(false);
       setSearchQuery("");

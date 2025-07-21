@@ -1,4 +1,4 @@
-import React from "react";
+import { memo, useCallback, useState } from "react";
 import { Pressable, View } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
@@ -9,8 +9,8 @@ import { Text } from "@/components/defaults";
 const getFade = (o: number) => `rgba(18, 18, 18, ${o})`;
 
 function NovelDescription({ description }: { description: string }) {
-  const [collapsed, setCollapsed] = React.useState(true);
-  const toggle = React.useCallback(() => setCollapsed((c) => !c), []);
+  const [collapsed, setCollapsed] = useState(true);
+  const toggle = useCallback(() => setCollapsed((c) => !c), []);
 
   return (
     <Pressable
@@ -54,4 +54,4 @@ function NovelDescription({ description }: { description: string }) {
   );
 }
 
-export default React.memo(NovelDescription);
+export default memo(NovelDescription);

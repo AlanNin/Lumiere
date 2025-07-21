@@ -3,7 +3,7 @@ import BottomDrawer from "../bottomDrawer";
 import { Text } from "../defaults";
 import { BottomSheetModal, BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { cn } from "@/lib/cn";
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { Picker } from "@react-native-picker/picker";
 import { colors } from "@/lib/constants";
 import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
@@ -35,7 +35,7 @@ export default function NovelDownloadChaptersDrawer({
   hasDownloadedChapters,
   refetchNovelInfo,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   novelTitle: string;
   chapters: Chapter[];
   currentChapter: number;

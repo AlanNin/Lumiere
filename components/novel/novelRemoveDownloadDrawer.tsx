@@ -2,7 +2,7 @@ import { TouchableOpacity, View } from "react-native";
 import BottomDrawer from "../bottomDrawer";
 import { Text } from "../defaults";
 import { DownloadChapter } from "@/types/download";
-import { useCallback } from "react";
+import { RefObject, useCallback } from "react";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useMutation } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
@@ -13,7 +13,7 @@ export default function NovelRemoveDownloadDrawer({
   setChaptersToDelete,
   refetchNovelInfo,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   chaptersToDelete: DownloadChapter[];
   setChaptersToDelete: (chapters: DownloadChapter[]) => void;
   refetchNovelInfo: () => void;

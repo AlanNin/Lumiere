@@ -2,12 +2,13 @@ import { TouchableOpacity, View } from "react-native";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import BottomDrawer from "@/components/bottomDrawer";
 import { Text } from "@/components/defaults";
+import { RefObject } from "react";
 
 export default function CategoryAZDrawer({
   bottomDrawerRef,
   sortCategoriesAlphabetically,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   sortCategoriesAlphabetically: () => void;
 }) {
   function handleClose() {

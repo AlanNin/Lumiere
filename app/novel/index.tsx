@@ -5,7 +5,7 @@ import Animated, {
 import { useQuery } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { useLocalSearchParams } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   RefreshControl,
@@ -62,14 +62,14 @@ export default function NovelScreen() {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlashList<Chapter>>(null);
   const scrollY = useSharedValue(0);
-  const [listLoaded, setListLoaded] = React.useState(false);
-  const [selectedChapters, setSelectedChapters] = React.useState<Chapter[]>([]);
+  const [listLoaded, setListLoaded] = useState(false);
+  const [selectedChapters, setSelectedChapters] = useState<Chapter[]>([]);
   const windowHeight = Dimensions.get("window").height;
   const [contentHeight, setContentHeight] = useState(0);
   const maxScrollY = Math.max(0, contentHeight - windowHeight);
-  const [chaptersToDelete, setChaptersToDelete] = React.useState<
-    DownloadChapter[]
-  >([]);
+  const [chaptersToDelete, setChaptersToDelete] = useState<DownloadChapter[]>(
+    []
+  );
   const [novelChaptersFilter] = useConfig<
     Record<string, NovelChaptersFilter["value"]>
   >(`novelChaptersFilter-${String(title)}`, {});
@@ -81,7 +81,7 @@ export default function NovelScreen() {
       order: "asc",
     }
   );
-  const hasChaptersFilterApplied = React.useMemo(() => {
+  const hasChaptersFilterApplied = useMemo(() => {
     return Object.values(novelChaptersFilter).some(
       (v) => v === "checked" || v === "indeterminate"
     );
@@ -112,7 +112,7 @@ export default function NovelScreen() {
     queryFn: () => categoryController.getCategories(),
   });
 
-  const novelChapters = React.useMemo<Chapter[]>(() => {
+  const novelChapters = useMemo<Chapter[]>(() => {
     if (!novelInfo) return [];
     return applyNovelChaptersFiltersAndSort(
       novelInfo.chapters,
@@ -137,19 +137,19 @@ export default function NovelScreen() {
     },
   });
 
-  const allChaptersCompleted = React.useMemo(() => {
+  const allChaptersCompleted = useMemo(() => {
     const chapters = novelInfo?.chapters;
     if (!chapters?.length) return false;
     return chapters.every((c) => (c.progress ?? 0) === 100);
   }, [novelInfo]);
 
-  const hasDownloadedChapters = React.useMemo(() => {
+  const hasDownloadedChapters = useMemo(() => {
     const chapters = novelInfo?.chapters;
     if (!chapters?.length) return false;
     return chapters.some((c) => c.downloaded);
   }, [novelInfo]);
 
-  const resumeChapter = React.useMemo<Chapter | null>(() => {
+  const resumeChapter = useMemo<Chapter | null>(() => {
     const chapters = novelInfo?.chapters;
     if (!chapters?.length) return null;
 
@@ -202,7 +202,7 @@ export default function NovelScreen() {
     return null;
   }, [novelInfo]);
 
-  const handleChapterPress = React.useCallback(
+  const handleChapterPress = useCallback(
     ({
       chapterNumber,
       downloaded,
@@ -244,7 +244,7 @@ export default function NovelScreen() {
     }
   }
 
-  const handleSelectChapter = React.useCallback(
+  const handleSelectChapter = useCallback(
     (chapter: Chapter) => {
       if (selectedChapters.length === 0) {
         vibration();
@@ -261,11 +261,11 @@ export default function NovelScreen() {
     [selectedChapters.length, queueDownload.length]
   );
 
-  const handleClearSelectedChapters = React.useCallback(() => {
+  const handleClearSelectedChapters = useCallback(() => {
     setSelectedChapters([]);
   }, []);
 
-  const handleSelectAllChapters = React.useCallback(() => {
+  const handleSelectAllChapters = useCallback(() => {
     if (
       !novelInfo?.chapters ||
       selectedChapters.length === novelInfo?.chapters.length
@@ -276,7 +276,7 @@ export default function NovelScreen() {
     setSelectedChapters(novelInfo?.chapters);
   }, [novelInfo?.chapters, selectedChapters.length]);
 
-  const handleSelectRemainingChapters = React.useCallback(() => {
+  const handleSelectRemainingChapters = useCallback(() => {
     if (!novelInfo?.chapters) return;
 
     const remaining = novelInfo?.chapters.filter(
@@ -305,7 +305,7 @@ export default function NovelScreen() {
     }, 2000);
   }, []);
 
-  const renderItem = React.useCallback(
+  const renderItem = useCallback(
     ({ item }: { item: Chapter }) => {
       const isDownloading = queueDownload.some(
         (c) =>
@@ -335,12 +335,12 @@ export default function NovelScreen() {
     ]
   );
 
-  const keyExtractor = React.useCallback(
+  const keyExtractor = useCallback(
     (item: Chapter) => `${item.number.toString()}-${item.title.toString()}`,
     []
   );
 
-  const ListHeader = React.useMemo(() => {
+  const ListHeader = useMemo(() => {
     if (!novelInfo) return null;
     return (
       <View className="flex flex-col gap-y-5 pb-4">
@@ -393,7 +393,7 @@ export default function NovelScreen() {
     );
   }, [novelInfo, novelChapters]);
 
-  const EmptyChaptersComponent = React.useMemo(() => {
+  const EmptyChaptersComponent = useMemo(() => {
     if (!novelInfo) return null;
 
     const title = hasChaptersFilterApplied
@@ -407,7 +407,7 @@ export default function NovelScreen() {
     );
   }, [novelChapters, hasChaptersFilterApplied]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (prevQueueDownloadLengthRef.current > queueDownload.length) {
       refetchNovelInfo();
     }

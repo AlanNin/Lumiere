@@ -4,7 +4,15 @@ import { TouchableOpacity, View } from "react-native";
 import { Text } from "../../defaults";
 import { SliderComponent } from "../../slider";
 import { colors } from "@/lib/constants";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ReactNode,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { FlatList } from "react-native-gesture-handler";
 import {
   AlignCenter,
@@ -31,7 +39,7 @@ export default function ReaderStyleConfigDrawer({
   setReaderGeneralConfig,
   pointerEvents,
 }: {
-  drawerRef: React.RefObject<BottomSheetModal | null>;
+  drawerRef: RefObject<BottomSheetModal | null>;
   insets: { top: number; bottom: number };
   toggleHoldHide: (isClosing: boolean) => void;
   styles: ReaderStyleConfig;
@@ -213,7 +221,7 @@ function ConfigItem({
   children,
   label,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   label: string;
 }) {
   return (

@@ -1,6 +1,6 @@
 import { TouchableOpacity, View } from "react-native";
 import { BottomSheetModal, BottomSheetTextInput } from "@gorhom/bottom-sheet";
-import { useEffect, useRef, useState } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { colors } from "@/lib/constants";
 import { cn } from "@/lib/cn";
 import BottomDrawer from "@/components/bottomDrawer";
@@ -9,14 +9,13 @@ import { Category } from "@/types/category";
 import { useMutation } from "@tanstack/react-query";
 import { categoryController } from "@/server/controllers/category";
 import { invalidateQueries } from "@/providers/reactQuery";
-import { TextInput } from "react-native-gesture-handler";
 
 export default function CategoryUpsertDrawer({
   bottomDrawerRef,
   onClose,
   categoryToUpdate,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   onClose: () => void;
   categoryToUpdate?: Category;
 }) {

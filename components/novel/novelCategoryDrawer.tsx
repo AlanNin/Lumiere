@@ -2,10 +2,9 @@ import { TouchableOpacity, View } from "react-native";
 import BottomDrawer from "../bottomDrawer";
 import { Text } from "../defaults";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { categoryController } from "@/server/controllers/category";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Checkbox from "../checkbox";
-import { useEffect, useState } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { novelController } from "@/server/controllers/novel";
 import { invalidateQueries } from "@/providers/reactQuery";
 import { useRouter } from "expo-router";
@@ -17,7 +16,7 @@ export default function NovelCategoryDrawer({
   novelTitle,
   novelCategories,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   categories: Category[] | undefined;
   novelTitle: string;
   novelCategories: number[] | undefined;

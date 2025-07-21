@@ -3,6 +3,7 @@ import { Text } from "../defaults";
 import { cn } from "@/lib/cn";
 import Modal from "react-native-modal";
 import Checkbox from "../checkbox";
+import { Dispatch, SetStateAction } from "react";
 
 export default function HistoryRemoveEntriesModal({
   entryToRemove,
@@ -14,7 +15,7 @@ export default function HistoryRemoveEntriesModal({
   entryToRemove: { novelTitle: string; chapterNumber: number } | null;
   handleClose: () => void;
   removeAllChaptersFromEntry: boolean;
-  setRemoveAllChaptersFromEntry: React.Dispatch<React.SetStateAction<boolean>>;
+  setRemoveAllChaptersFromEntry: Dispatch<SetStateAction<boolean>>;
   handleRemoveEntry: () => void;
 }) {
   return (

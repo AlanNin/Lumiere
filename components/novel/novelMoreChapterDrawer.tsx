@@ -2,7 +2,7 @@ import { TouchableOpacity, View } from "react-native";
 import BottomDrawer from "../bottomDrawer";
 import { Text } from "../defaults";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { Image } from "expo-image";
 import { pickAndSaveImage } from "@/lib/image-picker";
 import { useMutation } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ export default function NovelMoreChapterDrawer({
   novelCustomImageUri,
   refetchNovelInfo,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   novelTitle: string;
   novelImageUrl: string;
   novelCustomImageUri?: string | null;

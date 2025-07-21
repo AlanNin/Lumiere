@@ -12,6 +12,7 @@ import {
   Tags,
   VenetianMask,
 } from "lucide-react-native";
+import { ReactNode } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -19,7 +20,7 @@ export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  function OptionsWrapper({ children }: { children: React.ReactNode }) {
+  function OptionsWrapper({ children }: { children: ReactNode }) {
     return (
       <View className="flex flex-col gap-y-8 items-center px-5 py-8">
         {children}

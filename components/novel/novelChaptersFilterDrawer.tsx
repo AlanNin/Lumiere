@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import BottomDrawer from "../bottomDrawer";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useState } from "react";
+import { ReactNode, RefObject, useState } from "react";
 import { colors } from "@/lib/constants";
 import { SceneMap, TabBar, TabView } from "react-native-tab-view";
 import { Text } from "../defaults";
@@ -196,7 +196,7 @@ export default function NovelChaptersFilterDrawer({
   bottomDrawerRef,
   novelTitle,
 }: {
-  bottomDrawerRef: React.RefObject<BottomSheetModal | null>;
+  bottomDrawerRef: RefObject<BottomSheetModal | null>;
   novelTitle: NovelInfo["title"];
 }) {
   const [index, setIndex] = useState(0);
@@ -213,7 +213,7 @@ export default function NovelChaptersFilterDrawer({
       filter: () => renderFilterSection({ novelTitle }),
       sort: () => renderSortSection({ novelTitle }),
     }),
-    {} as Record<string, () => React.ReactNode>
+    {} as Record<string, () => ReactNode>
   );
 
   return (
