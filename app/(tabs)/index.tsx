@@ -18,6 +18,8 @@ import { Text } from "@/components/defaults";
 import { useKeyboard } from "@react-native-community/hooks";
 import { cn } from "@/lib/cn";
 import { useRouter } from "expo-router";
+import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
+import { RefreshControl } from "react-native-gesture-handler";
 
 const renderTabBar = (props: any) => (
   <TabBar
@@ -45,13 +47,19 @@ const renderNovels = ({
   searchQuery,
   keyboardShown,
   onSearchInExplorer,
+  onRefreshLibrary,
+  getIsRefreshing,
 }: {
   novels: Novel[];
   width: number;
   searchQuery: string;
   keyboardShown: boolean;
   onSearchInExplorer: () => void;
+  onRefreshLibrary: (titles: string[]) => void;
+  getIsRefreshing: () => boolean;
 }) => {
+  const isRefreshing = getIsRefreshing();
+
   return (
     <View className="flex-1">
       {searchQuery.length > 0 && (
@@ -88,6 +96,14 @@ const renderNovels = ({
           keyExtractor={(item) => item.title}
           numColumns={2}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              onRefresh={() => onRefreshLibrary(novels.map((n) => n.title))}
+              refreshing={isRefreshing}
+              progressBackgroundColor={colors.primary}
+              colors={[colors.primary_foreground]}
+            />
+          }
         />
       ) : (
         <View
@@ -113,6 +129,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { keyboardShown } = useKeyboard();
   const router = useRouter();
+  const { enqueueLibraryRefresh, isLibraryRefreshing } = useNovelRefreshQueue();
 
   function handleSearchInExplorer() {
     setIsSearchOpen(false);
@@ -215,6 +232,9 @@ export default function HomeScreen() {
           searchQuery,
           keyboardShown,
           onSearchInExplorer: handleSearchInExplorer,
+          onRefreshLibrary: (titles) =>
+            enqueueLibraryRefresh(category.id, titles),
+          getIsRefreshing: () => isLibraryRefreshing(category.id),
         });
 
       return scenes;
