@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import FilterCategory from "@/components/filterCategory";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import FilterCategory from "@/components/explore/filterCategory";
 import TabHeader from "@/components/tabHeader";
 import NovelCard from "@/components/novel/novelCard";
 import { Novel } from "@/types/novel";
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -20,7 +22,8 @@ import {
   Heart,
   BadgeAlert,
   Search,
-  ClockPlus,
+  ListFilter,
+  Globe,
 } from "lucide-react-native";
 import useDebounce from "@/hooks/useDebounce";
 import Quote from "@/components/statics/quote";
@@ -28,6 +31,8 @@ import Loading from "@/components/statics/loading";
 import { useKeyboard } from "@react-native-community/hooks";
 import { cn } from "@/lib/cn";
 import { useLocalSearchParams } from "expo-router";
+import ExploreFilterDrawer from "@/components/explore/exploreFilterDrawer";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 type FilterOption = {
   key: ExploreSection;
@@ -128,6 +133,7 @@ export default function ExploreScreen() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const { keyboardShown } = useKeyboard();
+  const bottomDrawerFilterRef = useRef<BottomSheetModal>(null);
 
   const allFilterOptions: FilterOption[] = useMemo(
     () => [
@@ -137,19 +143,19 @@ export default function ExploreScreen() {
         Icon: Search,
       },
       {
-        key: "new",
-        label: "New",
-        Icon: ClockPlus,
-      },
-      {
         key: "popular",
         label: "Popular",
         Icon: Heart,
       },
       {
         key: "latest-releases",
-        label: "Latest Releases",
+        label: "Latest",
         Icon: BadgeAlert,
+      },
+      {
+        key: "filter",
+        label: "Filter",
+        Icon: ListFilter,
       },
     ],
     []
@@ -199,6 +205,29 @@ export default function ExploreScreen() {
 
   const novels = novelsData?.pages.flatMap((p) => p.items) ?? [];
 
+  function renderOpenInBrowserButton() {
+    function handlePress() {
+      Linking.openURL(
+        `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/home`
+      );
+    }
+
+    return (
+      <TouchableOpacity className="p-2" onPress={handlePress}>
+        <Globe color={colors.muted_foreground} size={20} strokeWidth={1.6} />
+      </TouchableOpacity>
+    );
+  }
+
+  function handleFilterCategoryPress(filter: FilterOption) {
+    if (filter.key === "filter") {
+      bottomDrawerFilterRef.current?.present();
+      return;
+    }
+
+    handleChangeFilter(filter);
+  }
+
   useEffect(() => {
     if (paramSearchQuery) {
       setSearchQuery(String(paramSearchQuery));
@@ -215,6 +244,7 @@ export default function ExploreScreen() {
         isSearchOpen={isSearchOpen}
         setIsSearchOpen={setIsSearchOpen}
         showSearch={true}
+        customRightContent={renderOpenInBrowserButton()}
       />
       <View className="flex flex-col gap-y-2 border-b-[0.5px] border-muted pb-4">
         <FlatList
@@ -228,7 +258,7 @@ export default function ExploreScreen() {
                   ? item.key === "search"
                   : item.key === selectedFilter.key
               }
-              onPress={() => handleChangeFilter(item)}
+              onPress={() => handleFilterCategoryPress(item)}
             />
           )}
           horizontal
@@ -272,6 +302,8 @@ export default function ExploreScreen() {
           )}
         </>
       )}
+
+      <ExploreFilterDrawer bottomDrawerRef={bottomDrawerFilterRef} />
     </View>
   );
 }

@@ -283,7 +283,7 @@ export default function NovelDownloadChaptersDrawer({
             }}
             style={{
               width: 200,
-              backgroundColor: colors.muted_foreground + "15",
+              backgroundColor: colors.muted_foreground + "25",
             }}
             enabled={DOWNLOAD_MODE_OPTIONS.length > 1}
           >

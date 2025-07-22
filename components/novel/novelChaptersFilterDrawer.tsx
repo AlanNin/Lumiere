@@ -218,15 +218,14 @@ export default function NovelChaptersFilterDrawer({
 
   return (
     <BottomDrawer ref={bottomDrawerRef}>
-      <View className="flex-1 h-60">
-        <TabView
-          navigationState={{ index, routes }}
-          renderScene={SceneMap(sceneRenderers)}
-          onIndexChange={setIndex}
-          initialLayout={{ width: width }}
-          renderTabBar={renderTabBar}
-        />
-      </View>
+      <TabView
+        navigationState={{ index, routes }}
+        renderScene={SceneMap(sceneRenderers)}
+        onIndexChange={setIndex}
+        initialLayout={{ width: width }}
+        renderTabBar={renderTabBar}
+        style={{ height: 240 }}
+      />
     </BottomDrawer>
   );
 }

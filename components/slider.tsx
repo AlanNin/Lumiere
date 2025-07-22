@@ -1,9 +1,7 @@
 import { useSharedValue } from "react-native-reanimated";
 import { Slider } from "react-native-awesome-slider";
 import { colors } from "@/lib/constants";
-import { View, useWindowDimensions } from "react-native";
-import { Text } from "./defaults";
-import { cn } from "@/lib/cn";
+import { View } from "react-native";
 
 export function SliderComponent({
   minValue,

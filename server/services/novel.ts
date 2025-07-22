@@ -460,31 +460,39 @@ export const novelService = {
 // Helper functions
 function getNovelsExploreUrl(section: ExploreSection, pageNumber: number) {
   const EXPLORE_SECTION_MAP: Record<ExploreSection, string> = {
-    new: "new",
     popular: "popular",
     "latest-releases": "latest-release",
     search: "",
+    filter: "",
   };
 
-  return `https://novelfire.net/genre-all/sort-${EXPLORE_SECTION_MAP[section]}/status-all/all-novel?page=${pageNumber}`;
+  return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/genre-all/sort-${
+    EXPLORE_SECTION_MAP[section]
+  }/status-all/all-novel?page=${pageNumber}`;
 }
 
 function getNovelSearchUrl(searchQuery: string) {
-  return `https://novelfire.net/ajax/searchLive?inputContent=${encodeURIComponent(
-    searchQuery
-  )}`;
+  return `${String(
+    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
+  )}/ajax/searchLive?inputContent=${encodeURIComponent(searchQuery)}`;
 }
 
 function getNovelInfoUrl(novelTitleSlug: string) {
-  return `https://novelfire.net/book/${novelTitleSlug}`;
+  return `${String(
+    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
+  )}/book/${novelTitleSlug}`;
 }
 
 function getNovelChaptersUrl(novelTitleSlug: string) {
-  return `https://novelbin.com/ajax/chapter-archive?novelId=${novelTitleSlug}`;
+  return `${String(
+    process.env.EXPO_PUBLIC_SCRAPE_CHAPTERS_LIST_URL
+  )}?novelId=${novelTitleSlug}`;
 }
 
 function getNovelChapterUrl(novelTitleSlug: string, chapterNumber: number) {
-  return `https://novelfire.net/book/${novelTitleSlug}/chapter-${chapterNumber}`;
+  return `${String(
+    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
+  )}/book/${novelTitleSlug}/chapter-${chapterNumber}`;
 }
 
 function mergeNovelsScrapedWithStored(

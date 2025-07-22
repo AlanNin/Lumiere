@@ -16,6 +16,7 @@ import { useEffect } from "react";
 import { Frown } from "lucide-react-native";
 import Error from "@/components/statics/error";
 import { libraryController } from "@/server/controllers/library";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,19 +57,21 @@ export default function RootLayout() {
     <ReactQueryProvider>
       <ConfigProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar style="light" translucent />
-          <Stack
-            screenOptions={{
-              contentStyle: {
-                backgroundColor: colors.background,
-              },
-              headerShown: false,
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="novel" />
-            <Stack.Screen name="(more)" />
-          </Stack>
+          <BottomSheetModalProvider>
+            <StatusBar style="light" translucent />
+            <Stack
+              screenOptions={{
+                contentStyle: {
+                  backgroundColor: colors.background,
+                },
+                headerShown: false,
+              }}
+            >
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="novel" />
+              <Stack.Screen name="(more)" />
+            </Stack>
+          </BottomSheetModalProvider>
         </GestureHandlerRootView>
       </ConfigProvider>
     </ReactQueryProvider>

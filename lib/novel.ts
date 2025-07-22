@@ -8,7 +8,9 @@ import slugify from "./slug";
 export function getNovelUrl(novelTitle: string) {
   const novelTitleSlug = slugify(novelTitle);
 
-  return `https://novelfire.net/book/${novelTitleSlug}`;
+  return `${String(
+    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
+  )}/book/${novelTitleSlug}`;
 }
 
 export function applyNovelChaptersFiltersAndSort(

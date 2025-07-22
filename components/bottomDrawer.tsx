@@ -1,27 +1,43 @@
-import { ReactNode, RefObject, forwardRef, useCallback, useState } from "react";
 import {
+  ComponentProps,
+  ReactNode,
+  RefObject,
+  forwardRef,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+import {
+  BottomSheetFlatList,
   BottomSheetModal,
   BottomSheetView,
-  BottomSheetModalProvider,
 } from "@gorhom/bottom-sheet";
-import { BackHandler, TouchableOpacity } from "react-native";
+import {
+  BackHandler,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
 import { colors } from "@/lib/constants";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+type ListStyle = ComponentProps<typeof BottomSheetFlatList>["style"];
 
 const BottomDrawer = forwardRef<
   BottomSheetModal,
   Omit<
     {
-      children: ReactNode;
+      children?: ReactNode;
       paddingBottom?: number;
       onChange?: (boolean: number) => void;
       onClose?: () => void;
+      renderList?: ({ style }: { style?: ListStyle }) => ReactNode;
     },
     "ref"
   >
->(({ children, paddingBottom, onChange, onClose }, ref) => {
+>(({ children, paddingBottom, onChange, onClose, renderList }, ref) => {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
   const closeDrawer = () => {
     (ref as RefObject<BottomSheetModal>).current?.dismiss();
@@ -53,55 +69,61 @@ const BottomDrawer = forwardRef<
     }, [sheetStatus])
   );
 
+  const containerStyle = useMemo(
+    () => ({
+      padding: 20,
+      paddingBottom: paddingBottom ? paddingBottom : insets.bottom,
+    }),
+    []
+  );
+
   return (
-    <BottomSheetModalProvider>
-      <BottomSheetModal
-        onChange={(status) => {
-          if (status === 0) {
-            setSheetStatus("open");
-          } else {
-            setSheetStatus("close");
-          }
-          if (onChange) {
-            onChange(status);
-          }
-        }}
-        ref={ref}
-        backdropComponent={() => (
-          <TouchableOpacity
-            style={{
-              backgroundColor: "rgba(0,0,0,0.5)",
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 20,
-            }}
-            activeOpacity={1}
-            onPress={closeDrawer}
-          />
-        )}
-        backgroundStyle={{
-          backgroundColor: colors.layout_background,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: colors.grayscale,
-        }}
-        containerStyle={{
-          zIndex: 30,
-        }}
-      >
-        <BottomSheetView
+    <BottomSheetModal
+      ref={ref}
+      onChange={(status) => {
+        if (status === 0) {
+          setSheetStatus("open");
+        } else {
+          setSheetStatus("close");
+        }
+        if (onChange) {
+          onChange(status);
+        }
+      }}
+      backdropComponent={() => (
+        <TouchableOpacity
           style={{
-            padding: 20,
-            paddingBottom: paddingBottom ? paddingBottom : insets.bottom,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 20,
           }}
-        >
-          {children}
-        </BottomSheetView>
-      </BottomSheetModal>
-    </BottomSheetModalProvider>
+          activeOpacity={1}
+          onPress={closeDrawer}
+        />
+      )}
+      backgroundStyle={{
+        backgroundColor: colors.layout_background,
+      }}
+      handleIndicatorStyle={{
+        backgroundColor: colors.grayscale,
+      }}
+      containerStyle={{
+        zIndex: 30,
+      }}
+      maxDynamicContentSize={renderList ? height / 1.3 : undefined}
+    >
+      {renderList ? (
+        renderList({
+          style: { ...containerStyle },
+        })
+      ) : (
+        <BottomSheetView style={containerStyle}>{children}</BottomSheetView>
+      )}
+    </BottomSheetModal>
   );
 });
 

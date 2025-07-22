@@ -3,7 +3,11 @@ import { Chapter, NovelInfo } from "@/types/novel";
 import { novelService } from "../services/novel";
 import { DownloadChapter } from "@/types/download";
 
-export type ExploreSection = "new" | "popular" | "latest-releases" | "search";
+export type ExploreSection =
+  | "popular"
+  | "latest-releases"
+  | "filter"
+  | "search";
 
 export const novelController = {
   async exploreNovels({

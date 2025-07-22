@@ -1,6 +1,6 @@
 import HistoryBatchCard from "@/components/history/historyBatchCard";
-import HistoryRemoveAllModal from "@/components/history/historyRemoveAllModal";
-import HistoryRemoveEntriesModal from "@/components/history/historyRemoveEntriesModal";
+import HistoryRemoveAllDrawer from "@/components/history/historyRemoveAllDrawer";
+import HistoryRemoveEntriesDrawer from "@/components/history/historyRemoveEntriesDrawer";
 import Loading from "@/components/statics/loading";
 import Quote from "@/components/statics/quote";
 import TabHeader from "@/components/tabHeader";
@@ -8,11 +8,12 @@ import { cn } from "@/lib/cn";
 import { colors } from "@/lib/constants";
 import { historyController } from "@/server/controllers/history";
 import type { HistoryBatch } from "@/types/history";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useKeyboard } from "@react-native-community/hooks";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Shredder, Search } from "lucide-react-native";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
@@ -35,17 +36,11 @@ export default function HistoryScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const [removeAllChaptersFromEntry, setRemoveAllChaptersFromEntry] = useState(
-    false
-  );
+  const removeHistoryEntriesDrawerRef = useRef<BottomSheetModal>(null);
 
-  const [removeAllHistoryModal, setRemoveAllHistoryModal] = useState(false);
+  const removeAllHistoryDrawerRef = useRef<BottomSheetModal>(null);
 
-  const {
-    data: history,
-    isLoading: isLoadingHistory,
-    refetch: refetchHistory,
-  } = useQuery({
+  const { data: history, isLoading: isLoadingHistory } = useQuery({
     queryKey: ["history"],
     queryFn: () => historyController.getHistory(),
   });
@@ -72,61 +67,6 @@ export default function HistoryScreen() {
     },
   });
 
-  function handleResetRemoveEntryStates() {
-    setEntryToRemove(null);
-    setRemoveAllChaptersFromEntry(false);
-  }
-
-  const { mutate: removeChapterFromHistory } = useMutation({
-    mutationFn: ({
-      novelTitle,
-      chapterNumber,
-    }: {
-      novelTitle: string;
-      chapterNumber: number;
-    }) =>
-      historyController.removeChapterFromHistory({
-        novelTitle,
-        chapterNumber,
-      }),
-    onSuccess: () => {
-      refetchHistory();
-      handleResetRemoveEntryStates();
-    },
-  });
-
-  const { mutate: removeNovelFromHistory } = useMutation({
-    mutationFn: ({ novelTitle }: { novelTitle: string }) =>
-      historyController.removeNovelFromHistory({
-        novelTitle,
-      }),
-    onSuccess: () => {
-      refetchHistory();
-      handleResetRemoveEntryStates();
-    },
-  });
-
-  const { mutate: removeAllHistory } = useMutation({
-    mutationFn: () => historyController.removeAllHistory(),
-    onSuccess: () => {
-      refetchHistory();
-      setRemoveAllHistoryModal(false);
-    },
-  });
-
-  function handleRemoveEntry() {
-    if (!entryToRemove) return;
-
-    if (removeAllChaptersFromEntry) {
-      removeNovelFromHistory({ novelTitle: entryToRemove.novelTitle });
-    } else {
-      removeChapterFromHistory({
-        novelTitle: entryToRemove.novelTitle,
-        chapterNumber: entryToRemove.chapterNumber,
-      });
-    }
-  }
-
   function renderRemoveAllEntriesButton() {
     const list = searchQuery ? filteredHistory : history;
     if (!list || list.length === 0) return null;
@@ -134,7 +74,7 @@ export default function HistoryScreen() {
     return (
       <TouchableOpacity
         className="p-2"
-        onPress={() => setRemoveAllHistoryModal(true)}
+        onPress={() => removeAllHistoryDrawerRef.current?.present()}
       >
         <Shredder color={colors.muted_foreground} size={20} strokeWidth={1.6} />
       </TouchableOpacity>
@@ -183,7 +123,10 @@ export default function HistoryScreen() {
               renderItem={({ item }) => (
                 <HistoryBatchCard
                   history={item}
-                  openRemoveEntryDrawer={setEntryToRemove}
+                  openRemoveEntryDrawer={(entry) => {
+                    setEntryToRemove(entry);
+                    removeHistoryEntriesDrawerRef.current?.present();
+                  }}
                 />
               )}
               contentContainerStyle={{
@@ -201,19 +144,13 @@ export default function HistoryScreen() {
         </>
       )}
 
-      <HistoryRemoveEntriesModal
+      <HistoryRemoveEntriesDrawer
+        bottomDrawerRef={removeHistoryEntriesDrawerRef}
         entryToRemove={entryToRemove}
-        handleClose={handleResetRemoveEntryStates}
-        removeAllChaptersFromEntry={removeAllChaptersFromEntry}
-        setRemoveAllChaptersFromEntry={setRemoveAllChaptersFromEntry}
-        handleRemoveEntry={handleRemoveEntry}
+        setEntryToRemove={setEntryToRemove}
       />
 
-      <HistoryRemoveAllModal
-        removeAllHistoryModal={removeAllHistoryModal}
-        handleClose={() => setRemoveAllHistoryModal(false)}
-        handleRemoveAllHistory={removeAllHistory}
-      />
+      <HistoryRemoveAllDrawer bottomDrawerRef={removeAllHistoryDrawerRef} />
     </View>
   );
 }
