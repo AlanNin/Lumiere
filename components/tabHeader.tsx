@@ -13,7 +13,6 @@ import Animated, {
   useDerivedValue,
   withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabHeader({
   title,
@@ -40,7 +39,6 @@ export default function TabHeader({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const insets = useSafeAreaInsets();
 
   // Optional animated background
   const bgProgress = useDerivedValue(() =>
@@ -89,7 +87,7 @@ export default function TabHeader({
   }, [pathname]);
 
   return (
-    <Animated.View style={[{ paddingTop: insets.top }, backgroundStyle]}>
+    <Animated.View style={backgroundStyle}>
       {isSearchOpen &&
       searchQuery != undefined &&
       setSearchQuery != undefined ? (

@@ -31,7 +31,9 @@ export default function OptionButton({
           </Text>
         )}
       </View>
-      {switchValue !== undefined && <BooleanSwitch value={switchValue} />}
+      {switchValue !== undefined && (
+        <BooleanSwitch value={switchValue} asChild />
+      )}
     </TouchableOpacity>
   );
 }

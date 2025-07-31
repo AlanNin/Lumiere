@@ -1,3 +1,4 @@
+import ModeIndicator from "@/components/modeIndicator";
 import { Tabs } from "@/components/navigationTabs";
 import { colors } from "@/lib/constants";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -5,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function TabsLayout() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["right", "left"]}>
+      <ModeIndicator />
       <Tabs
         tabBarStyle={{ backgroundColor: colors.layout_background }}
         activeIndicatorColor={colors.primary}

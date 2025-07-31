@@ -1,5 +1,6 @@
 import OptionButton from "@/components/more/optionButton";
 import Separator from "@/components/separator";
+import { useConfig } from "@/providers/appConfig";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
@@ -14,23 +15,21 @@ import {
 } from "lucide-react-native";
 import { ReactNode } from "react";
 import { ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function MoreScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-
-  function OptionsWrapper({ children }: { children: ReactNode }) {
-    return (
-      <View className="flex flex-col gap-y-8 items-center px-5 py-8">
-        {children}
-      </View>
-    );
-  }
+  const [downloadedOnly, setDownloadedOnly] = useConfig<boolean>(
+    "downloadedOnly",
+    false
+  );
+  const [incognitoMode, setIncognitoMode] = useConfig<boolean>(
+    "incognitoMode",
+    false
+  );
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
-      <View className="flex-1" style={{ paddingTop: insets.top }}>
+      <View className="flex-1">
         <View className="w-full h-56 flex items-center justify-center">
           <Image
             source={require("@/assets/icon-transparent.png")}
@@ -44,15 +43,15 @@ export default function MoreScreen() {
             Icon={CloudOff}
             label="Downloaded only"
             description="Filters all entries in your library"
-            onPress={() => {}}
-            switchValue={false}
+            switchValue={downloadedOnly}
+            onPress={() => setDownloadedOnly((prev) => !prev)}
           />
           <OptionButton
             Icon={VenetianMask}
             label="Incognito mode"
             description="Pauses reading history"
-            onPress={() => {}}
-            switchValue={false}
+            switchValue={incognitoMode}
+            onPress={() => setIncognitoMode((prev) => !prev)}
           />
         </OptionsWrapper>
         <Separator />
@@ -85,5 +84,13 @@ export default function MoreScreen() {
         </OptionsWrapper>
       </View>
     </ScrollView>
+  );
+}
+
+function OptionsWrapper({ children }: { children: ReactNode }) {
+  return (
+    <View className="flex flex-col gap-y-8 items-center px-5 py-8">
+      {children}
+    </View>
   );
 }

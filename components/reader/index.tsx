@@ -54,6 +54,7 @@ export default function ReaderComponent({
     return Number.isNaN(p) ? 0 : Math.round(p);
   })();
   const hasInititalSeekedRef = useRef(false);
+  const [incognitoMode] = useConfig<boolean>("incognitoMode", false);
 
   const { mutate: updateNovelChapterProgress } = useMutation({
     mutationFn: () =>
@@ -169,10 +170,12 @@ export default function ReaderComponent({
     return () => {
       NavigationBar.setVisibilityAsync("visible");
       StatusBar.setStatusBarHidden(false);
-      if ((chapter.progress ?? 0) < 100) {
-        updateNovelChapterProgress();
+      if (!incognitoMode) {
+        if ((chapter.progress ?? 0) < 100) {
+          updateNovelChapterProgress();
+        }
+        updateNovelChapterReadAt();
       }
-      updateNovelChapterReadAt();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);

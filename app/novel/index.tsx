@@ -47,6 +47,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import NovelMoreChapterDrawer from "@/components/novel/novelMoreChapterDrawer";
 import NovelCategoryDrawer from "@/components/novel/novelCategoryDrawer";
 import { categoryController } from "@/server/controllers/category";
+import ModeIndicator from "@/components/modeIndicator";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -81,6 +82,7 @@ export default function NovelScreen() {
       order: "asc",
     }
   );
+  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
   const hasChaptersFilterApplied = useMemo(() => {
     return Object.values(novelChaptersFilter).some(
       (v) => v === "checked" || v === "indeterminate"
@@ -116,7 +118,10 @@ export default function NovelScreen() {
     if (!novelInfo) return [];
     return applyNovelChaptersFiltersAndSort(
       novelInfo.chapters,
-      novelChaptersFilter,
+      {
+        ...novelChaptersFilter,
+        downloaded: downloadedOnly ? "checked" : novelChaptersFilter.downloaded,
+      },
       novelChaptersSort
     );
   }, [novelInfo, novelChaptersFilter, novelChaptersSort]);
@@ -432,121 +437,129 @@ export default function NovelScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background relative">
-      <NovelHeader
-        scrollY={scrollY}
-        novelTitle={novelInfo.title}
-        selectedChapters={selectedChapters.length}
-        isDownloadingFromThisNovel={isDownloadingFromThisNovel}
-        handleClearSelectedChapters={handleClearSelectedChapters}
-        handleSelectAllChapters={handleSelectAllChapters}
-        handleSelectRemainingChapters={handleSelectRemainingChapters}
-        handleOpenSearchChapterDrawer={() =>
-          bottomDrawerSearchChapterRef.current?.present()
-        }
-        handleOpenDownloadChaptersDrawer={() =>
-          bottomDraweChaptersDownloadRef.current?.present()
-        }
-        handleOpenMoreChapterDrawer={() =>
-          bottomDrawerMoreRef.current?.present()
-        }
-      />
-
-      <AnimatedFlashList
-        ref={listRef}
-        ListHeaderComponent={ListHeader}
-        data={novelChapters}
-        extraData={[queueDownload.length, selectedChapters.length]}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        estimatedItemSize={44}
-        onScroll={scrollYHandler}
-        scrollEventThrottle={16}
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + (allChaptersCompleted ? 12 : 84),
-        }}
-        removeClippedSubviews={true}
-        onLoad={() => setListLoaded(true)}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing(String(title))}
-            onRefresh={() => enqueueRefresh([String(title)])}
-            progressBackgroundColor={colors.primary}
-            colors={[colors.primary_foreground]}
-          />
-        }
-        ListEmptyComponent={EmptyChaptersComponent}
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={(_, height) => setContentHeight(height)}
-      />
-
-      {listLoaded && !allChaptersCompleted && selectedChapters.length === 0 && (
-        <NovelReadButton
+    <View className="flex-1">
+      <ModeIndicator removeMinHeight={true} />
+      <View className="flex-1 bg-background relative">
+        <NovelHeader
           scrollY={scrollY}
           novelTitle={novelInfo.title}
-          novelTotalChapters={novelChapters.length}
-          resumeFromNovelChapter={
-            resumeChapter ? resumeChapter.number : undefined
+          selectedChapters={selectedChapters.length}
+          isDownloadingFromThisNovel={isDownloadingFromThisNovel}
+          handleClearSelectedChapters={handleClearSelectedChapters}
+          handleSelectAllChapters={handleSelectAllChapters}
+          handleSelectRemainingChapters={handleSelectRemainingChapters}
+          handleOpenSearchChapterDrawer={() =>
+            bottomDrawerSearchChapterRef.current?.present()
           }
-          maxScrollY={maxScrollY}
+          handleOpenDownloadChaptersDrawer={() =>
+            bottomDraweChaptersDownloadRef.current?.present()
+          }
+          handleOpenMoreChapterDrawer={() =>
+            bottomDrawerMoreRef.current?.present()
+          }
         />
-      )}
 
-      <NovelActionsBar
-        novelTitle={novelInfo.title}
-        selectedChapters={selectedChapters}
-        setSelectedChapters={setSelectedChapters}
-        refetchNovelInfo={refetchNovelInfo}
-        enqueueDownload={enqueueDownload}
-        onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
-        isSortAsc={novelChaptersSort.order === "asc"}
-      />
+        <AnimatedFlashList
+          ref={listRef}
+          ListHeaderComponent={ListHeader}
+          data={novelChapters}
+          extraData={[queueDownload.length, selectedChapters.length]}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          estimatedItemSize={44}
+          onScroll={scrollYHandler}
+          scrollEventThrottle={16}
+          contentContainerStyle={{
+            paddingBottom:
+              insets.bottom +
+              (allChaptersCompleted || novelChapters.length === 0 ? 12 : 84),
+          }}
+          removeClippedSubviews={true}
+          onLoad={() => setListLoaded(true)}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing(String(title))}
+              onRefresh={() => enqueueRefresh([String(title)])}
+              progressBackgroundColor={colors.primary}
+              colors={[colors.primary_foreground]}
+            />
+          }
+          ListEmptyComponent={EmptyChaptersComponent}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={(_, height) => setContentHeight(height)}
+        />
 
-      <NovelRemoveDownloadDrawer
-        bottomDrawerRef={bottomDrawerRemoveDownloadRef}
-        chaptersToDelete={chaptersToDelete}
-        setChaptersToDelete={setChaptersToDelete}
-        refetchNovelInfo={refetchNovelInfo}
-      />
+        {listLoaded &&
+          novelChapters.length > 0 &&
+          !allChaptersCompleted &&
+          selectedChapters.length === 0 && (
+            <NovelReadButton
+              scrollY={scrollY}
+              novelTitle={novelInfo.title}
+              novelTotalChapters={novelChapters.length}
+              resumeFromNovelChapter={
+                resumeChapter ? resumeChapter.number : undefined
+              }
+              maxScrollY={maxScrollY}
+            />
+          )}
 
-      <NovelChaptersFilterDrawer
-        bottomDrawerRef={bottomDrawerChaptersFilterRef}
-        novelTitle={novelInfo.title}
-      />
+        <NovelActionsBar
+          novelTitle={novelInfo.title}
+          selectedChapters={selectedChapters}
+          setSelectedChapters={setSelectedChapters}
+          refetchNovelInfo={refetchNovelInfo}
+          enqueueDownload={enqueueDownload}
+          onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
+          isSortAsc={novelChaptersSort.order === "asc"}
+        />
 
-      <NovelFindChapterDrawer
-        bottomDrawerRef={bottomDrawerSearchChapterRef}
-        maxChapters={novelChapters.length}
-        handleFindChapter={handleFindChapter}
-      />
+        <NovelRemoveDownloadDrawer
+          bottomDrawerRef={bottomDrawerRemoveDownloadRef}
+          chaptersToDelete={chaptersToDelete}
+          setChaptersToDelete={setChaptersToDelete}
+          refetchNovelInfo={refetchNovelInfo}
+        />
 
-      <NovelDownloadChaptersDrawer
-        bottomDrawerRef={bottomDraweChaptersDownloadRef}
-        novelTitle={novelInfo.title}
-        chapters={novelInfo?.chapters ?? []}
-        currentChapter={
-          resumeChapter ? Math.max(resumeChapter.number - 1, 1) : 1
-        }
-        maxChapters={novelChapters.length}
-        allChaptersCompleted={allChaptersCompleted}
-        hasDownloadedChapters={hasDownloadedChapters}
-        refetchNovelInfo={refetchNovelInfo}
-      />
+        <NovelChaptersFilterDrawer
+          bottomDrawerRef={bottomDrawerChaptersFilterRef}
+          novelTitle={novelInfo.title}
+        />
 
-      <NovelMoreChapterDrawer
-        bottomDrawerRef={bottomDrawerMoreRef}
-        novelTitle={novelInfo.title}
-        novelImageUrl={novelInfo.imageUrl}
-        novelCustomImageUri={novelInfo.customImageUri}
-        refetchNovelInfo={refetchNovelInfo}
-      />
+        <NovelFindChapterDrawer
+          bottomDrawerRef={bottomDrawerSearchChapterRef}
+          maxChapters={novelChapters.length}
+          handleFindChapter={handleFindChapter}
+        />
 
-      <NovelCategoryDrawer
-        bottomDrawerRef={bottomDrawerCategoryRef}
-        categories={categories}
-        novelTitle={novelInfo.title}
-        novelCategories={novelInfo.categoriesIds}
-      />
+        <NovelDownloadChaptersDrawer
+          bottomDrawerRef={bottomDraweChaptersDownloadRef}
+          novelTitle={novelInfo.title}
+          chapters={novelInfo?.chapters ?? []}
+          currentChapter={
+            resumeChapter ? Math.max(resumeChapter.number - 1, 1) : 1
+          }
+          maxChapters={novelChapters.length}
+          allChaptersCompleted={allChaptersCompleted}
+          hasDownloadedChapters={hasDownloadedChapters}
+          refetchNovelInfo={refetchNovelInfo}
+        />
+
+        <NovelMoreChapterDrawer
+          bottomDrawerRef={bottomDrawerMoreRef}
+          novelTitle={novelInfo.title}
+          novelImageUrl={novelInfo.imageUrl}
+          novelCustomImageUri={novelInfo.customImageUri}
+          refetchNovelInfo={refetchNovelInfo}
+        />
+
+        <NovelCategoryDrawer
+          bottomDrawerRef={bottomDrawerCategoryRef}
+          categories={categories}
+          novelTitle={novelInfo.title}
+          novelCategories={novelInfo.categoriesIds}
+        />
+      </View>
     </View>
   );
 }

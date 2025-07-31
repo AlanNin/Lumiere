@@ -20,6 +20,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { Text } from "../defaults";
 import { cn } from "@/lib/cn";
+import ModeIndicator from "../modeIndicator";
+import { useConfig } from "@/providers/appConfig";
 
 export default function NovelHeader({
   novelTitle,
@@ -46,6 +48,9 @@ export default function NovelHeader({
 }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
+  const [incognitoMode] = useConfig<boolean>("incognitoMode", false);
+  const removeInsetPadding = downloadedOnly || incognitoMode;
 
   // Animate from fully transparent → to layout background
   const bgProgress = useDerivedValue(() =>
@@ -74,12 +79,12 @@ export default function NovelHeader({
   }));
 
   return (
-    <View
-      className="absolute top-0 w-full z-10"
-      style={{ height: insets.top + 65 }}
-    >
+    <View className="absolute top-0 w-full z-10">
       <Animated.View
-        style={[{ paddingTop: insets.top + 16 }, backgroundStyle]}
+        style={[
+          { paddingTop: removeInsetPadding ? 16 : insets.top + 16 },
+          backgroundStyle,
+        ]}
         className="p-4 flex flex-row items-center justify-between px-4 gap-x-6"
       >
         {selectedChapters > 0 ? (

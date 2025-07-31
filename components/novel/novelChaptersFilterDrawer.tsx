@@ -68,6 +68,7 @@ function renderFilterSection({
   const [novelChaptersFilter, setNovelChaptersFilter] = useConfig<
     Record<string, NovelChaptersFilter["value"]>
   >(`novelChaptersFilter-${novelTitle}`, {});
+  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
 
   function handleChange(key: string) {
     const current = novelChaptersFilter[key] ?? "unchecked";
@@ -89,12 +90,18 @@ function renderFilterSection({
   }: {
     item: typeof FILTER_OPTIONS[number];
   }) => {
-    const status = novelChaptersFilter[option.key] ?? "unchecked";
+    const defaultStatus = novelChaptersFilter[option.key] ?? "unchecked";
+    const isDownloadedOnly = option.key === "downloaded" && downloadedOnly;
+    const status = isDownloadedOnly ? "checked" : defaultStatus;
 
     return (
       <TouchableOpacity
         onPress={() => handleChange(option.key)}
-        className="flex flex-row items-center gap-x-4 py-2"
+        className={cn(
+          "flex flex-row items-center gap-x-4 py-2",
+          option.key === "downloaded" && isDownloadedOnly && "opacity-50"
+        )}
+        disabled={option.key === "downloaded" && isDownloadedOnly}
       >
         <Checkbox status={status} />
         <Text

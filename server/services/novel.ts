@@ -462,8 +462,8 @@ function getNovelsExploreUrl(section: ExploreSection, pageNumber: number) {
   const EXPLORE_SECTION_MAP: Record<ExploreSection, string> = {
     popular: "popular",
     "latest-releases": "latest-release",
+    new: "new",
     search: "",
-    filter: "",
   };
 
   return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/genre-all/sort-${

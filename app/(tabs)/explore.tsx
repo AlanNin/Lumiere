@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import FilterCategory from "@/components/explore/filterCategory";
 import TabHeader from "@/components/tabHeader";
 import NovelCard from "@/components/novel/novelCard";
@@ -22,8 +22,8 @@ import {
   Heart,
   BadgeAlert,
   Search,
-  ListFilter,
   Globe,
+  History,
 } from "lucide-react-native";
 import useDebounce from "@/hooks/useDebounce";
 import Quote from "@/components/statics/quote";
@@ -31,8 +31,6 @@ import Loading from "@/components/statics/loading";
 import { useKeyboard } from "@react-native-community/hooks";
 import { cn } from "@/lib/cn";
 import { useLocalSearchParams } from "expo-router";
-import ExploreFilterDrawer from "@/components/explore/exploreFilterDrawer";
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 type FilterOption = {
   key: ExploreSection;
@@ -133,7 +131,6 @@ export default function ExploreScreen() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const { keyboardShown } = useKeyboard();
-  const bottomDrawerFilterRef = useRef<BottomSheetModal>(null);
 
   const allFilterOptions: FilterOption[] = useMemo(
     () => [
@@ -153,9 +150,9 @@ export default function ExploreScreen() {
         Icon: BadgeAlert,
       },
       {
-        key: "filter",
-        label: "Filter",
-        Icon: ListFilter,
+        key: "new",
+        label: "New",
+        Icon: History,
       },
     ],
     []
@@ -219,15 +216,6 @@ export default function ExploreScreen() {
     );
   }
 
-  function handleFilterCategoryPress(filter: FilterOption) {
-    if (filter.key === "filter") {
-      bottomDrawerFilterRef.current?.present();
-      return;
-    }
-
-    handleChangeFilter(filter);
-  }
-
   useEffect(() => {
     if (paramSearchQuery) {
       setSearchQuery(String(paramSearchQuery));
@@ -258,7 +246,7 @@ export default function ExploreScreen() {
                   ? item.key === "search"
                   : item.key === selectedFilter.key
               }
-              onPress={() => handleFilterCategoryPress(item)}
+              onPress={() => handleChangeFilter(item)}
             />
           )}
           horizontal
@@ -302,8 +290,6 @@ export default function ExploreScreen() {
           )}
         </>
       )}
-
-      <ExploreFilterDrawer bottomDrawerRef={bottomDrawerFilterRef} />
     </View>
   );
 }
