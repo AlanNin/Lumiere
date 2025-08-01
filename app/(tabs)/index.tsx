@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Novel } from "@/types/novel";
-import { TabView, TabBar, TabBarItem } from "react-native-tab-view";
+import { TabView, TabBar } from "react-native-tab-view";
 import { colors } from "@/lib/constants";
 import { Telescope } from "lucide-react-native";
 import Quote from "@/components/statics/quote";
@@ -20,6 +20,7 @@ import { cn } from "@/lib/cn";
 import { useRouter } from "expo-router";
 import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
 import { RefreshControl } from "react-native-gesture-handler";
+import { useConfig } from "@/providers/appConfig";
 
 const renderTabBar = (props: any) => (
   <TabBar
@@ -87,7 +88,10 @@ const renderNovels = ({
                 containerStyle={{ maxWidth }}
                 href={{
                   pathname: "/novel",
-                  params: { title: item.title, isLocal: "false" },
+                  params: {
+                    title: item.title,
+                    isSaved: item.isSaved ? "true" : "false",
+                  },
                 }}
               />
             );
@@ -129,6 +133,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { keyboardShown } = useKeyboard();
   const router = useRouter();
+  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
   const { enqueueLibraryRefresh, isLibraryRefreshing } = useNovelRefreshQueue();
 
   function handleSearchInExplorer() {
@@ -145,8 +150,8 @@ export default function HomeScreen() {
   ];
 
   const { data: libraryCategories = defaultLibrary, isLoading } = useQuery({
-    queryKey: ["library"],
-    queryFn: () => libraryController.getLibrary(),
+    queryKey: ["library", downloadedOnly],
+    queryFn: () => libraryController.getLibrary({ downloadedOnly }),
   });
 
   const selectedCategories = libraryCategories?.length

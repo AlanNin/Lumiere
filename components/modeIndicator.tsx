@@ -10,6 +10,7 @@ import Animated, {
 import { Text } from "./defaults";
 import { colors } from "@/lib/constants";
 import { useMemo } from "react";
+import { usePathname } from "expo-router";
 
 type ModeKey = "incognito" | "downloaded";
 
@@ -78,12 +79,9 @@ function Badge({
   );
 }
 
-export default function ModeIndicator({
-  removeMinHeight = false,
-}: {
-  removeMinHeight?: boolean;
-}) {
+export default function ModeIndicator() {
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
   const [incognitoMode] = useConfig<boolean>("incognitoMode", false);
   const onlyOneModeActive = downloadedOnly !== incognitoMode;
@@ -104,8 +102,15 @@ export default function ModeIndicator({
     [downloadedOnly, incognitoMode]
   );
 
+  const useMinHeight = useMemo<boolean>(() => {
+    if (pathname === "/(more)/downloadQueue") {
+      return true;
+    }
+    return false;
+  }, [pathname]);
+
   return (
-    <View style={{ minHeight: removeMinHeight ? undefined : insets.top }}>
+    <View style={{ minHeight: useMinHeight ? insets.top : 0 }}>
       {modeEntries.map(({ mode, isOpen }) => {
         const hasExtraHeight = extraHeightMap[mode.key];
         const centerText = hasExtraHeight && onlyOneModeActive;

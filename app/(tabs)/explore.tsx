@@ -101,7 +101,10 @@ function RenderNovels({
               containerStyle={{ maxWidth }}
               href={{
                 pathname: "/novel",
-                params: { title: item.title, isLocal: "false" },
+                params: {
+                  title: item.title,
+                  isSaved: item.isSaved ? "true" : "false",
+                },
               }}
               showSavedBadge={item.isSaved}
             />

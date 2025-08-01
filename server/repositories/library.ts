@@ -1,26 +1,79 @@
 import { NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
-import { categories, novelCategories, novels } from "../db/schema";
-import { eq } from "drizzle-orm";
+import {
+  categories,
+  novelCategories,
+  novels,
+  novelChapters,
+} from "../db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { LibraryCategory } from "@/types/library";
 
 export const libraryRepository = {
-  async getLibrary(): Promise<LibraryCategory[]> {
-    const savedNovels = await db_client
-      .select({
-        title: novels.title,
-        imageUrl: novels.imageUrl,
-        customImageUri: novels.customImageUri,
-        description: novels.description,
-        rank: novels.rank,
-        rating: novels.rating,
-        author: novels.author,
-        genres: novels.genres,
-        status: novels.status,
-      })
-      .from(novels)
-      .where(eq(novels.isSaved, 1))
-      .all();
+  async getLibrary({
+    downloadedOnly,
+  }: {
+    downloadedOnly: boolean;
+  }): Promise<LibraryCategory[]> {
+    let savedNovels: {
+      title: string;
+      imageUrl: string;
+      customImageUri: string | null;
+      description: string;
+      rank: number;
+      rating: number;
+      author: string;
+      genres: string;
+      status: string;
+    }[];
+
+    if (downloadedOnly) {
+      const novelsWithDownloadedChapters = await db_client
+        .selectDistinct({
+          novelTitle: novelChapters.novelTitle,
+        })
+        .from(novelChapters)
+        .where(eq(novelChapters.downloaded, 1))
+        .all();
+
+      const novelTitles = novelsWithDownloadedChapters.map((n) => n.novelTitle);
+
+      if (novelTitles.length === 0) {
+        savedNovels = [];
+      } else {
+        savedNovels = await db_client
+          .select({
+            title: novels.title,
+            imageUrl: novels.imageUrl,
+            customImageUri: novels.customImageUri,
+            description: novels.description,
+            rank: novels.rank,
+            rating: novels.rating,
+            author: novels.author,
+            genres: novels.genres,
+            status: novels.status,
+          })
+          .from(novels)
+          .where(and(eq(novels.isSaved, 1), inArray(novels.title, novelTitles)))
+          .all();
+      }
+    } else {
+      savedNovels = await db_client
+        .select({
+          title: novels.title,
+          imageUrl: novels.imageUrl,
+          customImageUri: novels.customImageUri,
+          description: novels.description,
+          rank: novels.rank,
+          rating: novels.rating,
+          author: novels.author,
+          genres: novels.genres,
+          status: novels.status,
+        })
+        .from(novels)
+        .where(eq(novels.isSaved, 1))
+        .all();
+    }
 
     const dbCategories = await db_client
       .select({

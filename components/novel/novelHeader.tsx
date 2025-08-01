@@ -27,7 +27,6 @@ export default function NovelHeader({
   novelTitle,
   scrollY,
   selectedChapters,
-  isDownloadingFromThisNovel,
   handleClearSelectedChapters,
   handleSelectAllChapters,
   handleSelectRemainingChapters,
@@ -38,7 +37,6 @@ export default function NovelHeader({
   novelTitle: string;
   scrollY: SharedValue<number>;
   selectedChapters: number;
-  isDownloadingFromThisNovel: boolean;
   handleClearSelectedChapters: () => void;
   handleSelectAllChapters: () => void;
   handleSelectRemainingChapters: () => void;
@@ -160,12 +158,8 @@ export default function NovelHeader({
                 />
               </TouchableOpacity>
               <TouchableOpacity
-                className={cn(
-                  "p-2",
-                  isDownloadingFromThisNovel && "opacity-50"
-                )}
+                className="p-2"
                 onPress={handleOpenDownloadChaptersDrawer}
-                disabled={isDownloadingFromThisNovel}
               >
                 <Download
                   color={colors.muted_foreground}

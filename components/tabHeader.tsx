@@ -13,6 +13,7 @@ import Animated, {
   useDerivedValue,
   withTiming,
 } from "react-native-reanimated";
+import { getPaddingTop } from "@/lib/safeAreaInsets";
 
 export default function TabHeader({
   title,
@@ -51,7 +52,6 @@ export default function TabHeader({
       ["transparent", colors.layout_background]
     ),
   }));
-  //...
 
   useFocusEffect(
     useCallback(() => {
@@ -86,8 +86,10 @@ export default function TabHeader({
     }
   }, [pathname]);
 
+  const paddingTop = getPaddingTop(true);
+
   return (
-    <Animated.View style={backgroundStyle}>
+    <Animated.View style={[{ paddingTop: paddingTop }, backgroundStyle]}>
       {isSearchOpen &&
       searchQuery != undefined &&
       setSearchQuery != undefined ? (

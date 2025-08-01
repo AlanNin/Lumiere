@@ -57,7 +57,7 @@ export default function NovelScreen() {
   const router = useRouter();
 
   // Local pathname state
-  const { title } = useLocalSearchParams();
+  const { title, isSaved } = useLocalSearchParams();
 
   // States
   const insets = useSafeAreaInsets();
@@ -130,11 +130,13 @@ export default function NovelScreen() {
   const { enqueueDownload, queueDownload } = useChapterDownloadQueue();
   const { enqueueRefresh, isRefreshing } = useNovelRefreshQueue();
 
-  const isDownloadingFromThisNovel = queueDownload.some(
-    (c) => c.novelTitle === novelInfo?.title
-  );
-
   const prevQueueDownloadLengthRef = useRef<number>(queueDownload.length);
+
+  const downloadingSet = useMemo(
+    () =>
+      new Set(queueDownload.map((c) => `${c.novelTitle}-${c.chapterNumber}`)),
+    [queueDownload]
+  );
 
   const scrollYHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -155,7 +157,7 @@ export default function NovelScreen() {
   }, [novelInfo]);
 
   const resumeChapter = useMemo<Chapter | null>(() => {
-    const chapters = novelInfo?.chapters;
+    const chapters = novelChapters;
     if (!chapters?.length) return null;
 
     // find the lowest chapter number in the list
@@ -205,7 +207,7 @@ export default function NovelScreen() {
 
     // 5) If nothing applies, return null
     return null;
-  }, [novelInfo]);
+  }, [novelChapters]);
 
   const handleChapterPress = useCallback(
     ({
@@ -312,9 +314,8 @@ export default function NovelScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: Chapter }) => {
-      const isDownloading = queueDownload.some(
-        (c) =>
-          c.novelTitle === item.novelTitle && c.chapterNumber === item.number
+      const isDownloading = downloadingSet.has(
+        `${item.novelTitle}-${item.number}`
       );
 
       const isHighlighted = highlightChapter === item.number;
@@ -332,7 +333,7 @@ export default function NovelScreen() {
       );
     },
     [
-      queueDownload,
+      downloadingSet,
       selectedChapters,
       highlightChapter,
       handleChapterPress,
@@ -341,8 +342,17 @@ export default function NovelScreen() {
   );
 
   const keyExtractor = useCallback(
-    (item: Chapter) => `${item.number.toString()}-${item.title.toString()}`,
+    (item: Chapter) => `${item.number}-${item.title}`,
     []
+  );
+
+  const extraDeps = useMemo(
+    () => ({
+      downloadingSet,
+      selectedCount: selectedChapters.length,
+      highlightChapter,
+    }),
+    [downloadingSet, selectedChapters.length, highlightChapter]
   );
 
   const ListHeader = useMemo(() => {
@@ -420,7 +430,21 @@ export default function NovelScreen() {
   }, [queueDownload, refetchNovelInfo]);
 
   if (isLoadingNovel) {
-    return <Loading title="The ink is still drying on this novel..." />;
+    if (isSaved) {
+      return (
+        <View className="flex-1">
+          <ModeIndicator />
+          <View className="flex-1 bg-background" />
+        </View>
+      );
+    }
+
+    return (
+      <View className="flex-1">
+        <ModeIndicator />
+        <Loading title="The ink is still drying on this novel..." />
+      </View>
+    );
   }
 
   if (!novelInfo) {
@@ -438,13 +462,12 @@ export default function NovelScreen() {
 
   return (
     <View className="flex-1">
-      <ModeIndicator removeMinHeight={true} />
+      <ModeIndicator />
       <View className="flex-1 bg-background relative">
         <NovelHeader
           scrollY={scrollY}
           novelTitle={novelInfo.title}
           selectedChapters={selectedChapters.length}
-          isDownloadingFromThisNovel={isDownloadingFromThisNovel}
           handleClearSelectedChapters={handleClearSelectedChapters}
           handleSelectAllChapters={handleSelectAllChapters}
           handleSelectRemainingChapters={handleSelectRemainingChapters}
@@ -463,7 +486,7 @@ export default function NovelScreen() {
           ref={listRef}
           ListHeaderComponent={ListHeader}
           data={novelChapters}
-          extraData={[queueDownload.length, selectedChapters.length]}
+          extraData={extraDeps}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           estimatedItemSize={44}
@@ -542,6 +565,8 @@ export default function NovelScreen() {
           maxChapters={novelChapters.length}
           allChaptersCompleted={allChaptersCompleted}
           hasDownloadedChapters={hasDownloadedChapters}
+          queueDownload={queueDownload}
+          enqueueDownload={enqueueDownload}
           refetchNovelInfo={refetchNovelInfo}
         />
 

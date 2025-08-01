@@ -2,9 +2,15 @@ import { libraryService } from "../services/library";
 import { LibraryCategory } from "@/types/library";
 
 export const libraryController = {
-  async getLibrary(): Promise<LibraryCategory[]> {
+  async getLibrary({
+    downloadedOnly,
+  }: {
+    downloadedOnly: boolean;
+  }): Promise<LibraryCategory[]> {
     try {
-      return await libraryService.getLibrary();
+      return await libraryService.getLibrary({
+        downloadedOnly,
+      });
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;

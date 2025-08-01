@@ -6,7 +6,10 @@ import { cn } from "@/lib/cn";
 import { RefObject, useState } from "react";
 import { Picker } from "@react-native-picker/picker";
 import { colors } from "@/lib/constants";
-import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
+import {
+  QueueDownloadItem,
+  useChapterDownloadQueue,
+} from "@/hooks/useChapterDownloadQueue";
 import { Chapter } from "@/types/novel";
 import { DownloadChapter } from "@/types/download";
 import { novelController } from "@/server/controllers/novel";
@@ -33,6 +36,8 @@ export default function NovelDownloadChaptersDrawer({
   maxChapters,
   allChaptersCompleted,
   hasDownloadedChapters,
+  queueDownload,
+  enqueueDownload,
   refetchNovelInfo,
 }: {
   bottomDrawerRef: RefObject<BottomSheetModal | null>;
@@ -42,6 +47,8 @@ export default function NovelDownloadChaptersDrawer({
   maxChapters: number;
   allChaptersCompleted: boolean;
   hasDownloadedChapters: boolean;
+  queueDownload: QueueDownloadItem[];
+  enqueueDownload: (chapters: DownloadChapter[], priority?: number) => void;
   refetchNovelInfo: () => void;
 }) {
   const getNextUndownloadedChapter = () => {
@@ -60,6 +67,29 @@ export default function NovelDownloadChaptersDrawer({
       .sort((a, b) => b.number - a.number);
 
     return downloadedChapters[0]?.number || 0;
+  };
+
+  const isInQueue = (num: number) =>
+    queueDownload.some(
+      (q) => q.novelTitle === novelTitle && q.chapterNumber === num
+    );
+
+  const getStartForNext = () =>
+    chapters.find((c) => c.number === currentChapter)?.downloaded
+      ? getLastDownloadedChapter() + 1
+      : getNextUndownloadedChapter();
+
+  const getNextNChapters = (startFrom: number, count: number): Chapter[] => {
+    const sorted = [...chapters].sort((a, b) => a.number - b.number);
+    const result: Chapter[] = [];
+    for (const c of sorted) {
+      if (c.number < startFrom) continue;
+      if (c.downloaded) continue;
+      if (isInQueue(c.number)) continue;
+      result.push(c);
+      if (result.length === count) break;
+    }
+    return result;
   };
 
   const DOWNLOAD_MODE_OPTIONS = DEFAULT_DOWNLOAD_MODE_OPTIONS.filter((opt) => {
@@ -82,14 +112,16 @@ export default function NovelDownloadChaptersDrawer({
       const parts = opt.value.split("-");
       const count = parts.length === 1 ? 1 : parseInt(parts[1], 10);
 
-      const nextUndownloadedChapter = getNextUndownloadedChapter();
+      const startFrom = getStartForNext();
 
-      const availableUndownloadedChapters = chapters.filter(
+      const availableCandidates = chapters.filter(
         (chapter) =>
-          chapter.number >= nextUndownloadedChapter && !chapter.downloaded
-      ).length;
+          chapter.number >= startFrom &&
+          !chapter.downloaded &&
+          !isInQueue(chapter.number)
+      );
 
-      return availableUndownloadedChapters >= count;
+      return availableCandidates.length >= count;
     }
 
     if (opt.value === "unread") {
@@ -103,7 +135,6 @@ export default function NovelDownloadChaptersDrawer({
     return true;
   });
 
-  const { enqueueDownload } = useChapterDownloadQueue();
   const { mutate: removeAllDownloadedChaptersFromNovels } = useMutation({
     mutationFn: () =>
       novelController.removeAllDownloadedChaptersFromNovels({
@@ -189,50 +220,41 @@ export default function NovelDownloadChaptersDrawer({
     if (isDeleteDownloads) {
       removeAllDownloadedChaptersFromNovels();
     } else {
-      const nextUndownloadedChapter = getNextUndownloadedChapter();
-      const lastDownloadedChapter = getLastDownloadedChapter();
-
       switch (selectedDownloadMode) {
-        case "next":
-          if (chapters.find((c) => c.number === currentChapter)?.downloaded) {
-            toQueue = chapters.filter(
-              (c) => c.number === lastDownloadedChapter + 1
-            );
-          } else {
-            toQueue = chapters.filter(
-              (c) => c.number === nextUndownloadedChapter
-            );
-          }
+        case "next": {
+          const start = getStartForNext();
+          toQueue = getNextNChapters(start, 1);
           break;
+        }
 
         case "next-5":
-        case "next-10":
+        case "next-10": {
           const count = Number(selectedDownloadMode.split("-")[1]);
-          const startFrom = chapters.find((c) => c.number === currentChapter)
-            ?.downloaded
-            ? lastDownloadedChapter + 1
-            : nextUndownloadedChapter;
-
-          toQueue = chapters
-            .filter(
-              (c) => c.number >= startFrom && c.number < startFrom + count
-            )
-            .filter((c) => !c.downloaded);
+          const start = getStartForNext();
+          toQueue = getNextNChapters(start, count);
           break;
+        }
 
         case "unread":
-          toQueue = chapters.filter((c) => !c.downloaded);
+          toQueue = chapters.filter(
+            (c) => !c.downloaded && !isInQueue(c.number)
+          );
           break;
 
         case "all":
-          toQueue = chapters.filter((c) => !c.downloaded);
+          toQueue = chapters.filter(
+            (c) => !c.downloaded && !isInQueue(c.number)
+          );
           break;
 
         case "custom":
           if (customFrom != null && customTo != null) {
             toQueue = chapters.filter(
               (c) =>
-                c.number >= customFrom && c.number <= customTo && !c.downloaded
+                c.number >= customFrom &&
+                c.number <= customTo &&
+                !c.downloaded &&
+                !isInQueue(c.number)
             );
           }
           break;

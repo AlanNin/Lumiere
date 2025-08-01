@@ -18,6 +18,7 @@ import { ScrollView, View } from "react-native";
 
 export default function MoreScreen() {
   const router = useRouter();
+
   const [downloadedOnly, setDownloadedOnly] = useConfig<boolean>(
     "downloadedOnly",
     false
@@ -59,7 +60,7 @@ export default function MoreScreen() {
           <OptionButton
             Icon={ArrowDownToLine}
             label="Download queue"
-            onPress={() => {}}
+            onPress={() => router.push("/(more)/downloadQueue")}
           />
           <OptionButton
             Icon={Tags}

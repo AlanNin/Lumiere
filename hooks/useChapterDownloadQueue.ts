@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,18 +8,24 @@ import { invalidateQueries } from "@/providers/reactQuery";
 
 const TASK_NAME = "DOWNLOAD_QUEUE_TASK";
 const STORAGE_KEY = "DOWNLOAD_QUEUE";
+const DOWNLOADS_PAUSED_KEY = "DOWNLOADS_PAUSED";
 const POLL_INTERVAL_MS = 3000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 
 // Extended interface to handle retries and control
-interface QueueDownloadItem extends DownloadChapter {
+export interface QueueDownloadItem extends DownloadChapter {
   retryCount?: number;
   lastError?: string;
   timestamp?: number;
   id?: string; // Unique ID to identify elements
   priority?: number; // 1 = high, 2 = medium, 3 = low
   status?: "pending" | "downloading" | "paused" | "failed";
+}
+
+export interface GroupedQueueChapters {
+  novelTitle: string;
+  chapters: QueueDownloadItem[];
 }
 
 // Helper function for delay
@@ -42,8 +48,28 @@ const sortByPriority = (items: QueueDownloadItem[]): QueueDownloadItem[] =>
     return (a.timestamp || 0) - (b.timestamp || 0); // By time if same priority
   });
 
+// Helper function to nvalidate novel queries
+const invalidateNovelQueries = ({
+  novelTitle,
+  chapterNumber,
+}: {
+  novelTitle: string;
+  chapterNumber: number;
+}) => {
+  invalidateQueries(
+    ["novel-info", novelTitle],
+    ["novel-chapter", novelTitle, chapterNumber]
+  );
+};
+
 TaskManager.defineTask(TASK_NAME, async () => {
   try {
+    const globallyPaused =
+      (await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY)) === "true";
+    if (globallyPaused) {
+      return BackgroundTask.BackgroundTaskResult.Success;
+    }
+
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     const queueDownload: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
 
@@ -178,6 +204,12 @@ export function useChapterDownloadQueue() {
   const processingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+  const [areDownloadsPaused, setAreDownloadsPaused] = useState(false);
+  const pausedRef = useRef(false);
+
+  useEffect(() => {
+    pausedRef.current = areDownloadsPaused;
+  }, [areDownloadsPaused]);
 
   // Function to load queueDownload from storage
   const loadQueueDownload = useCallback(async () => {
@@ -196,10 +228,16 @@ export function useChapterDownloadQueue() {
 
   // Function to process queueDownload in foreground
   const processQueueDownload = useCallback(async () => {
+    // CHECK GLOBAL PAUSE STATE FIRST
+    const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+    const globallyPaused = pausedValue === "true";
+
+    if (globallyPaused || pausedRef.current) {
+      return;
+    }
+
     // Prevent re-entrancy
     if (processingRef.current) return;
-    processingRef.current = true;
-    setIsProcessing(true);
 
     try {
       // 1) Read the latest queueDownload from storage
@@ -215,10 +253,25 @@ export function useChapterDownloadQueue() {
         return;
       }
 
+      processingRef.current = true;
+      setIsProcessing(true);
+
       // 3) Take the first item to download
       const current = activeQueueDownload[0];
 
-      // 4) Mark it as “downloading” both in storage and in local state
+      // CHECK PAUSE STATE AGAIN BEFORE DOWNLOADING
+      const pausedValueBeforeDownload = await AsyncStorage.getItem(
+        DOWNLOADS_PAUSED_KEY
+      );
+      const stillGloballyPaused = pausedValueBeforeDownload === "true";
+
+      if (stillGloballyPaused) {
+        processingRef.current = false;
+        setIsProcessing(false);
+        return;
+      }
+
+      // 4) Mark it as "downloading" both in storage and in local state
       const updatedCurrent: QueueDownloadItem = {
         ...current,
         status: "downloading",
@@ -238,10 +291,10 @@ export function useChapterDownloadQueue() {
         await novelController.downloadNovelChapter(current);
 
         // 6) Invalidate related React-Query caches on success
-        invalidateQueries(
-          ["novel-info", current.novelTitle],
-          ["novel-chapter", current.novelTitle, current.chapterNumber]
-        );
+        invalidateNovelQueries({
+          novelTitle: current.novelTitle,
+          chapterNumber: current.chapterNumber,
+        });
 
         // 7) Re-read the queueDownload to pick up any items added during download
         const rawAfter = await AsyncStorage.getItem(STORAGE_KEY);
@@ -314,16 +367,21 @@ export function useChapterDownloadQueue() {
         }
       }
 
-      // 10) Continue processing remaining items
-      const nextRaw = await AsyncStorage.getItem(STORAGE_KEY);
-      const nextQueueDownload: QueueDownloadItem[] = nextRaw
-        ? JSON.parse(nextRaw)
-        : [];
-      const nextActive = sortByPriority(
-        nextQueueDownload.filter((item) => item.status !== "paused")
-      );
-      if (nextActive.length > 0) {
-        setTimeout(() => void processQueueDownload(), 100);
+      // 10) Continue processing remaining items - but check pause state first
+      const pausedValueAfter = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+      const pausedAgain = pausedValueAfter === "true";
+
+      if (!pausedAgain) {
+        const nextRaw = await AsyncStorage.getItem(STORAGE_KEY);
+        const nextQueueDownload: QueueDownloadItem[] = nextRaw
+          ? JSON.parse(nextRaw)
+          : [];
+        const nextActive = sortByPriority(
+          nextQueueDownload.filter((item) => item.status !== "paused")
+        );
+        if (nextActive.length > 0) {
+          setTimeout(() => void processQueueDownload(), 100);
+        }
       }
     } catch (err) {
       console.error("Error in processQueueDownload:", err);
@@ -341,11 +399,17 @@ export function useChapterDownloadQueue() {
     const initialize = async () => {
       const stored = await loadQueueDownload();
 
-      // Register background task if it doesn't exist
+      // LOAD PAUSE STATE ON INIT
+      const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+      const pausedFlag = pausedValue === "true";
+
+      setAreDownloadsPaused(pausedFlag);
+
+      // Register background task if it doesn't exist and not paused
       const tasks = await TaskManager.getRegisteredTasksAsync();
       const taskExists = tasks.find((t) => t.taskName === TASK_NAME);
 
-      if (!taskExists && stored.length > 0) {
+      if (!taskExists && stored.length > 0 && !pausedFlag) {
         await BackgroundTask.registerTaskAsync(TASK_NAME);
       }
     };
@@ -357,12 +421,12 @@ export function useChapterDownloadQueue() {
     };
   }, [loadQueueDownload]);
 
-  // Foreground processing
+  // Only process if not paused
   useEffect(() => {
-    if (queueDownload.length > 0) {
+    if (queueDownload.length > 0 && !areDownloadsPaused) {
       processQueueDownload();
     }
-  }, [queueDownload, processQueueDownload]);
+  }, [queueDownload, processQueueDownload, areDownloadsPaused]);
 
   // Optimized polling
   useEffect(() => {
@@ -370,7 +434,7 @@ export function useChapterDownloadQueue() {
       if (intervalRef.current) return;
 
       intervalRef.current = setInterval(async () => {
-        if (!processingRef.current) {
+        if (!processingRef.current && !areDownloadsPaused) {
           await loadQueueDownload();
         }
       }, POLL_INTERVAL_MS);
@@ -386,7 +450,7 @@ export function useChapterDownloadQueue() {
     startPolling();
 
     return stopPolling;
-  }, [loadQueueDownload]);
+  }, [loadQueueDownload, areDownloadsPaused]);
 
   // Function to add chapters to queueDownload
   const enqueueDownload = useCallback(
@@ -419,8 +483,13 @@ export function useChapterDownloadQueue() {
           setQueueDownload(updated);
         }
 
-        // Ensure background task is registered
-        await BackgroundTask.registerTaskAsync(TASK_NAME);
+        // Only register background task if not paused
+        const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+        const isPaused = pausedValue === "true";
+
+        if (!isPaused) {
+          await BackgroundTask.registerTaskAsync(TASK_NAME);
+        }
       } catch (error) {
         console.error("Error enqueueDownloading chapters:", error);
       }
@@ -448,12 +517,17 @@ export function useChapterDownloadQueue() {
           processingRef.current = false;
           setIsProcessing(false);
 
-          // Process next in queueDownload
-          const nextActiveQueueDownload = sortByPriority(
-            updated.filter((item) => item.status !== "paused")
-          );
-          if (nextActiveQueueDownload.length > 0) {
-            setTimeout(() => processQueueDownload(), 500);
+          // Only process next if not paused
+          const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+          const isPaused = pausedValue === "true";
+
+          if (!isPaused) {
+            const nextActiveQueueDownload = sortByPriority(
+              updated.filter((item) => item.status !== "paused")
+            );
+            if (nextActiveQueueDownload.length > 0) {
+              setTimeout(() => processQueueDownload(), 500);
+            }
           }
         }
       } catch (error) {
@@ -507,9 +581,16 @@ export function useChapterDownloadQueue() {
           setQueueDownload(updated);
         }
 
-        // If resuming and no active processing, start
+        // Check global pause state before processing
         const resumedItem = updated.find((item) => item.id === id);
-        if (resumedItem?.status === "pending" && !processingRef.current) {
+        const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+        const globallyPaused = pausedValue === "true";
+
+        if (
+          resumedItem?.status === "pending" &&
+          !processingRef.current &&
+          !globallyPaused
+        ) {
           setTimeout(() => processQueueDownload(), 100);
         }
       } catch (error) {
@@ -691,14 +772,102 @@ export function useChapterDownloadQueue() {
     };
   }, [queueDownload, isProcessing]);
 
+  // Function to pause all downloads
+  const pauseAllDownloads = useCallback(async () => {
+    try {
+      // Set the pause flag in storage
+      await AsyncStorage.setItem(DOWNLOADS_PAUSED_KEY, "true");
+      setAreDownloadsPaused(true);
+
+      // STOP CURRENT PROCESSING IMMEDIATELY
+      processingRef.current = false;
+      setIsProcessing(false);
+
+      // UNREGISTER BACKGROUND TASK TO PREVENT IT FROM RUNNING
+      try {
+        await TaskManager.unregisterTaskAsync(TASK_NAME);
+      } catch (e) {
+        // Do nothing if task is not registered
+      }
+
+      // CLEAR POLLING INTERVAL
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    } catch (e) {
+      console.error("❌ Error pausing all downloads:", e);
+    }
+  }, []);
+
+  //  Function to resume all downloads
+  const resumeAllDownloads = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(DOWNLOADS_PAUSED_KEY);
+      setAreDownloadsPaused(false);
+
+      // RE-REGISTER BACKGROUND TASK
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const queue: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
+      const active = sortByPriority(queue.filter((i) => i.status !== "paused"));
+
+      if (active.length > 0) {
+        await BackgroundTask.registerTaskAsync(TASK_NAME);
+
+        // RESTART POLLING
+        if (!intervalRef.current) {
+          intervalRef.current = setInterval(async () => {
+            if (!processingRef.current && !areDownloadsPaused) {
+              await loadQueueDownload();
+            }
+          }, POLL_INTERVAL_MS);
+        }
+
+        // KICK OFF FOREGROUND PROCESSING
+        if (!processingRef.current) {
+          setTimeout(() => {
+            void processQueueDownload();
+          }, 100);
+        }
+      }
+    } catch (e) {
+      console.error("❌ Error resuming all downloads:", e);
+    }
+  }, [processQueueDownload, loadQueueDownload]);
+
+  // Function to toggle pause/resume all downloads
+  const toggleAllDownloadsPaused = useCallback(async () => {
+    if (areDownloadsPaused) {
+      await resumeAllDownloads();
+    } else {
+      await pauseAllDownloads();
+    }
+  }, [areDownloadsPaused, pauseAllDownloads, resumeAllDownloads]);
+
+  // Grouped queue by novel
+  const groupedQueueDownload = useMemo<GroupedQueueChapters[]>(() => {
+    const map = new Map<string, QueueDownloadItem[]>();
+    for (const item of queueDownload) {
+      if (!map.has(item.novelTitle)) map.set(item.novelTitle, []);
+      map.get(item.novelTitle)!.push(item);
+    }
+    return Array.from(map.entries()).map(([novelTitle, chapters]) => ({
+      novelTitle,
+      chapters: sortByPriority(chapters),
+    }));
+  }, [queueDownload]);
+
   return {
     enqueueDownload,
     queueDownload,
+    groupedQueueDownload,
     isProcessing,
+    areDownloadsPaused,
     // Control functions
     cancelDownload,
     cancelAllDownloads,
     togglePause,
+    toggleAllDownloadsPaused,
     // Priority and order functions
     changePriority,
     moveUp,
