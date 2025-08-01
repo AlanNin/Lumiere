@@ -43,6 +43,9 @@ export const novels = sqliteTable(
     isSaved: int("is_saved")
       .notNull()
       .default(sql`0`),
+    savedAt: text("saved_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [uniqueIndex("novels_pk").on(table.title)]
 );

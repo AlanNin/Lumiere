@@ -27,6 +27,7 @@ export type Novel = {
   rating?: number;
   rank?: number;
   isSaved?: boolean;
+  savedAt?: string;
 };
 
 export type NovelInfo = Novel & {

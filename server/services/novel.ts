@@ -80,9 +80,16 @@ export const novelService = {
       }
 
       const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
-      const novelChaptersUrl = getNovelChaptersUrl(novelTitleSlug);
+      const novelChaptersAjaxUrl = getNovelChaptersAjaxUrl(novelTitleSlug);
+      const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(
+        novelTitleSlug
+      );
 
-      info = await scrapeNovelInfo({ novelInfoUrl, novelChaptersUrl });
+      info = await scrapeNovelInfo({
+        novelInfoUrl,
+        novelChaptersAjaxUrl,
+        novelChaptersMainSourceUrl,
+      });
 
       if (!info) {
         throw new Error("Failed to scrape novel info");
@@ -178,9 +185,16 @@ export const novelService = {
       const novelTitleSlug = slugify(title);
 
       const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
-      const novelChaptersUrl = getNovelChaptersUrl(novelTitleSlug);
+      const novelChaptersAjaxUrl = getNovelChaptersAjaxUrl(novelTitleSlug);
+      const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(
+        novelTitleSlug
+      );
 
-      const info = await scrapeNovelInfo({ novelInfoUrl, novelChaptersUrl });
+      const info = await scrapeNovelInfo({
+        novelInfoUrl,
+        novelChaptersAjaxUrl,
+        novelChaptersMainSourceUrl,
+      });
 
       if (!info) {
         throw new Error("Failed to scrape novel info");
@@ -483,10 +497,16 @@ function getNovelInfoUrl(novelTitleSlug: string) {
   )}/book/${novelTitleSlug}`;
 }
 
-function getNovelChaptersUrl(novelTitleSlug: string) {
+function getNovelChaptersAjaxUrl(novelTitleSlug: string) {
   return `${String(
     process.env.EXPO_PUBLIC_SCRAPE_CHAPTERS_LIST_URL
   )}?novelId=${novelTitleSlug}`;
+}
+
+function getNovelChaptersMainSourceUrl(novelTitleSlug: string) {
+  return `${String(
+    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
+  )}/book/${novelTitleSlug}/chapters`;
 }
 
 function getNovelChapterUrl(novelTitleSlug: string, chapterNumber: number) {

@@ -57,7 +57,8 @@ export default function NovelScreen() {
   const router = useRouter();
 
   // Local pathname state
-  const { title, isSaved } = useLocalSearchParams();
+  const { title, isSaved: isSavedParam } = useLocalSearchParams();
+  const isSaved = isSavedParam ? isSavedParam === "1" : false;
 
   // States
   const insets = useSafeAreaInsets();

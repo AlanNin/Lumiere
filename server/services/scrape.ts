@@ -15,6 +15,8 @@ const DEFAULT_HEADERS = {
   "Content-Type": "application/x-www-form-urlencoded",
 };
 
+type NovelMetadata = Omit<NovelInfo, "chapters">;
+
 export async function scrapeNovelsExplore({
   novelsExploreUrl,
 }: ScrapeNovelsExplore): Promise<{ novels: Novel[]; totalPages: number }> {
@@ -109,35 +111,24 @@ export async function scrapeNovelsSearch({
   return { novels };
 }
 
-export async function scrapeNovelInfo({
-  novelInfoUrl,
-  novelChaptersUrl,
-}: ScrapeNovelInfo): Promise<NovelInfo | null> {
-  // Fetch both the info page and the chapters list in parallel
-  const [htmlInfo, htmlChapters] = await Promise.all([
-    fetch(novelInfoUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text()),
-    fetch(novelChaptersUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text()),
-  ]);
+async function scrapeNovelMetadata(
+  novelInfoUrl: string
+): Promise<NovelMetadata | null> {
+  const html = await fetch(novelInfoUrl, {
+    headers: DEFAULT_HEADERS,
+  }).then((r) => r.text());
+  if (!html) throw new Error("Novel metadata not found");
 
-  if (!htmlInfo || !htmlChapters) {
-    throw new Error("Novel not found");
-  }
+  const $ = cheerio.load(html);
 
-  const $ = cheerio.load(htmlInfo);
-  const $$ = cheerio.load(htmlChapters);
-
-  // ——— Novel metadata —————————————————————————————————————————————
-  // Full title from the header
   const title = $("header.novel-header h1.novel-title").text().trim();
   if (!title) return null;
 
-  // Cover image URL (prefers lazy-loaded data-src)
   const imageUrl =
     $("header.novel-header .cover img").attr("data-src") ||
     $("header.novel-header .cover img").attr("src") ||
     "";
 
-  // Collect all authors (there may be more than one)
   const authors = $(
     'header.novel-header .author a.property-item span[itemprop="author"]'
   )
@@ -145,18 +136,15 @@ export async function scrapeNovelInfo({
     .get()
     .join(", ");
 
-  // Star rating from the data-rating attribute
   const ratingRaw = parseFloat(
     $(".rating-star .my-rating").attr("data-rating") || "0"
   );
   const rating = Number.isFinite(ratingRaw) ? ratingRaw : 0;
 
-  // Rank from the rank text
   const rankText = $(".rating .rank strong").text().trim();
   const rankMatch = rankText.match(/\d+/);
   const rank = rankMatch ? parseInt(rankMatch[0], 10) : 0;
 
-  // Status (Completed, Ongoing, etc.)
   const status =
     $(".header-stats .completed").text().trim() ||
     $('.header-stats span small:contains("Status")')
@@ -165,34 +153,50 @@ export async function scrapeNovelInfo({
       .trim() ||
     "";
 
-  // Genres list
   const genres = $(".categories ul li a.property-item")
     .map((_: number, el: cheerio.Element) => $(el).text().trim())
     .get()
     .join(",");
 
-  // Description
   const summaryParas: string[] = $("div.summary .content p")
     .map((_: number, p: cheerio.Element) => $(p).text().trim())
     .get()
     .filter((t: string) => t.length > 0)
     .filter((t: string) => /[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ]/.test(t));
 
-  let description: string;
-  if (summaryParas.length > 0) {
-    description = summaryParas.join("\n\n");
-  } else {
-    description =
-      $('article[itemprop="itemReviewed"] meta[itemprop="description"]')
-        .attr("content")
-        ?.trim() || "";
-  }
+  const description =
+    summaryParas.length > 0
+      ? summaryParas.join("\n\n")
+      : $('article[itemprop="itemReviewed"] meta[itemprop="description"]')
+          .attr("content")
+          ?.trim() || "";
 
-  // ——— Chapters parsing —————————————————————————————————————————————————————
-  const items = $$(".list-chapter li").toArray();
+  return {
+    title,
+    imageUrl,
+    rating,
+    rank,
+    genres,
+    status,
+    author: authors,
+    description,
+  };
+}
+
+async function scrapeNovelChaptersFromAjax(
+  novelChaptersAjaxUrl: string
+): Promise<Chapter[]> {
+  const html = await fetch(novelChaptersAjaxUrl, {
+    headers: DEFAULT_HEADERS,
+  }).then((r) => r.text());
+  if (!html) throw new Error("Chapters not found");
+
+  const $ = cheerio.load(html);
+  const items = $(".list-chapter li").toArray();
+
   const chapters: Chapter[] = items
     .map((liEl: cheerio.Element, idx: number) => {
-      const li = $$(liEl);
+      const li = $(liEl);
       const rawText = li.find(".nchr-text, .chapter-title").text().trim();
       const url = li.find("a").attr("href") || "";
 
@@ -204,16 +208,85 @@ export async function scrapeNovelInfo({
     })
     .sort((a: Chapter, b: Chapter) => a.number - b.number);
 
-  // ——— Build and return the result —————————————————————————————————————————————
+  return chapters;
+}
+
+async function scrapeNovelChaptersFromMainSource(
+  novelChaptersMainSourceUrl: string
+): Promise<Chapter[]> {
+  let currentPage = 1;
+  const allChapters: Chapter[] = [];
+
+  while (true) {
+    const pageUrl =
+      currentPage === 1
+        ? novelChaptersMainSourceUrl
+        : `${novelChaptersMainSourceUrl}?page=${currentPage}`;
+    const html = await fetch(pageUrl, { headers: DEFAULT_HEADERS }).then((r) =>
+      r.text()
+    );
+    if (!html) break;
+
+    const $ = cheerio.load(html);
+
+    // Parse chapters in current page
+    const items = $("ul.chapter-list li").toArray();
+    const chapters: Chapter[] = items.map(
+      (liEl: cheerio.Element, idx: number) => {
+        const li = $(liEl);
+        const url = li.find("a").attr("href") || "";
+        const numberText = li.find(".chapter-no").text().trim();
+        const number = parseInt(numberText, 10) || idx;
+        const rawText =
+          li.find(".chapter-title").text().trim() ||
+          li.find("a").attr("title")?.trim() ||
+          `Chapter ${number}`;
+        const title = extractChapterTitle(rawText);
+
+        return { number, title, url };
+      }
+    );
+
+    allChapters.push(...chapters);
+
+    const nextPageLink = $(".pagination .page-link[rel='next']").attr("href");
+    if (!nextPageLink) break;
+
+    currentPage++;
+  }
+
+  return allChapters.sort((a, b) => a.number - b.number);
+}
+
+export async function scrapeNovelInfo({
+  novelInfoUrl,
+  novelChaptersAjaxUrl,
+  novelChaptersMainSourceUrl,
+}: ScrapeNovelInfo): Promise<NovelInfo | null> {
+  const metadata = await scrapeNovelMetadata(novelInfoUrl);
+  if (!metadata) return null;
+
+  let chapters: Chapter[] = [];
+
+  try {
+    chapters = await scrapeNovelChaptersFromAjax(novelChaptersAjaxUrl);
+  } catch (err) {
+    console.warn("Ajax scraping failed:", err);
+  }
+
+  if (!chapters || chapters.length === 0) {
+    try {
+      chapters = await scrapeNovelChaptersFromMainSource(
+        novelChaptersMainSourceUrl
+      );
+    } catch (err) {
+      console.error("Main source scraping also failed:", err);
+      throw new Error("Failed to scrape chapters from both sources.");
+    }
+  }
+
   return {
-    title,
-    imageUrl,
-    rating,
-    rank,
-    genres,
-    status,
-    author: authors,
-    description,
+    ...metadata,
     chapters,
   };
 }

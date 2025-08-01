@@ -103,7 +103,7 @@ function RenderNovels({
                 pathname: "/novel",
                 params: {
                   title: item.title,
-                  isSaved: item.isSaved ? "true" : "false",
+                  isSaved: item.isSaved ? 1 : 0,
                 },
               }}
               showSavedBadge={item.isSaved}
@@ -220,7 +220,7 @@ export default function ExploreScreen() {
   }
 
   useEffect(() => {
-    if (paramSearchQuery) {
+    if (paramSearchQuery && paramSearchQuery.length > 0) {
       setSearchQuery(String(paramSearchQuery));
       setIsSearchOpen(true);
     }

@@ -25,6 +25,7 @@ export const libraryRepository = {
       author: string;
       genres: string;
       status: string;
+      savedAt: string;
     }[];
 
     if (downloadedOnly) {
@@ -52,9 +53,11 @@ export const libraryRepository = {
             author: novels.author,
             genres: novels.genres,
             status: novels.status,
+            savedAt: novels.savedAt,
           })
           .from(novels)
           .where(and(eq(novels.isSaved, 1), inArray(novels.title, novelTitles)))
+          .orderBy(novels.savedAt) // orden por fecha de guardado ascendente
           .all();
       }
     } else {
@@ -69,12 +72,19 @@ export const libraryRepository = {
           author: novels.author,
           genres: novels.genres,
           status: novels.status,
+          savedAt: novels.savedAt,
         })
         .from(novels)
         .where(eq(novels.isSaved, 1))
+        .orderBy(novels.savedAt)
         .all();
     }
 
+    // Construir índice de orden para preservar dentro de categorías
+    const orderIndex = new Map<string, number>();
+    savedNovels.forEach((n, i) => orderIndex.set(n.title, i));
+
+    // Traer categorías y relaciones
     const dbCategories = await db_client
       .select({
         id: categories.id,
@@ -93,10 +103,13 @@ export const libraryRepository = {
       .from(novelCategories)
       .all();
 
+    // Inicializar mapa de categorías
     const categoryMap = new Map<number, NovelInfo[]>();
     dbCategories.forEach((cat) => categoryMap.set(cat.id, []));
 
     const novelsWithoutCategory: NovelInfo[] = [];
+
+    // Llenar novelas en sus categorías (o sin categoría)
     for (const n of savedNovels) {
       const info: NovelInfo = {
         title: n.title,
@@ -110,6 +123,7 @@ export const libraryRepository = {
         status: n.status,
         chapters: [],
       };
+
       const rels = novelCategoryRelations.filter(
         (r) => r.novelTitle === n.title
       );
@@ -123,6 +137,22 @@ export const libraryRepository = {
       }
     }
 
+    // Ordenar internamente cada grupo por el índice de inserción (savedAt)
+    for (const arr of categoryMap.values()) {
+      arr.sort((a, b) => {
+        const ai = orderIndex.get(a.title) ?? 0;
+        const bi = orderIndex.get(b.title) ?? 0;
+        return ai - bi;
+      });
+    }
+
+    novelsWithoutCategory.sort((a, b) => {
+      const ai = orderIndex.get(a.title) ?? 0;
+      const bi = orderIndex.get(b.title) ?? 0;
+      return ai - bi;
+    });
+
+    // Armar resultado final
     const result: LibraryCategory[] = [];
     if (novelsWithoutCategory.length > 0) {
       result.push({
@@ -132,6 +162,7 @@ export const libraryRepository = {
         novels: novelsWithoutCategory,
       });
     }
+
     dbCategories.forEach((cat) => {
       result.push({
         id: cat.id,

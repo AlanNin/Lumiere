@@ -90,7 +90,7 @@ const renderNovels = ({
                   pathname: "/novel",
                   params: {
                     title: item.title,
-                    isSaved: item.isSaved ? "true" : "false",
+                    isSaved: item.isSaved ? 1 : 0,
                   },
                 }}
               />

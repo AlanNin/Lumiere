@@ -151,24 +151,34 @@ export function extractChapterTitle(rawText: string): string {
   let cleanText = rawText.trim();
 
   // Remove zero-width characters
-  cleanText = cleanText.replace(/[​‌‍﻿]/g, "");
+  cleanText = cleanText.replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+  // If there's an em-dash / en-dash used as a separator, strip everything before the first one
+  if (/[—–]/.test(cleanText)) {
+    const parts = cleanText.split(/[—–]/);
+    // Keep everything after the first dash, rejoining the rest with an em-dash to preserve secondary parts
+    cleanText = parts.slice(1).join("—");
+  } else {
+    // Remove leading "Volume <number>" (and optional decimal), e.g., "Volume 4 3.5", leaving the rest
+    cleanText = cleanText.replace(/^Volume\s*\d+(?:\.\d+)?\s*/i, "");
+  }
 
   // Remove leading "Chapter" keyword
   cleanText = cleanText.replace(/^Chapter\s+/i, "");
 
-  cleanText = cleanText.trim();
-
-  // Remove numeric prefixes with separators
+  // Remove numeric prefixes with separators like "1 - Title" or "2: Title"
   cleanText = cleanText.replace(/^\d+\s*[-–—:]\s*/, "");
 
-  // Remove standalone numeric prefixes
+  // Remove standalone numeric prefixes like "123 Title"
   cleanText = cleanText.replace(/^\d+\s+/, "");
 
-  // Strip everything before the colon for log-like input
+  // Strip everything before a colon for log-like input
   cleanText = cleanText.replace(/^.*?:\s*/, "");
 
-  // If the remaining text is only digits, return an empty title
-  return /^\d+$/.test(cleanText) ? "" : cleanText.trim();
+  cleanText = cleanText.trim();
+
+  // If the remaining text is only digits, return empty
+  return /^\d+$/.test(cleanText) ? "" : cleanText;
 }
 
 export function insertTitleHtml(
