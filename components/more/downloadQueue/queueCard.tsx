@@ -4,10 +4,16 @@ import { colors } from "@/lib/constants";
 import { Ellipsis } from "lucide-react-native";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 
-export default function GroupQueueCard({ item }: { item: QueueDownloadItem }) {
+export default function GroupQueueCard({
+  item,
+  openItemOptionsDrawer,
+}: {
+  item: QueueDownloadItem;
+  openItemOptionsDrawer: (item: QueueDownloadItem) => void;
+}) {
   return (
-    <View className="mb-8 flex flex-row justify-between -mr-2">
-      <View className="flex flex-row gap-x-3">
+    <View className="mb-8 flex flex-row items-center justify-between gap-x-4 -mr-2">
+      <View className="flex flex-row gap-x-3 flex-1">
         {item.status === "downloading" && (
           <ActivityIndicator size="small" color={colors.primary} />
         )}
@@ -22,7 +28,10 @@ export default function GroupQueueCard({ item }: { item: QueueDownloadItem }) {
         </View>
       </View>
 
-      <TouchableOpacity className="p-2">
+      <TouchableOpacity
+        className="p-2"
+        onPress={() => openItemOptionsDrawer(item)}
+      >
         <Ellipsis size={16} strokeWidth={1.6} color={colors.foreground} />
       </TouchableOpacity>
     </View>

@@ -2,7 +2,6 @@ import { Text } from "@/components/defaults";
 import { cn } from "@/lib/cn";
 import { colors } from "@/lib/constants";
 import { Category } from "@/types/category";
-
 import {
   ChevronDown,
   ChevronUp,

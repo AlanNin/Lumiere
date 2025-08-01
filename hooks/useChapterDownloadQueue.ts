@@ -537,6 +537,49 @@ export function useChapterDownloadQueue() {
     [processQueueDownload]
   );
 
+  const cancelNovelDownloads = useCallback(
+    async (novelTitle: string) => {
+      if (!novelTitle) return;
+
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
+
+        const toCancel = stored.filter((i) => i.novelTitle === novelTitle);
+        if (toCancel.length === 0) return; // nothing to do
+
+        const updated = stored.filter((i) => i.novelTitle !== novelTitle);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+        if (mountedRef.current) {
+          setQueueDownload(updated);
+        }
+
+        // If any of the cancelled items was downloading, reset and process next
+        const hadDownloading = toCancel.some((i) => i.status === "downloading");
+        if (hadDownloading) {
+          processingRef.current = false;
+          setIsProcessing(false);
+
+          const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+          const isPaused = pausedValue === "true";
+
+          if (!isPaused) {
+            const nextActiveQueueDownload = sortByPriority(
+              updated.filter((item) => item.status !== "paused")
+            );
+            if (nextActiveQueueDownload.length > 0) {
+              setTimeout(() => processQueueDownload(), 500);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error canceling novel downloads:", error);
+      }
+    },
+    [processQueueDownload, sortByPriority]
+  );
+
   // Function to cancel all downloads
   const cancelAllDownloads = useCallback(async () => {
     try {
@@ -550,12 +593,24 @@ export function useChapterDownloadQueue() {
       processingRef.current = false;
       setIsProcessing(false);
 
-      // Unregister background task
-      await TaskManager.unregisterTaskAsync(TASK_NAME);
+      try {
+        const isRegistered = await TaskManager.isTaskRegisteredAsync(TASK_NAME);
+        if (isRegistered) {
+          await TaskManager.unregisterTaskAsync(TASK_NAME);
+        }
+      } catch (taskErr) {
+        if (
+          taskErr instanceof Error &&
+          /not found for app ID/.test(taskErr.message)
+        ) {
+        } else {
+          console.warn("Error unregistering background task:", taskErr);
+        }
+      }
     } catch (error) {
       console.error("Error canceling all downloads:", error);
     }
-  }, []);
+  }, [setQueueDownload, setIsProcessing]);
 
   // Function to pause/resume a download
   const togglePause = useCallback(
@@ -600,21 +655,53 @@ export function useChapterDownloadQueue() {
     [processQueueDownload]
   );
 
-  // Function to change priority
   const changePriority = useCallback(
     async (id: string, newPriority: number) => {
+      if (!id) {
+        console.warn("changePriority called with empty id");
+        return;
+      }
+      if (newPriority < 0) {
+        console.warn("Invalid newPriority", newPriority);
+        return;
+      }
+
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
 
-        const updated = stored.map((item) => {
-          if (item.id === id) {
-            return { ...item, priority: newPriority };
+        const targetIdx = stored.findIndex(
+          (item) => String(item.id) === String(id)
+        );
+        if (targetIdx === -1) {
+          console.warn("Item to change priority not found", {
+            id,
+            existing: stored.map((i) => i.id),
+          });
+          return;
+        }
+
+        const target = stored[targetIdx];
+        // Remove target so we can re-insert it at newPriority
+        const others = stored.filter((_, idx) => idx !== targetIdx);
+
+        // Shift any existing item with priority >= newPriority down by 1
+        const updatedOthers = others.map((item) => {
+          const prio = item.priority ?? Infinity;
+          if (prio >= newPriority) {
+            return { ...item, priority: prio + 1 };
           }
           return item;
         });
 
-        const sortedQueueDownload = sortByPriority(updated);
+        const updatedTarget: QueueDownloadItem = {
+          ...target,
+          priority: newPriority,
+        };
+
+        const merged = [...updatedOthers, updatedTarget];
+        const sortedQueueDownload = sortByPriority(merged);
+
         await AsyncStorage.setItem(
           STORAGE_KEY,
           JSON.stringify(sortedQueueDownload)
@@ -627,7 +714,7 @@ export function useChapterDownloadQueue() {
         console.error("Error changing priority:", error);
       }
     },
-    []
+    [sortByPriority]
   );
 
   // Function to move element up in queueDownload
@@ -723,6 +810,44 @@ export function useChapterDownloadQueue() {
       console.error("Error moving to bottom:", error);
     }
   }, []);
+
+  // Function to move a novel to the top or bottom of the queue
+  const moveNovelToTop = useCallback(
+    async (novelTitle: string) => {
+      if (!novelTitle) return;
+      const current = queueDownload;
+      const novelItems = current.filter((i) => i.novelTitle === novelTitle);
+      if (novelItems.length === 0) return;
+
+      const others = current.filter((i) => i.novelTitle !== novelTitle);
+      const newQueue = [...novelItems, ...others];
+
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newQueue));
+      if (mountedRef.current) {
+        setQueueDownload(newQueue);
+      }
+    },
+    [queueDownload]
+  );
+
+  // Function to move a novel to the top or bottom of the queue
+  const moveNovelToBottom = useCallback(
+    async (novelTitle: string) => {
+      if (!novelTitle) return;
+      const current = queueDownload;
+      const novelItems = current.filter((i) => i.novelTitle === novelTitle);
+      if (novelItems.length === 0) return;
+
+      const others = current.filter((i) => i.novelTitle !== novelTitle);
+      const newQueue = [...others, ...novelItems];
+
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newQueue));
+      if (mountedRef.current) {
+        setQueueDownload(newQueue);
+      }
+    },
+    [queueDownload]
+  );
 
   // Function to clear failed chapters
   const clearFailedChapters = useCallback(async () => {
@@ -865,6 +990,7 @@ export function useChapterDownloadQueue() {
     areDownloadsPaused,
     // Control functions
     cancelDownload,
+    cancelNovelDownloads,
     cancelAllDownloads,
     togglePause,
     toggleAllDownloadsPaused,
@@ -874,6 +1000,8 @@ export function useChapterDownloadQueue() {
     moveDown,
     moveToTop,
     moveToBottom,
+    moveNovelToTop,
+    moveNovelToBottom,
     // Cleanup and stats functions
     clearFailedChapters,
     getStats,

@@ -1,3 +1,5 @@
+import QueueItemOptionsDrawer from "@/components/more/downloadQueue/QueueItemOptionsDrawer";
+import ClearQueueDrawer from "@/components/more/downloadQueue/clearQueueDrawer";
 import QueueCard from "@/components/more/downloadQueue/queueCard";
 import Quote from "@/components/statics/quote";
 import TabHeader from "@/components/tabHeader";
@@ -6,8 +8,10 @@ import {
   useChapterDownloadQueue,
 } from "@/hooks/useChapterDownloadQueue";
 import { colors } from "@/lib/constants";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
 import { ArrowDownToLine, Pause, Shredder, Tags } from "lucide-react-native";
+import { useRef, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
@@ -22,11 +26,25 @@ const AnimatedFlashList = Animated.createAnimatedComponent<
 export default function CategoriesScreen() {
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
+  const [selectedQueueItem, setSelectedQueueItem] = useState<
+    QueueDownloadItem | undefined
+  >();
+  const queueItemOptionsDrawerRef = useRef<BottomSheetModal>(null);
+  const clearQueueDrawerRef = useRef<BottomSheetModal>(null);
 
   const {
     queueDownload,
     toggleAllDownloadsPaused,
     areDownloadsPaused,
+    moveUp,
+    moveDown,
+    moveToTop,
+    moveToBottom,
+    moveNovelToTop,
+    moveNovelToBottom,
+    cancelDownload,
+    cancelNovelDownloads,
+    cancelAllDownloads,
   } = useChapterDownloadQueue();
 
   const scrollYHandler = useAnimatedScrollHandler({
@@ -53,7 +71,10 @@ export default function CategoriesScreen() {
 
   function ToggleRemoveAllButton() {
     return (
-      <TouchableOpacity className="p-2" onPress={toggleAllDownloadsPaused}>
+      <TouchableOpacity
+        className="p-2"
+        onPress={() => clearQueueDrawerRef.current?.present()}
+      >
         <Shredder color={colors.muted_foreground} size={20} strokeWidth={1.6} />
       </TouchableOpacity>
     );
@@ -70,10 +91,19 @@ export default function CategoriesScreen() {
     );
   }
 
+  function openItemOptionsDrawer(item: QueueDownloadItem) {
+    setSelectedQueueItem(item);
+    queueItemOptionsDrawerRef.current?.present();
+  }
+
   return (
     <View className="flex-1 bg-background">
       <TabHeader
-        title="Download Queue"
+        title={
+          queueDownload.length > 0
+            ? `Download Queue (${queueDownload.length})`
+            : "Download Queue"
+        }
         renderBackButton
         scrollY={scrollY}
         customRightContent={HeaderRightButtons()}
@@ -82,7 +112,12 @@ export default function CategoriesScreen() {
         <AnimatedFlashList
           data={queueDownload}
           renderItem={({ item }) => {
-            return <QueueCard item={item} />;
+            return (
+              <QueueCard
+                item={item}
+                openItemOptionsDrawer={openItemOptionsDrawer}
+              />
+            );
           }}
           contentContainerStyle={{
             padding: 16,
@@ -99,6 +134,25 @@ export default function CategoriesScreen() {
       ) : (
         <Quote quote="No downloads yet. Add some!" Icon={Tags} />
       )}
+
+      <QueueItemOptionsDrawer
+        bottomDrawerRef={queueItemOptionsDrawerRef}
+        selectedQueueItem={selectedQueueItem}
+        setSelectedQueueItem={setSelectedQueueItem}
+        moveUp={moveUp}
+        moveDown={moveDown}
+        moveToTop={moveToTop}
+        moveToBottom={moveToBottom}
+        moveNovelToTop={moveNovelToTop}
+        moveNovelToBottom={moveNovelToBottom}
+        cancelDownload={cancelDownload}
+        cancelNovelDownloads={cancelNovelDownloads}
+      />
+
+      <ClearQueueDrawer
+        bottomDrawerRef={clearQueueDrawerRef}
+        handleRemoveAll={cancelAllDownloads}
+      />
     </View>
   );
 }
