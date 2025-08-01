@@ -103,7 +103,7 @@ export default function ModeIndicator() {
   );
 
   const useMinHeight = useMemo<boolean>(() => {
-    if (pathname === "/(more)/downloadQueue") {
+    if (pathname === "/more") {
       return true;
     }
     return false;
