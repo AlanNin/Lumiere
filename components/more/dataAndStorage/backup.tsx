@@ -56,14 +56,14 @@ export default function BackupOptions() {
   return (
     <View className="flex flex-row">
       <TouchableOpacity
-        className="border border-r-0 border-grayscale rounded-l-full flex-1 flex items-center justify-center p-4"
+        className="border border-r-0 border-grayscale rounded-l-3xl flex-1 flex items-center justify-center p-4"
         onPress={handleCreateBackup}
       >
         <Text> Create Backup</Text>
       </TouchableOpacity>
       <View className="h-full w-[1px] bg-grayscale" />
       <TouchableOpacity
-        className="border border-l-0 border-grayscale rounded-r-full flex-1 flex items-center justify-center p-4"
+        className="border border-l-0 border-grayscale rounded-r-3xl flex-1 flex items-center justify-center p-4"
         onPress={handleRestoreBackupPicker}
       >
         <Text>Restore Backup</Text>
