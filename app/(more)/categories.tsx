@@ -133,7 +133,7 @@ export default function CategoriesScreen() {
             );
           }}
           contentContainerStyle={{
-            padding: 16,
+            padding: 20,
             paddingBottom: insets.bottom + 84,
           }}
           keyExtractor={(item) =>

@@ -125,7 +125,7 @@ export default function DownloadQueueScreen() {
             );
           }}
           contentContainerStyle={{
-            padding: 16,
+            padding: 20,
             paddingBottom: insets.bottom,
           }}
           keyExtractor={(item) =>

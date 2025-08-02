@@ -37,7 +37,7 @@ export default function DataAndStorageScreen() {
         scrollEventThrottle={16}
         className="flex-1"
       >
-        <View className="flex flex-col gap-y-4 p-4">
+        <View className="flex flex-col gap-y-5 p-5">
           <Text className="font-medium">Storage Usage</Text>
           <StorageUsageBar />
         </View>

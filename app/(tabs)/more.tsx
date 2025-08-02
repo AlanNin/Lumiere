@@ -84,7 +84,11 @@ export default function MoreScreen() {
         </OptionsWrapper>
         <Separator />
         <OptionsWrapper>
-          <OptionButton Icon={Info} label="About" onPress={() => {}} />
+          <OptionButton
+            Icon={Info}
+            label="About"
+            onPress={() => router.push("/(more)/about")}
+          />
         </OptionsWrapper>
       </View>
     </ScrollView>
