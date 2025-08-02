@@ -1,5 +1,5 @@
 import { Text } from "@/components/defaults";
-import { QueueDownloadItem } from "@/hooks/useChapterDownloadQueue";
+import { QueueDownloadItem } from "@/providers/chapterDownloadQueue";
 import { colors } from "@/lib/constants";
 import { Ellipsis } from "lucide-react-native";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";

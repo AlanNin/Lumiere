@@ -67,7 +67,7 @@ export default function AboutScreen() {
         scrollEventThrottle={16}
         className="flex-1"
       >
-        <View className="w-full h-56 flex items-center justify-center">
+        <View className="w-full h-52 flex items-center justify-center">
           <Image
             source={require("@/assets/icon-transparent.png")}
             contentFit="contain"

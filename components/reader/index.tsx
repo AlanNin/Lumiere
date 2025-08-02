@@ -24,6 +24,7 @@ import { useMutation } from "@tanstack/react-query";
 import { novelController } from "@/server/controllers/novel";
 import { invalidateQueries } from "@/providers/reactQuery";
 import ReaderFooter from "./footer";
+import { TouchableWithoutFeedback } from "@gorhom/bottom-sheet";
 
 export default function ReaderComponent({
   chapter,

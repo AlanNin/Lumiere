@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   RefreshControl,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -30,7 +31,7 @@ import NovelReadButton from "@/components/novel/novelReadButton";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
 import Loading from "@/components/statics/loading";
 import Error from "@/components/statics/error";
-import { useChapterDownloadQueue } from "@/hooks/useChapterDownloadQueue";
+import { useChapterDownloadQueue } from "@/providers/chapterDownloadQueue";
 import { DownloadChapter } from "@/types/download";
 import { colors } from "@/lib/constants";
 import NovelActionsBar from "@/components/novel/novelActionsBar";
@@ -40,7 +41,7 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import NovelChaptersFilterDrawer from "@/components/novel/novelChaptersFilterDrawer";
 import { useConfig } from "@/providers/appConfig";
 import { applyNovelChaptersFiltersAndSort } from "@/lib/novel";
-import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
+import { useNovelRefreshQueue } from "@/providers/novelRefreshQueue";
 import NovelFindChapterDrawer from "@/components/novel/novelFindChapterDrawer";
 import NovelDownloadChaptersDrawer from "@/components/novel/novelDownloadChaptersDrawer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -48,6 +49,7 @@ import NovelMoreChapterDrawer from "@/components/novel/novelMoreChapterDrawer";
 import NovelCategoryDrawer from "@/components/novel/novelCategoryDrawer";
 import { categoryController } from "@/server/controllers/category";
 import ModeIndicator from "@/components/modeIndicator";
+import { useIsOnline } from "@/providers/network";
 
 const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Chapter>
@@ -90,6 +92,7 @@ export default function NovelScreen() {
     );
   }, [novelChaptersFilter]);
   const [highlightChapter, setHighlightChapter] = useState<number | null>(null);
+  const isOnline = useIsOnline();
 
   // Drawers
   const bottomDrawerRemoveDownloadRef = useRef<BottomSheetModal>(null);
@@ -218,6 +221,11 @@ export default function NovelScreen() {
       chapterNumber: number;
       downloaded?: boolean;
     }) => {
+      if (!isOnline && !downloaded) {
+        ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+        return;
+      }
+
       router.push({
         pathname: "/novel/reader",
         params: {
@@ -227,7 +235,7 @@ export default function NovelScreen() {
         },
       });
     },
-    [router, novelInfo?.title]
+    [router, novelInfo?.title, isOnline]
   );
 
   function handleOpenDeleteChaptersDrawer(chapters: DownloadChapter[]) {
@@ -341,6 +349,14 @@ export default function NovelScreen() {
       handleDownloadPress,
     ]
   );
+
+  function handleRefresh() {
+    if (!isOnline) {
+      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      return;
+    }
+    enqueueRefresh([String(title)]);
+  }
 
   const keyExtractor = useCallback(
     (item: Chapter) => `${item.number}-${item.title}`,
@@ -503,7 +519,7 @@ export default function NovelScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing(String(title))}
-              onRefresh={() => enqueueRefresh([String(title)])}
+              onRefresh={handleRefresh}
               progressBackgroundColor={colors.primary}
               colors={[colors.primary_foreground]}
             />

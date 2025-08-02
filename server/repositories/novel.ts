@@ -695,4 +695,29 @@ export const novelRepository = {
 
     return changes > 0;
   },
+
+  async checkIfIsStored({
+    novelTitle,
+  }: {
+    novelTitle: string;
+  }): Promise<boolean> {
+    try {
+      const novelRow = await db_client
+        .select()
+        .from(novels)
+        .where(eq(novels.title, novelTitle))
+        .get();
+
+      if (!novelRow) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to check if novel is stored:", error);
+      if (error instanceof Error) throw error;
+      throw new Error(
+        "An unknown error occurred while checking if novel is stored."
+      );
+    }
+  },
 };

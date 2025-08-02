@@ -469,6 +469,23 @@ export const novelService = {
       throw new Error("An unknown error occurred.");
     }
   },
+
+  async checkIfIsStored({
+    novelTitle,
+  }: {
+    novelTitle: string;
+  }): Promise<boolean> {
+    try {
+      return await novelRepository.checkIfIsStored({
+        novelTitle,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
 };
 
 // Helper functions

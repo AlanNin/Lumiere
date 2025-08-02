@@ -1,8 +1,14 @@
-import { TouchableOpacity, View } from "react-native";
+import {
+  GestureResponderEvent,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Text } from "../defaults";
 import { Chapter } from "@/types/novel";
 import { Style } from "@/types/reader";
 import { useRouter } from "expo-router";
+import { useIsOnline } from "@/providers/network";
 
 export default function ReaderFooter({
   chapter,
@@ -14,9 +20,16 @@ export default function ReaderFooter({
   insets: { top: number; bottom: number };
 }) {
   const router = useRouter();
+  const isOnline = useIsOnline();
 
   function handleNextChapter() {
     if (!chapter.nextChapter) return;
+
+    if (!isOnline && !chapter.nextChapter.downloaded) {
+      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      return;
+    }
+
     router.replace({
       pathname: "/novel/reader",
       params: {
@@ -42,7 +55,7 @@ export default function ReaderFooter({
 
       {chapter.nextChapter ? (
         <TouchableOpacity
-          className="bg-primary_dark p-3 w-full rounded-xl flex items-center justify-center"
+          className="bg-primary_dark py-3 px-6 w-full rounded-xl flex items-center justify-center"
           onPress={handleNextChapter}
         >
           <Text className="text-center" style={{ fontSize: styles.p.fontSize }}>

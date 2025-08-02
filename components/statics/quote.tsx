@@ -8,9 +8,11 @@ import { useKeyboard } from "@react-native-community/hooks";
 export default function Quote({
   quote,
   Icon,
+  iconStrokeWidth = 1,
 }: {
   quote: string;
   Icon?: LucideIcon;
+  iconStrokeWidth?: number;
 }) {
   const { keyboardShown } = useKeyboard();
 
@@ -25,7 +27,11 @@ export default function Quote({
         {quote}
       </Text>
       {Icon && (
-        <Icon color={colors.muted_foreground} size={20} strokeWidth={1} />
+        <Icon
+          color={colors.muted_foreground}
+          size={20}
+          strokeWidth={iconStrokeWidth}
+        />
       )}
     </View>
   );

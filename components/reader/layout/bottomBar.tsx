@@ -1,4 +1,5 @@
 import { colors } from "@/lib/constants";
+import { useIsOnline } from "@/providers/network";
 import { Chapter } from "@/types/novel";
 import { useRouter } from "expo-router";
 import {
@@ -8,7 +9,7 @@ import {
   ChevronRight,
   Settings,
 } from "lucide-react-native";
-import { Pressable, TouchableOpacity } from "react-native";
+import { Pressable, ToastAndroid, TouchableOpacity } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -37,6 +38,7 @@ export default function ReaderBottomBar({
   handleOpenBottomDrawerConfig: () => void;
 }) {
   const router = useRouter();
+  const isOnline = useIsOnline();
 
   const bottomBarAnimValue = useDerivedValue(
     () => withTiming(layoutVisible ? 1 : 0, { duration: 200 }),
@@ -50,6 +52,11 @@ export default function ReaderBottomBar({
   function handlePreviousChapter() {
     if (!chapter.previousChapter) return;
 
+    if (!isOnline && !chapter.previousChapter.downloaded) {
+      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      return;
+    }
+
     router.replace({
       pathname: "/novel/reader",
       params: {
@@ -62,6 +69,11 @@ export default function ReaderBottomBar({
 
   function handleNextChapter() {
     if (!chapter.nextChapter) return;
+
+    if (!isOnline && !chapter.nextChapter.downloaded) {
+      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      return;
+    }
 
     router.replace({
       pathname: "/novel/reader",

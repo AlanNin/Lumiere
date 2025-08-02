@@ -3,6 +3,7 @@ import NovelCard from "@/components/novel/novelCard";
 import TabHeader from "@/components/tabHeader";
 import {
   FlatList,
+  ToastAndroid,
   TouchableOpacity,
   View,
   useWindowDimensions,
@@ -18,9 +19,10 @@ import { Text } from "@/components/defaults";
 import { useKeyboard } from "@react-native-community/hooks";
 import { cn } from "@/lib/cn";
 import { useRouter } from "expo-router";
-import { useNovelRefreshQueue } from "@/hooks/useNovelRefreshQueue";
+import { useNovelRefreshQueue } from "@/providers/novelRefreshQueue";
 import { RefreshControl } from "react-native-gesture-handler";
 import { useConfig } from "@/providers/appConfig";
+import { useIsOnlineDirect } from "@/hooks/network";
 
 const renderTabBar = (props: any) => (
   <TabBar
@@ -60,10 +62,19 @@ const renderNovels = ({
   getIsRefreshing: () => boolean;
 }) => {
   const isRefreshing = getIsRefreshing();
+  const isOnline = useIsOnlineDirect();
+
+  function handleRefresh() {
+    if (!isOnline) {
+      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      return;
+    }
+    onRefreshLibrary(novels.map((n) => n.title));
+  }
 
   return (
     <View className="flex-1">
-      {searchQuery.length > 0 && (
+      {searchQuery.length > 0 && isOnline && (
         <TouchableOpacity
           className="my-1 py-2 flex items-center justify-center"
           onPress={onSearchInExplorer}
@@ -93,6 +104,7 @@ const renderNovels = ({
                     isSaved: item.isSaved ? 1 : 0,
                   },
                 }}
+                isStored={true}
               />
             );
           }}
@@ -102,7 +114,7 @@ const renderNovels = ({
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              onRefresh={() => onRefreshLibrary(novels.map((n) => n.title))}
+              onRefresh={handleRefresh}
               refreshing={isRefreshing}
               progressBackgroundColor={colors.primary}
               colors={[colors.primary_foreground]}
@@ -113,7 +125,7 @@ const renderNovels = ({
         <View
           className={cn(
             "items-center justify-center flex",
-            keyboardShown ? "h-[32%]" : "flex-1"
+            keyboardShown ? (isOnline ? "h-[32%]" : "h-[36%]") : "flex-1"
           )}
         >
           <Quote

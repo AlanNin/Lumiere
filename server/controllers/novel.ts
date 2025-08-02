@@ -341,4 +341,21 @@ export const novelController = {
       throw new Error("An unknown error occurred.");
     }
   },
+
+  async checkIfIsStored({
+    novelTitle,
+  }: {
+    novelTitle: string;
+  }): Promise<boolean> {
+    try {
+      return await novelService.checkIfIsStored({
+        novelTitle,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
 };

@@ -17,6 +17,10 @@ import { Frown } from "lucide-react-native";
 import Error from "@/components/statics/error";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { PrefetchLibrary } from "@/lib/prefetch";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ChapterDownloadQueueProvider } from "@/providers/chapterDownloadQueue";
+import { NovelRefreshQueueProvider } from "@/providers/novelRefreshQueue";
+import { NetworkProvider } from "@/providers/network";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,8 +32,10 @@ SplashScreen.setOptions({
 export default function RootLayout() {
   useDrizzleStudio(db_expo);
   const { success, error } = useMigrations(db_client, migrations);
+  const { requestNotificationPermissions } = usePermissions();
 
   useEffect(() => {
+    requestNotificationPermissions();
     PrefetchLibrary();
 
     if (success !== undefined) {
@@ -43,26 +49,32 @@ export default function RootLayout() {
   }
 
   return (
-    <ReactQueryProvider>
-      <ConfigProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <BottomSheetModalProvider>
-            <StatusBar style="light" translucent />
-            <Stack
-              screenOptions={{
-                contentStyle: {
-                  backgroundColor: colors.background,
-                },
-                headerShown: false,
-              }}
-            >
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="novel" />
-              <Stack.Screen name="(more)" />
-            </Stack>
-          </BottomSheetModalProvider>
-        </GestureHandlerRootView>
-      </ConfigProvider>
-    </ReactQueryProvider>
+    <NetworkProvider>
+      <ReactQueryProvider>
+        <ConfigProvider>
+          <ChapterDownloadQueueProvider>
+            <NovelRefreshQueueProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <BottomSheetModalProvider>
+                  <StatusBar style="light" translucent />
+                  <Stack
+                    screenOptions={{
+                      contentStyle: {
+                        backgroundColor: colors.background,
+                      },
+                      headerShown: false,
+                    }}
+                  >
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="novel" />
+                    <Stack.Screen name="(more)" />
+                  </Stack>
+                </BottomSheetModalProvider>
+              </GestureHandlerRootView>
+            </NovelRefreshQueueProvider>
+          </ChapterDownloadQueueProvider>
+        </ConfigProvider>
+      </ReactQueryProvider>
+    </NetworkProvider>
   );
 }

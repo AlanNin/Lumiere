@@ -3,7 +3,7 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { RefObject } from "react";
 import BottomDrawer from "@/components/bottomDrawer";
 import { Text } from "@/components/defaults";
-import { QueueDownloadItem } from "@/hooks/useChapterDownloadQueue";
+import { QueueDownloadItem } from "@/providers/chapterDownloadQueue";
 
 export default function QueueItemOptionsDrawer({
   bottomDrawerRef,

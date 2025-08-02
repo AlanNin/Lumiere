@@ -6,7 +6,7 @@ import TabHeader from "@/components/tabHeader";
 import {
   QueueDownloadItem,
   useChapterDownloadQueue,
-} from "@/hooks/useChapterDownloadQueue";
+} from "@/providers/chapterDownloadQueue";
 import { colors } from "@/lib/constants";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
@@ -39,8 +39,8 @@ export default function DownloadQueueScreen() {
 
   const {
     queueDownload,
-    toggleAllDownloadsPaused,
     areDownloadsPaused,
+    toggleAllDownloadsPaused,
     moveUp,
     moveDown,
     moveToTop,

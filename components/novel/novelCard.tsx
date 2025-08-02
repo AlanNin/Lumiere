@@ -1,5 +1,11 @@
 import { cn } from "@/lib/cn";
-import { StyleProp, TouchableOpacity, View, ViewStyle } from "react-native";
+import {
+  StyleProp,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import { LinearGradient } from "react-native-linear-gradient";
 import { useRouter } from "expo-router";
 import { Text } from "@/components/defaults";
@@ -7,6 +13,8 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { BookMarked } from "lucide-react-native";
 import { colors } from "@/lib/constants";
+import { useIsOnline } from "@/providers/network";
+import { novelController } from "@/server/controllers/novel";
 
 export default function NovelCard({
   title,
@@ -15,6 +23,7 @@ export default function NovelCard({
   containerClassName,
   containerStyle,
   showSavedBadge,
+  isStored = false,
 }: {
   title: string;
   imageUri: string;
@@ -25,10 +34,24 @@ export default function NovelCard({
   containerClassName?: string;
   containerStyle?: StyleProp<ViewStyle>;
   showSavedBadge?: boolean;
+  isStored?: boolean | undefined;
 }) {
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
-  function handlePress() {
+  const isOnline = useIsOnline();
+
+  async function handlePress() {
+    if (!isOnline && !isStored) {
+      const isStoredCheck = await novelController.checkIfIsStored({
+        novelTitle: title,
+      });
+
+      if (!isStoredCheck) {
+        ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+        return;
+      }
+    }
+
     if (href) {
       router.push({
         pathname: href.pathname,

@@ -9,7 +9,7 @@ import { colors } from "@/lib/constants";
 import {
   QueueDownloadItem,
   useChapterDownloadQueue,
-} from "@/hooks/useChapterDownloadQueue";
+} from "@/providers/chapterDownloadQueue";
 import { Chapter } from "@/types/novel";
 import { DownloadChapter } from "@/types/download";
 import { novelController } from "@/server/controllers/novel";

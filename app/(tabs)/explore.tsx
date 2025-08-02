@@ -24,6 +24,7 @@ import {
   Search,
   Globe,
   History,
+  WifiOff,
 } from "lucide-react-native";
 import useDebounce from "@/hooks/useDebounce";
 import Quote from "@/components/statics/quote";
@@ -31,6 +32,7 @@ import Loading from "@/components/statics/loading";
 import { useKeyboard } from "@react-native-community/hooks";
 import { cn } from "@/lib/cn";
 import { useLocalSearchParams } from "expo-router";
+import { useIsOnline } from "@/providers/network";
 
 type FilterOption = {
   key: ExploreSection;
@@ -52,6 +54,7 @@ function RenderNovels({
   fetchNextPage: () => void;
 }) {
   const { keyboardShown } = useKeyboard();
+  const isOnline = useIsOnline();
 
   if (!novels || novels.length === 0) {
     return (
@@ -78,10 +81,12 @@ function RenderNovels({
         !isFetchingNextPage &&
         scrollHeight - scrollTop <= clientHeight + 200
       ) {
-        fetchNextPage();
+        if (isOnline) {
+          fetchNextPage();
+        }
       }
     },
-    [hasNextPage, isFetchingNextPage, fetchNextPage]
+    [hasNextPage, isFetchingNextPage, fetchNextPage, isOnline]
   );
   return (
     <View className="flex-1">
@@ -92,7 +97,6 @@ function RenderNovels({
         renderItem={({ item, index }) => {
           const lastItem = index === novels.length - 1;
           const maxWidth = lastItem ? width / 2 - 21 : width;
-
           return (
             <NovelCard
               title={item.title}
@@ -134,6 +138,7 @@ export default function ExploreScreen() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const { keyboardShown } = useKeyboard();
+  const isOnline = useIsOnline();
 
   const allFilterOptions: FilterOption[] = useMemo(
     () => [
@@ -201,6 +206,7 @@ export default function ExploreScreen() {
       lastPage.pageNumber! < lastPage.totalPages!
         ? lastPage.pageNumber! + 1
         : undefined,
+    enabled: isOnline,
   });
 
   const novels = novelsData?.pages.flatMap((p) => p.items) ?? [];
@@ -234,9 +240,10 @@ export default function ExploreScreen() {
         setSearchQuery={setSearchQuery}
         isSearchOpen={isSearchOpen}
         setIsSearchOpen={setIsSearchOpen}
-        showSearch={true}
+        showSearch={isOnline ? true : false}
         customRightContent={renderOpenInBrowserButton()}
       />
+
       <View className="flex flex-col gap-y-2 border-b-[0.5px] border-muted pb-4">
         <FlatList
           data={filterOptions}
@@ -283,13 +290,23 @@ export default function ExploreScreen() {
               <Loading />
             </View>
           ) : (
-            <RenderNovels
-              novels={novels}
-              width={width}
-              hasNextPage={hasNextNovelsPage}
-              isFetchingNextPage={isFetchingNextNovelsPage}
-              fetchNextPage={fetchNextNovelsPage}
-            />
+            <>
+              {novels.length === 0 && !isOnline ? (
+                <Quote
+                  quote="No internet connection. Try again later."
+                  Icon={WifiOff}
+                  iconStrokeWidth={1.3}
+                />
+              ) : (
+                <RenderNovels
+                  novels={novels}
+                  width={width}
+                  hasNextPage={hasNextNovelsPage}
+                  isFetchingNextPage={isFetchingNextNovelsPage}
+                  fetchNextPage={fetchNextNovelsPage}
+                />
+              )}
+            </>
           )}
         </>
       )}

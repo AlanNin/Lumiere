@@ -1,5 +1,6 @@
 import OptionButton from "@/components/more/optionButton";
 import Separator from "@/components/separator";
+import { useChapterDownloadQueue } from "@/providers/chapterDownloadQueue";
 import { useSafeAreaPaddings } from "@/hooks/useSafeAreaPaddings";
 
 import { useConfig } from "@/providers/appConfig";
@@ -31,10 +32,16 @@ export default function MoreScreen() {
     false
   );
 
+  const {
+    queueDownload,
+    areDownloadsPaused,
+    isWaitingForConnection,
+  } = useChapterDownloadQueue();
+
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
       <View className="flex-1" style={{ paddingTop: paddingTop }}>
-        <View className="w-full h-56 flex items-center justify-center">
+        <View className="w-full h-52 flex items-center justify-center">
           <Image
             source={require("@/assets/icon-transparent.png")}
             contentFit="contain"
@@ -63,6 +70,17 @@ export default function MoreScreen() {
           <OptionButton
             Icon={ArrowDownToLine}
             label="Download Queue"
+            description={
+              queueDownload.length > 0
+                ? `${
+                    areDownloadsPaused
+                      ? isWaitingForConnection
+                        ? "Waiting for connection"
+                        : "Paused"
+                      : "Donwloading"
+                  } • ${queueDownload.length} remaining`
+                : undefined
+            }
             onPress={() => router.push("/(more)/downloadQueue")}
           />
           <OptionButton
