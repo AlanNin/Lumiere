@@ -174,4 +174,18 @@ export const libraryRepository = {
 
     return result;
   },
+
+  async clearDatabase(): Promise<boolean> {
+    try {
+      await db_client.delete(novels).where(eq(novels.isSaved, 0));
+
+      return true;
+    } catch (error) {
+      console.error("Failed to clear database:", error);
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
 };

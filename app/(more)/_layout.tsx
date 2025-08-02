@@ -13,6 +13,7 @@ export default function NovelLayout() {
       >
         <Stack.Screen name="categories" />
         <Stack.Screen name="downloadQueue" />
+        <Stack.Screen name="dataAndStorage" />
       </Stack>
     </View>
   );

@@ -3,6 +3,7 @@ import { LucideIcon } from "lucide-react-native";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "../defaults";
 import BooleanSwitch from "../switch";
+import { cn } from "@/lib/cn";
 
 export default function OptionButton({
   Icon,
@@ -10,17 +11,23 @@ export default function OptionButton({
   description,
   onPress,
   switchValue,
+  disabled,
 }: {
   Icon: LucideIcon;
   label: string;
   description?: string;
   onPress: () => void;
   switchValue?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <TouchableOpacity
-      className="flex flex-row gap-x-6 items-center w-full"
+      className={cn(
+        "flex flex-row gap-x-6 items-center w-full",
+        disabled && "opacity-50"
+      )}
       onPress={onPress}
+      disabled={disabled}
     >
       <Icon color={colors.primary} size={20} strokeWidth={1.6} />
       <View className="flex flex-col gap-y-1 flex-1">

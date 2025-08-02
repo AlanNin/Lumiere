@@ -13,7 +13,7 @@ import Animated, {
   useDerivedValue,
   withTiming,
 } from "react-native-reanimated";
-import { getPaddingTop } from "@/lib/safeAreaInsets";
+import { useSafeAreaPaddings } from "@/hooks/useSafeAreaPaddings";
 
 export default function TabHeader({
   title,
@@ -86,6 +86,7 @@ export default function TabHeader({
     }
   }, [pathname]);
 
+  const { getPaddingTop } = useSafeAreaPaddings();
   const paddingTop = getPaddingTop(true);
 
   return (

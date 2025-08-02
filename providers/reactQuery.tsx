@@ -23,6 +23,10 @@ export function invalidateQueries(...keys: Array<string | readonly unknown[]>) {
   );
 }
 
+export function resetCache() {
+  queryClient.clear();
+}
+
 function ReactQueryProvider({ children }: { children: ReactNode }) {
   const [, _setClient] = useState<QueryClient>(queryClient);
 

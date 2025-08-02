@@ -1,15 +1,16 @@
 import OptionButton from "@/components/more/optionButton";
 import Separator from "@/components/separator";
+import { useSafeAreaPaddings } from "@/hooks/useSafeAreaPaddings";
+
 import { useConfig } from "@/providers/appConfig";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
   ArrowDownToLine,
-  CircleQuestionMark,
+  CalendarSync,
   CloudOff,
   Database,
   Info,
-  Settings,
   Tags,
   VenetianMask,
 } from "lucide-react-native";
@@ -18,6 +19,8 @@ import { ScrollView, View } from "react-native";
 
 export default function MoreScreen() {
   const router = useRouter();
+  const { getPaddingTop } = useSafeAreaPaddings();
+  const paddingTop = getPaddingTop();
 
   const [downloadedOnly, setDownloadedOnly] = useConfig<boolean>(
     "downloadedOnly",
@@ -30,7 +33,7 @@ export default function MoreScreen() {
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
-      <View className="flex-1">
+      <View className="flex-1" style={{ paddingTop: paddingTop }}>
         <View className="w-full h-56 flex items-center justify-center">
           <Image
             source={require("@/assets/icon-transparent.png")}
@@ -42,14 +45,14 @@ export default function MoreScreen() {
         <OptionsWrapper>
           <OptionButton
             Icon={CloudOff}
-            label="Downloaded only"
+            label="Downloaded Only"
             description="Filters all entries in your library"
             switchValue={downloadedOnly}
             onPress={() => setDownloadedOnly((prev) => !prev)}
           />
           <OptionButton
             Icon={VenetianMask}
-            label="Incognito mode"
+            label="Incognito Mode"
             description="Pauses reading history"
             switchValue={incognitoMode}
             onPress={() => setIncognitoMode((prev) => !prev)}
@@ -59,7 +62,7 @@ export default function MoreScreen() {
         <OptionsWrapper>
           <OptionButton
             Icon={ArrowDownToLine}
-            label="Download queue"
+            label="Download Queue"
             onPress={() => router.push("/(more)/downloadQueue")}
           />
           <OptionButton
@@ -69,19 +72,19 @@ export default function MoreScreen() {
           />
           <OptionButton
             Icon={Database}
-            label="Data and storage"
+            label="Data & Storage"
+            onPress={() => router.push("/(more)/dataAndStorage")}
+          />
+          <OptionButton
+            Icon={CalendarSync}
+            label="Automatic Updates & Downloads"
             onPress={() => {}}
+            disabled={true}
           />
         </OptionsWrapper>
         <Separator />
         <OptionsWrapper>
-          <OptionButton Icon={Settings} label="Settings" onPress={() => {}} />
           <OptionButton Icon={Info} label="About" onPress={() => {}} />
-          <OptionButton
-            Icon={CircleQuestionMark}
-            label="Help"
-            onPress={() => {}}
-          />
         </OptionsWrapper>
       </View>
     </ScrollView>

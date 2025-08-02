@@ -10,7 +10,12 @@ import {
 import { colors } from "@/lib/constants";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList, FlashListProps } from "@shopify/flash-list";
-import { ArrowDownToLine, Pause, Shredder, Tags } from "lucide-react-native";
+import {
+  ArrowBigDownDash,
+  ArrowDownToLine,
+  Pause,
+  Shredder,
+} from "lucide-react-native";
 import { useRef, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -23,7 +28,7 @@ const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<QueueDownloadItem>
 >(FlashList);
 
-export default function CategoriesScreen() {
+export default function DownloadQueueScreen() {
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const [selectedQueueItem, setSelectedQueueItem] = useState<
@@ -132,7 +137,7 @@ export default function CategoriesScreen() {
           scrollEventThrottle={16}
         />
       ) : (
-        <Quote quote="No downloads yet. Add some!" Icon={Tags} />
+        <Quote quote="No downloads yet. Add some!" Icon={ArrowBigDownDash} />
       )}
 
       <QueueItemOptionsDrawer

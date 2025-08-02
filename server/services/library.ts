@@ -16,4 +16,15 @@ export const libraryService = {
       throw new Error("An unknown error occurred.");
     }
   },
+
+  async clearDatabase(): Promise<boolean> {
+    try {
+      return await libraryRepository.clearDatabase();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error("An unknown error occurred.");
+    }
+  },
 };
