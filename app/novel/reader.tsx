@@ -44,6 +44,9 @@ export default function NovelReaderScreen() {
         novelTitle: String(novelTitle),
         chapterNumber: Number(chapterNumber),
       }),
+    meta: {
+      persist: false,
+    },
   });
 
   if (!isDownloaded && isFetching) {

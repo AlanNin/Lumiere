@@ -1,5 +1,6 @@
 import { Text } from "@/components/defaults";
 import BackupOptions from "@/components/more/dataAndStorage/backup";
+import ClearCache from "@/components/more/dataAndStorage/clearCache";
 import ClearDatabase from "@/components/more/dataAndStorage/clearDatabase";
 import StorageUsageBar from "@/components/more/dataAndStorage/storageUsageBar";
 import TabHeader from "@/components/tabHeader";
@@ -51,6 +52,7 @@ export default function DataAndStorageScreen() {
           <Text className="font-medium">Automatic Backup Frequency</Text>
           <Text className="text-grayscale_foreground">Off</Text>
         </TouchableOpacity>
+        <ClearCache />
         <ClearDatabase />
       </AnimatedScrollView>
     </View>

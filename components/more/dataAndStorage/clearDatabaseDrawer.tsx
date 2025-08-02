@@ -20,8 +20,8 @@ export default function ClearDatabaseDrawer({
       <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-4 flex-1">
         <Text className="text-lg font-medium text-center">Clear Database</Text>
         <Text className="text-muted_foreground/85 text-center mx-2 mb-4">
-          This action will permanently delete all entries not saved in your
-          library. Do you wish to continue?
+          This action will delete all entries not saved in your library, cache
+          will also be cleared.
         </Text>
         <View className="flex flex-col items-center gap-y-4 flex-1 w-full px-16">
           <TouchableOpacity
