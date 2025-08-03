@@ -355,7 +355,7 @@ export async function scrapeNovelChapter({
   const dirtyHtml = $contentDiv.html()!.trim();
 
   // sanitize & wrap
-  const cleanHtml = sanitizeHtml(dirtyHtml);
+  const cleanHtml = sanitizeHtml(dirtyHtml, title, number);
   const htmlWithTitle = insertTitleHtml(title, number, cleanHtml);
   const body = `
     <!DOCTYPE html>

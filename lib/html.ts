@@ -1,7 +1,11 @@
 import { parseDocument } from "htmlparser2";
 import { DomUtils } from "htmlparser2";
 
-export function sanitizeHtml(dirtyHtml: string) {
+export function sanitizeHtml(
+  dirtyHtml: string,
+  chapterTitle: string,
+  chapterNumber: number
+) {
   let pCounter = 0;
 
   const cleanHtml = dirtyHtml
@@ -57,6 +61,17 @@ export function sanitizeHtml(dirtyHtml: string) {
 
     // 5.7 Remove paragraphs that contain "Chapter n:" where n is any number
     .replace(/<p[^>]*>\s*Chapter\s+\d+:\s*[\s\S]*?<\/p>/gi, "")
+
+    // 5.8 Remove the initial <p> containing just chapter number and title
+    .replace(
+      new RegExp(
+        `^\\s*<p[^>]*>\\s*(?:Chapter\\s*)?${chapterNumber}\\s*[-:\\u2013\\u2014]?\\s*${escapeRegExp(
+          chapterTitle
+        )}\\s*<\\/p>`,
+        "i"
+      ),
+      ""
+    )
 
     // 6. Delete any empty <p> tags (including those containing only whitespace or &nbsp;).
     .replace(/<p>(?:\s|&nbsp;)*<\/p>/gi, "")
@@ -148,6 +163,10 @@ export function sanitizeHtml(dirtyHtml: string) {
   }
 
   return cleanHtml;
+}
+
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function extractChapterTitle(rawText: string): string {
