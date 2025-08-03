@@ -1,15 +1,12 @@
+import { RefObject, useCallback, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import BottomDrawer from "../bottomDrawer";
 import { Text } from "../defaults";
 import { BottomSheetModal, BottomSheetTextInput } from "@gorhom/bottom-sheet";
-import { cn } from "@/lib/cn";
-import { RefObject, useState } from "react";
 import { Picker } from "@react-native-picker/picker";
+import { cn } from "@/lib/cn";
 import { colors } from "@/lib/constants";
-import {
-  QueueDownloadItem,
-  useChapterDownloadQueue,
-} from "@/providers/chapterDownloadQueue";
+import { QueueDownloadItem } from "@/providers/chapterDownloadQueue";
 import { Chapter } from "@/types/novel";
 import { DownloadChapter } from "@/types/download";
 import { novelController } from "@/server/controllers/novel";
@@ -51,46 +48,66 @@ export default function NovelDownloadChaptersDrawer({
   enqueueDownload: (chapters: DownloadChapter[], priority?: number) => void;
   refetchNovelInfo: () => void;
 }) {
-  const getNextUndownloadedChapter = () => {
+  // helpers
+  const getNextUndownloadedChapter = useCallback(() => {
     const sortedChapters = [...chapters].sort((a, b) => a.number - b.number);
-
     const nextUndownloaded = sortedChapters.find(
-      (chapter) => chapter.number >= currentChapter && !chapter.downloaded
+      (chapter) =>
+        chapter.number >= currentChapter && !Boolean(chapter.downloaded)
     );
-
     return nextUndownloaded?.number || currentChapter;
-  };
+  }, [chapters, currentChapter]);
 
-  const getLastDownloadedChapter = () => {
+  const getLastDownloadedChapter = useCallback(() => {
     const downloadedChapters = chapters
-      .filter((chapter) => chapter.downloaded)
+      .filter((chapter) => Boolean(chapter.downloaded))
       .sort((a, b) => b.number - a.number);
-
     return downloadedChapters[0]?.number || 0;
-  };
+  }, [chapters]);
 
-  const isInQueue = (num: number) =>
-    queueDownload.some(
-      (q) => q.novelTitle === novelTitle && q.chapterNumber === num
-    );
+  const isInQueue = useCallback(
+    (num: number) =>
+      queueDownload.some(
+        (q) => q.novelTitle === novelTitle && q.chapterNumber === num
+      ),
+    [queueDownload, novelTitle]
+  );
 
-  const getStartForNext = () =>
-    chapters.find((c) => c.number === currentChapter)?.downloaded
+  const getStartForNext = useCallback(() => {
+    const current = chapters.find((c) => c.number === currentChapter);
+    const downloaded = current ? Boolean(current.downloaded) : false;
+    return downloaded
       ? getLastDownloadedChapter() + 1
       : getNextUndownloadedChapter();
+  }, [
+    chapters,
+    currentChapter,
+    getLastDownloadedChapter,
+    getNextUndownloadedChapter,
+  ]);
 
-  const getNextNChapters = (startFrom: number, count: number): Chapter[] => {
-    const sorted = [...chapters].sort((a, b) => a.number - b.number);
-    const result: Chapter[] = [];
-    for (const c of sorted) {
-      if (c.number < startFrom) continue;
-      if (c.downloaded) continue;
-      if (isInQueue(c.number)) continue;
-      result.push(c);
-      if (result.length === count) break;
+  const getNextNChapters = useCallback(
+    (startFrom: number, count: number): Chapter[] => {
+      const sorted = [...chapters].sort((a, b) => a.number - b.number);
+      const result: Chapter[] = [];
+      for (const c of sorted) {
+        if (c.number < startFrom) continue;
+        if (Boolean(c.downloaded)) continue;
+        if (isInQueue(c.number)) continue;
+        result.push(c);
+        if (result.length === count) break;
+      }
+      return result;
+    },
+    [chapters, isInQueue]
+  );
+
+  const isChapterUnread = useCallback((c: Chapter) => {
+    if (!c.progress || c.progress < 100) {
+      return true;
     }
-    return result;
-  };
+    return false;
+  }, []);
 
   const DOWNLOAD_MODE_OPTIONS = DEFAULT_DOWNLOAD_MODE_OPTIONS.filter((opt) => {
     if (allChaptersCompleted) {
@@ -103,7 +120,9 @@ export default function NovelDownloadChaptersDrawer({
       return false;
     }
 
-    const allDownloaded = chapters.every((chapter) => chapter.downloaded);
+    const allDownloaded = chapters.every((chapter) =>
+      Boolean(chapter.downloaded)
+    );
     if (allDownloaded && opt.value !== "remove-all") {
       return false;
     }
@@ -111,25 +130,25 @@ export default function NovelDownloadChaptersDrawer({
     if (opt.value.startsWith("next")) {
       const parts = opt.value.split("-");
       const count = parts.length === 1 ? 1 : parseInt(parts[1], 10);
-
       const startFrom = getStartForNext();
-
       const availableCandidates = chapters.filter(
         (chapter) =>
           chapter.number >= startFrom &&
-          !chapter.downloaded &&
+          !Boolean(chapter.downloaded) &&
           !isInQueue(chapter.number)
       );
-
       return availableCandidates.length >= count;
     }
 
     if (opt.value === "unread") {
-      return chapters.some((chapter) => !chapter.downloaded);
+      const hasUnread = chapters.some((chapter) => isChapterUnread(chapter));
+      return hasUnread;
     }
 
     if (opt.value === "all") {
-      return chapters.some((chapter) => !chapter.downloaded);
+      return chapters.some(
+        (chapter) => !Boolean(chapter.downloaded) && !isInQueue(chapter.number)
+      );
     }
 
     return true;
@@ -151,70 +170,68 @@ export default function NovelDownloadChaptersDrawer({
   const [customFrom, setCustomFrom] = useState<number | null>(null);
   const [customTo, setCustomTo] = useState<number | null>(null);
 
-  function handleCustomFromChange(value: string) {
-    value = value.replace(/[.,]/g, "").replace(/^0+/, "");
-
-    const num = Number(value);
-    if (isNaN(num)) {
-      setCustomFrom(null);
-      return;
-    }
-
-    setCustomFrom(num);
-
-    if (customTo === null || customTo < num) {
-      if (num === 0) {
+  const handleCustomFromChange = useCallback(
+    (value: string) => {
+      value = value.replace(/[.,]/g, "").replace(/^0+/, "");
+      const num = Number(value);
+      if (isNaN(num)) {
+        setCustomFrom(null);
         return;
       }
+      setCustomFrom(num);
+      if (customTo === null || customTo < num) {
+        if (num === 0) {
+          return;
+        }
+        if (num < maxChapters) {
+          setCustomTo(num + 1);
+        } else {
+          setCustomTo(num);
+        }
+      }
+    },
+    [customTo, maxChapters]
+  );
 
-      if (num < maxChapters) {
-        setCustomTo(num + 1);
+  const handleCustomToChange = useCallback(
+    (value: string) => {
+      value = value.replace(/[.,]/g, "").replace(/^0+/, "");
+      const num = Number(value);
+      if (isNaN(num)) {
+        setCustomTo(null);
+        return;
+      }
+      if (num < 1) {
+        setCustomTo(null);
+      } else if (num > maxChapters) {
+        setCustomTo(maxChapters);
       } else {
         setCustomTo(num);
       }
-    }
-  }
-
-  function handleCustomToChange(value: string) {
-    value = value.replace(/[.,]/g, "").replace(/^0+/, "");
-
-    const num = Number(value);
-    if (isNaN(num)) {
-      setCustomTo(null);
-      return;
-    }
-
-    if (num < 1) {
-      setCustomTo(null);
-    } else if (num > maxChapters) {
-      setCustomTo(maxChapters);
-    } else {
-      setCustomTo(num);
-    }
-
-    if (customFrom === null || customFrom > num) {
-      if (num === 0) {
-        return;
+      if (customFrom === null || customFrom > num) {
+        if (num === 0) {
+          return;
+        }
+        if (num > 1) {
+          setCustomFrom(num - 1);
+        } else {
+          setCustomFrom(num);
+        }
       }
-
-      if (num > 1) {
-        setCustomFrom(num - 1);
-      } else {
-        setCustomFrom(num);
-      }
-    }
-  }
+    },
+    [customFrom, maxChapters]
+  );
 
   const isDeleteDownloads = selectedDownloadMode === "remove-all";
   const isCustom = selectedDownloadMode === "custom";
 
-  function handleReset() {
+  const handleReset = useCallback(() => {
     setSelectedDownloadMode(DOWNLOAD_MODE_OPTIONS[0]?.value || "remove-all");
     setCustomFrom(null);
     setCustomTo(null);
-  }
+  }, [DOWNLOAD_MODE_OPTIONS]);
 
-  function handleConfirm() {
+  const handleConfirm = useCallback(() => {
     let toQueue: Chapter[] = [];
 
     if (isDeleteDownloads) {
@@ -226,7 +243,6 @@ export default function NovelDownloadChaptersDrawer({
           toQueue = getNextNChapters(start, 1);
           break;
         }
-
         case "next-5":
         case "next-10": {
           const count = Number(selectedDownloadMode.split("-")[1]);
@@ -234,26 +250,26 @@ export default function NovelDownloadChaptersDrawer({
           toQueue = getNextNChapters(start, count);
           break;
         }
-
         case "unread":
           toQueue = chapters.filter(
-            (c) => !c.downloaded && !isInQueue(c.number)
+            (c) =>
+              isChapterUnread(c) &&
+              !Boolean(c.downloaded) &&
+              !isInQueue(c.number)
           );
           break;
-
         case "all":
           toQueue = chapters.filter(
-            (c) => !c.downloaded && !isInQueue(c.number)
+            (c) => !Boolean(c.downloaded) && !isInQueue(c.number)
           );
           break;
-
         case "custom":
           if (customFrom != null && customTo != null) {
             toQueue = chapters.filter(
               (c) =>
                 c.number >= customFrom &&
                 c.number <= customTo &&
-                !c.downloaded &&
+                !Boolean(c.downloaded) &&
                 !isInQueue(c.number)
             );
           }
@@ -267,18 +283,31 @@ export default function NovelDownloadChaptersDrawer({
         chapterTitle: c.title,
         novelTitle: c.novelTitle,
       }));
-
       enqueueDownload(downloadChapters);
       handleReset();
     }
 
     bottomDrawerRef.current?.dismiss();
-  }
+  }, [
+    isDeleteDownloads,
+    selectedDownloadMode,
+    getStartForNext,
+    getNextNChapters,
+    chapters,
+    isChapterUnread,
+    isInQueue,
+    customFrom,
+    customTo,
+    enqueueDownload,
+    handleReset,
+    novelTitle,
+    removeAllDownloadedChaptersFromNovels,
+  ]);
 
-  function handleClose() {
+  const handleClose = useCallback(() => {
     handleReset();
     bottomDrawerRef.current?.dismiss();
-  }
+  }, [handleReset]);
 
   return (
     <BottomDrawer ref={bottomDrawerRef} onClose={handleReset}>
@@ -320,6 +349,7 @@ export default function NovelDownloadChaptersDrawer({
               />
             ))}
           </Picker>
+
           {isCustom && (
             <View className="flex flex-row items-center gap-x-4">
               <BottomSheetTextInput

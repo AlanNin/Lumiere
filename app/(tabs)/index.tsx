@@ -293,6 +293,7 @@ export default function HomeScreen() {
         onIndexChange={setIndex}
         initialLayout={{ width: width }}
         renderTabBar={renderTabBar}
+        key={libraryCategories.length}
       />
     );
   };
