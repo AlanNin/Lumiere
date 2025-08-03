@@ -12,6 +12,7 @@ export function SliderComponent({
   renderBubble = true,
   renderMark = true,
   forceSnapToStep = true,
+  defaultInvervals,
 }: {
   minValue: number;
   maxValue: number;
@@ -21,11 +22,13 @@ export function SliderComponent({
   renderBubble?: boolean;
   renderMark?: boolean;
   forceSnapToStep?: boolean;
+  defaultInvervals?: number;
 }) {
   const progress = useSharedValue(value ?? minValue);
   const min = useSharedValue(minValue);
   const max = useSharedValue(maxValue);
-  const intervals = (maxValue - minValue) / stepSize;
+  const intervals =
+    defaultInvervals ?? Math.round((maxValue - minValue) / stepSize);
 
   return (
     <Slider

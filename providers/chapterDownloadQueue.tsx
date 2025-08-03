@@ -382,12 +382,12 @@ export function useQueueDownloadStore() {
     const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
     const globallyPaused = pausedValue === "true";
 
-    if (globallyPaused || pausedRef.current) {
-      if (!isOnline) {
-        setIsWaitingForConnection(true);
-        return;
-      }
+    if (!isOnline) {
+      setIsWaitingForConnection(true);
+      return;
+    }
 
+    if (globallyPaused || pausedRef.current) {
       // Update notification to show paused state
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const queue: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
@@ -578,7 +578,7 @@ export function useQueueDownloadStore() {
       processingRef.current = false;
       if (mountedRef.current) setIsProcessing(false);
     }
-  }, []);
+  }, [isOnline]);
 
   // Initialization
   useEffect(() => {

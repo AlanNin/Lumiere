@@ -4,7 +4,7 @@ import { novelController } from "@/server/controllers/novel";
 import { Chapter } from "@/types/novel";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Bookmark, Volume1 } from "lucide-react-native";
+import { ArrowLeft, Bookmark, Pause, Volume1 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -18,11 +18,15 @@ export default function ReaderTopBar({
   postponeHide,
   chapter,
   insets,
+  handleTTS,
+  isTTSReading,
 }: {
   layoutVisible: boolean;
   postponeHide: () => void;
   chapter: Chapter;
   insets: { top: number; bottom: number };
+  handleTTS: () => void;
+  isTTSReading: boolean;
 }) {
   const router = useRouter();
 
@@ -94,8 +98,16 @@ export default function ReaderTopBar({
             </Text>
           </View>
           <View className="flex flex-row items-center gap-x-5">
-            <TouchableOpacity>
-              <Volume1 color={colors.foreground} size={24} strokeWidth={1.6} />
+            <TouchableOpacity onPress={handleTTS}>
+              {isTTSReading ? (
+                <Pause color={colors.foreground} size={24} strokeWidth={1.6} />
+              ) : (
+                <Volume1
+                  color={colors.foreground}
+                  size={24}
+                  strokeWidth={1.6}
+                />
+              )}
             </TouchableOpacity>
             <TouchableOpacity onPress={handleToggleBookMarked}>
               <Bookmark

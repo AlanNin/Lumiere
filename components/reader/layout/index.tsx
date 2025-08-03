@@ -8,6 +8,7 @@ import ReaderTopBar from "./topBar";
 import ReaderBottomBar from "./bottomBar";
 import ProgressSeekBar from "./progressSeekBar";
 import { useConfig } from "@/providers/appConfig";
+import { VoiceIdentifier } from "@/types/reader";
 
 export default function ReaderLayout({
   children,
@@ -24,6 +25,11 @@ export default function ReaderLayout({
   isAtTop,
   isAtBottom,
   seekTo,
+  handleTTS,
+  isTTSReading,
+  readerGeneralConfig,
+  setReaderGeneralConfig,
+  availableVoices,
 }: {
   children: ReactNode;
   layoutVisible: boolean;
@@ -39,19 +45,17 @@ export default function ReaderLayout({
   isAtTop: boolean;
   isAtBottom: boolean;
   seekTo: (percent: number) => void;
+  handleTTS: () => void;
+  isTTSReading: boolean;
+  readerGeneralConfig: ReaderGeneralConfig;
+  setReaderGeneralConfig: (config: ReaderGeneralConfig) => void;
+  availableVoices: VoiceIdentifier[];
 }) {
   const bottomDrawerConfigRef = useRef<BottomSheetModal>(null);
 
   const handleOpenBottomDrawerConfig = () => {
     bottomDrawerConfigRef.current?.present();
   };
-
-  // local config states (styles config state is passed in as a prop)
-  const [readerGeneralConfig, setReaderGeneralConfig] = useConfig<
-    ReaderGeneralConfig
-  >("readerGeneralConfig", {
-    showProgressSeekBar: false,
-  });
 
   return (
     <View
@@ -67,6 +71,8 @@ export default function ReaderLayout({
         postponeHide={postponeHide}
         chapter={chapter}
         insets={insets}
+        handleTTS={handleTTS}
+        isTTSReading={isTTSReading}
       />
 
       {/* optional- progress seek bar */}
@@ -103,6 +109,7 @@ export default function ReaderLayout({
         readerGeneralConfig={readerGeneralConfig}
         setReaderGeneralConfig={setReaderGeneralConfig}
         pointerEvents={layoutVisible ? "auto" : "none"}
+        availableVoices={availableVoices}
       />
     </View>
   );

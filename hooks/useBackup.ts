@@ -120,7 +120,6 @@ class AppBackupManager {
 
         // Only call multiSet if we have valid entries
         if (safeConfigEntries.length > 0) {
-          console.log("Setting config entries:", safeConfigEntries.length);
           await AsyncStorage.multiSet(safeConfigEntries);
         }
       }

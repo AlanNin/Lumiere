@@ -25,9 +25,10 @@ import {
   Plus,
 } from "lucide-react-native";
 import { ReaderGeneralConfig, ReaderStyleConfig } from "@/types/appConfig";
-import { TextAlgin } from "@/types/reader";
+import { TextAlgin, VoiceIdentifier } from "@/types/reader";
 import { cn } from "@/lib/cn";
 import BooleanSwitch from "@/components/switch";
+import { Picker } from "@react-native-picker/picker";
 
 export default function ReaderStyleConfigDrawer({
   drawerRef,
@@ -38,6 +39,7 @@ export default function ReaderStyleConfigDrawer({
   readerGeneralConfig,
   setReaderGeneralConfig,
   pointerEvents,
+  availableVoices,
 }: {
   drawerRef: RefObject<BottomSheetModal | null>;
   insets: { top: number; bottom: number };
@@ -47,6 +49,7 @@ export default function ReaderStyleConfigDrawer({
   readerGeneralConfig: ReaderGeneralConfig;
   setReaderGeneralConfig: (config: ReaderGeneralConfig) => void;
   pointerEvents: "auto" | "none";
+  availableVoices: VoiceIdentifier[];
 }) {
   const [readerStylesConfigState, setReaderStylesConfigState] = useState<
     ReaderStyleConfig
@@ -69,6 +72,8 @@ export default function ReaderStyleConfigDrawer({
     ReaderGeneralConfig
   >({
     showProgressSeekBar: readerGeneralConfig.showProgressSeekBar,
+    speechSpeed: readerGeneralConfig.speechSpeed,
+    voiceIdentifier: readerGeneralConfig.voiceIdentifier,
   });
 
   const initialReaderStylesConfigStateRef = useRef<ReaderStyleConfig>(
@@ -78,17 +83,6 @@ export default function ReaderStyleConfigDrawer({
   const initialReaderGeneralConfigStateRef = useRef<ReaderGeneralConfig>(
     readerGeneralConfigState
   );
-
-  // ...
-
-  const hasChanges = useMemo(() => {
-    return (
-      JSON.stringify(readerStylesConfigState) !==
-        JSON.stringify(initialReaderStylesConfigStateRef.current) ||
-      JSON.stringify(readerGeneralConfigState) !==
-        JSON.stringify(initialReaderGeneralConfigStateRef.current)
-    );
-  }, [readerStylesConfigState, readerGeneralConfigState]);
 
   useEffect(() => {
     setReaderStylesConfig(readerStylesConfigState);
@@ -211,6 +205,47 @@ export default function ReaderStyleConfigDrawer({
               }))
             }
           />
+        </ConfigItem>
+        <ConfigItem label="Speech Speed">
+          <SliderComponent
+            minValue={0.7}
+            maxValue={1.5}
+            defaultInvervals={8}
+            value={readerGeneralConfigState.speechSpeed}
+            onChange={(value) =>
+              setReaderGeneralConfigState((prev) => ({
+                ...prev,
+                speechSpeed: value,
+              }))
+            }
+          />
+        </ConfigItem>
+        <ConfigItem label="Speech Voice">
+          <Picker
+            selectedValue={readerGeneralConfigState.voiceIdentifier}
+            onValueChange={(value) => {
+              setReaderGeneralConfigState((prev) => ({
+                ...prev,
+                voiceIdentifier: value,
+              }));
+            }}
+            style={{
+              width: 200,
+              backgroundColor: colors.muted_foreground + "25",
+            }}
+            enabled={availableVoices.length > 1}
+          >
+            {availableVoices.map((voice, idx) => (
+              <Picker.Item
+                key={voice.identifier}
+                label={`Voice - ${idx + 1}`}
+                value={voice.identifier}
+                style={{
+                  color: colors.foreground,
+                }}
+              />
+            ))}
+          </Picker>
         </ConfigItem>
       </View>
     </BottomDrawer>
@@ -415,26 +450,5 @@ function LineHeightItem({
         <Plus size={20} color={colors.primary} />
       </TouchableOpacity>
     </View>
-  );
-}
-
-function SaveButton({
-  handleSubmit,
-  hasChanges,
-}: {
-  handleSubmit: () => void;
-  hasChanges: boolean;
-}) {
-  return (
-    <TouchableOpacity
-      className={cn(
-        "flex-1 p-4 flex bg-primary items-center justify-center rounded-xl",
-        !hasChanges && "opacity-50"
-      )}
-      disabled={!hasChanges}
-      onPress={handleSubmit}
-    >
-      <Text className="text-xl font-medium text-primary_foreground">Save</Text>
-    </TouchableOpacity>
   );
 }

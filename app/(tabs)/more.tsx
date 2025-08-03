@@ -73,10 +73,10 @@ export default function MoreScreen() {
             description={
               queueDownload.length > 0
                 ? `${
-                    areDownloadsPaused
-                      ? isWaitingForConnection
-                        ? "Waiting for connection"
-                        : "Paused"
+                    isWaitingForConnection
+                      ? "Waiting for connection"
+                      : areDownloadsPaused
+                      ? "Paused"
                       : "Donwloading"
                   } • ${queueDownload.length} remaining`
                 : undefined

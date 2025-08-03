@@ -13,7 +13,7 @@ export default function BooleanSwitch({
   asChild = false,
 }: {
   value: boolean;
-  onChange?: () => void;
+  onChange?: (value: boolean) => void;
   asChild?: boolean;
 }) {
   const translateX = useSharedValue(value ? 18 : 0);
@@ -37,7 +37,7 @@ export default function BooleanSwitch({
     }
 
     return (
-      <Pressable onPress={onChange} className={className}>
+      <Pressable onPress={() => onChange?.(!value)} className={className}>
         {children}
       </Pressable>
     );

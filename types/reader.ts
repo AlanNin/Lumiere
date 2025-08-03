@@ -31,4 +31,13 @@ export type Style = StyleConfig & {
 
 export type GeneralConfig = {
   showProgressSeekBar: boolean;
+  speechSpeed: number;
+  voiceIdentifier: string | undefined;
+};
+
+export type VoiceIdentifier = {
+  identifier: string;
+  language: string;
+  name: string;
+  quality: string;
 };

@@ -1,3 +1,6 @@
+import { parseDocument } from "htmlparser2";
+import { DomUtils } from "htmlparser2";
+
 export function sanitizeHtml(dirtyHtml: string) {
   let pCounter = 0;
 
@@ -200,4 +203,23 @@ export function insertTitleHtml(
       `<h4>Chapter ${chapterNumber} ${title ? `- ${title}` : ""}</h4>\n` + html
     );
   }
+}
+
+export function extractContentFromHTML(
+  html: string
+): { title: string; paragraphs: string[] } {
+  const dom = parseDocument(html);
+
+  const h4 = DomUtils.getElementsByTagName("h4", dom.children)[0];
+  const title = h4 ? DomUtils.getText(h4).trim() : "";
+
+  const paragraphs = DomUtils.getElementsByTagName("p", dom.children);
+  const paragraphTexts = paragraphs
+    .map((p) => DomUtils.getText(p).trim())
+    .filter(Boolean);
+
+  return {
+    title,
+    paragraphs: paragraphTexts,
+  };
 }
