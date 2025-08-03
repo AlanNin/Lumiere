@@ -194,35 +194,47 @@ async function scrapeNovelChaptersFromAjax(
   const $ = cheerio.load(html);
   const items = $(".list-chapter li").toArray();
 
-  let chapters: Chapter[] = items.map((liEl: cheerio.Element, idx: number) => {
-    const li = $(liEl);
-    const rawText = li.find(".nchr-text, .chapter-title").text().trim();
-    const url = li.find("a").attr("href") || "";
+  const chapters: Chapter[] = items.map(
+    (liEl: cheerio.Element, idx: number) => {
+      const li = $(liEl);
+      const rawText = li.find(".nchr-text, .chapter-title").text().trim();
+      const url = li.find("a").attr("href") || "";
 
-    const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
-    const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
-    const title = extractChapterTitle(rawText);
+      const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
+      const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
+      const title = extractChapterTitle(rawText);
 
-    return { number, title, url };
-  });
+      return { number, title, url };
+    }
+  );
 
   chapters.sort((a, b) => a.number - b.number);
 
-  let expected = 1;
-  let gapIndex = -1;
-  for (let i = 0; i < chapters.length; i++, expected++) {
-    if (chapters[i].number !== expected) {
-      gapIndex = i;
-      break;
+  const seen = new Map<number, number>();
+  const duplicated: number[] = [];
+  for (const ch of chapters) {
+    const count = seen.get(ch.number) || 0;
+    seen.set(ch.number, count + 1);
+    if (count + 1 === 2) {
+      duplicated.push(ch.number);
     }
   }
-
-  if (gapIndex !== -1) {
+  if (duplicated.length) {
     console.warn(
-      `⚠️ Hueco o duplicado detectado en posición ${gapIndex} (número bruto ${chapters[gapIndex].number}). Reindexando a partir de aquí.`
+      `⚠️ Capítulos duplicados detectados en los números: ${[
+        ...new Set(duplicated),
+      ].join(", ")}. Se conservan ambos sin reindexar.`
     );
-    for (let i = gapIndex; i < chapters.length; i++) {
-      chapters[i].number = i + 1;
+  }
+
+  if (chapters.length > 0) {
+    const expectedStart = chapters[0].number === 0 ? 0 : 1;
+    let expected = expectedStart;
+    for (let i = 0; i < chapters.length; i++) {
+      if (chapters[i].number !== expected) {
+        expected = chapters[i].number;
+      }
+      expected++;
     }
   }
 

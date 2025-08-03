@@ -5,7 +5,6 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   ScrollView,
   TextStyle,
   View,
@@ -71,8 +70,13 @@ export default function ReaderComponent({
     speechSpeed: 0.7,
     voiceIdentifier: availableVoices[0]?.identifier,
   });
+  const [removeDownloadOnRead] = useConfig<boolean>(
+    "removeDownloadOnRead",
+    false
+  );
   const speechSpeedRef = useRef(readerGeneralConfig.speechSpeed);
   const speechVoiceRef = useRef(readerGeneralConfig.voiceIdentifier);
+  const userScrolledRef = useRef(false);
 
   const { mutate: updateNovelChapterProgress } = useMutation({
     mutationFn: () =>
@@ -80,11 +84,13 @@ export default function ReaderComponent({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number,
         chapterProgress: percent,
+        removeDownloadOnRead,
       }),
     onSuccess: () => {
       invalidateQueries(
         ["novel-info", chapter.novelTitle],
-        ["novel-chapter", chapter.novelTitle, chapter.number]
+        ["novel-chapter", chapter.novelTitle, chapter.number],
+        "library"
       );
     },
   });
@@ -246,6 +252,7 @@ export default function ReaderComponent({
   }, []);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!userScrolledRef.current) userScrolledRef.current = true;
     setScrollY(e.nativeEvent.contentOffset.y);
   }, []);
 
@@ -338,6 +345,7 @@ export default function ReaderComponent({
       if (!incognitoMode) {
         if ((chapter.progress ?? 0) < 100) {
           updateNovelChapterProgress();
+          invalidateQueries("library");
         }
         updateNovelChapterReadAt();
       }
@@ -378,12 +386,13 @@ export default function ReaderComponent({
 
   useEffect(() => {
     if (
-      !ttsIndex &&
+      ttsIndex === null &&
       paragraphPositions.current &&
       Object.keys(paragraphPositions.current).length > 0 &&
       contentHeight > 0 &&
       viewHeight > 0 &&
-      chapter.progress !== undefined
+      chapter.progress !== undefined &&
+      chapter.progress < 100
     ) {
       const scrollYTarget =
         (chapter.progress / 100) * (contentHeight - viewHeight);
@@ -395,7 +404,6 @@ export default function ReaderComponent({
         const index = parseInt(indexStr, 10);
         const centerY = pos.y + pos.height / 2;
         const distance = Math.abs(centerY - scrollYTarget);
-
         if (distance < closestDistance) {
           closestDistance = distance;
           closestIndex = index;
@@ -405,7 +413,44 @@ export default function ReaderComponent({
       setTtsIndex(closestIndex);
       lastIndexRef.current = closestIndex;
     }
-  }, [chapter.progress, contentHeight, viewHeight, paragraphPositions.current]);
+  }, [
+    chapter.progress,
+    contentHeight,
+    viewHeight,
+    paragraphPositions.current,
+    ttsIndex,
+  ]);
+
+  useEffect(() => {
+    if (!userScrolledRef.current) return;
+
+    if (
+      paragraphPositions.current &&
+      Object.keys(paragraphPositions.current).length > 0 &&
+      contentHeight > 0 &&
+      viewHeight > 0
+    ) {
+      const viewportCenterY = scrollY + viewHeight / 2;
+
+      let closestIndex = lastIndexRef.current ?? 0;
+      let closestDistance = Infinity;
+
+      Object.entries(paragraphPositions.current).forEach(([indexStr, pos]) => {
+        const index = parseInt(indexStr, 10);
+        const centerY = pos.y + pos.height / 2;
+        const distance = Math.abs(centerY - viewportCenterY);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      if (closestIndex !== lastIndexRef.current) {
+        setTtsIndex(closestIndex);
+        lastIndexRef.current = closestIndex;
+      }
+    }
+  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current]);
 
   useEffect(() => {
     async function getVoices() {

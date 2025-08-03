@@ -720,4 +720,29 @@ export const novelRepository = {
       );
     }
   },
+
+  async checkIfNovelStartAtChapterZero({
+    novelTitle,
+  }: {
+    novelTitle: string;
+  }): Promise<boolean> {
+    try {
+      const row = await db_client
+        .select({ number: novelChapters.number })
+        .from(novelChapters)
+        .where(eq(novelChapters.novelTitle, novelTitle))
+        .orderBy(asc(novelChapters.number))
+        .limit(1)
+        .get();
+
+      if (!row) return false;
+      return Number(row.number) === 0;
+    } catch (error) {
+      console.error("Failed to check if novel starts at chapter zero:", error);
+      if (error instanceof Error) throw error;
+      throw new Error(
+        "An unknown error occurred in checkIfNovelStartAtChapterZero."
+      );
+    }
+  },
 };

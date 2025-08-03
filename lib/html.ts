@@ -24,6 +24,7 @@ export function sanitizeHtml(
     // 5. Remove translator credits at the start of paragraphs ("Translator: …").
     .replace(/<p>\s*<strong>\s*Translator:[\s\S]*?<\/p>/gi, "")
 
+    // 6. Remove the first two paragraphs if they contain Translator: or TL: (handled specially).
     .replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, (match) => {
       pCounter++;
       if (pCounter <= 2 && /(Translator:|TL:)/i.test(match)) {
@@ -32,54 +33,64 @@ export function sanitizeHtml(
       return match;
     })
 
-    // 5.1 Remove any <p> that contains "TL Notes:"
+    // 7. Remove any paragraph that contains "TL Notes:".
     .replace(/<p>[\s\S]*?TL Notes:[\s\S]*?<\/p>/gi, "")
 
-    // 5.2 Remove any <p> that contains the "NovelFire Notes"
+    // 8. Remove any paragraph that contains the NovelFire notes instruction.
     .replace(/<p[^>]*>\s*Search the NovelFire\.net[\s\S]*?<\/p>/gi, "")
 
-    // 5.3 Remove any paragraphs containing "http"
+    // 9. Remove any paragraph containing "http".
     .replace(
       /<p[^>]*>(?:(?!<\/p>)[\s\S])*?http(?:(?!<\/p>)[\s\S])*?<\/p>/gi,
       ""
     )
 
-    // 5.4 Remove donation link paragraphs
+    // 10. Remove donation link paragraphs.
     .replace(/<p\b[^>]*>[^<]*Link to donations[^<]*<\/p>/gi, "")
 
-    // 5.5 Remove paragraphs with "box-notification" class containing NovelFire search text
+    // 11. Remove box-notification paragraphs with NovelFire search text.
     .replace(
       /<p[^>]*class="[^"]*box-notification[^"]*"[^>]*>\s*Search the\s*<b>NovelFire\.net<\/b>\s*website[\s\S]*?<\/p>/gi,
       ""
     )
 
-    // 5.6 Remove other NovelFire search instruction paragraphs
+    // 12. Remove other NovelFire search instruction paragraphs.
     .replace(
       /<p[^>]*>\s*Search the\s*(?:<b>)?NovelFire\.net(?:<\/b>)?\s*website[\s\S]*?<\/p>/gi,
       ""
     )
 
-    // 5.7 Remove paragraphs that contain "Chapter n:" where n is any number
+    // 13. Remove paragraphs that contain "Chapter n:" where n is any number.
     .replace(/<p[^>]*>\s*Chapter\s+\d+:\s*[\s\S]*?<\/p>/gi, "")
 
-    // 5.8 Remove the initial <p> containing just chapter number and title
+    // 13.1. Remove the first paragraph if it contains both the chapter number and the chapter title.
+    .replace(/^\s*<p\b[^>]*>[\s\S]*?<\/p>/i, (match) => {
+      const low = match.toLowerCase();
+      if (
+        low.includes(chapterNumber.toString().toLowerCase()) &&
+        low.includes(chapterTitle.toLowerCase())
+      ) {
+        return "";
+      }
+      return match;
+    })
+
+    // 14. Remove the initial paragraph containing just the chapter/episode number and title.
     .replace(
       new RegExp(
-        `^\\s*<p[^>]*>\\s*(?:Chapter\\s*)?${chapterNumber}\\s*[-:\\u2013\\u2014]?\\s*${escapeRegExp(
-          chapterTitle
-        )}\\s*<\\/p>`,
+        `^\\s*<p[^>]*>\\s*(?:Chapter|Episode)\\s*${chapterNumber}\\b[\\s\\S]*?<\\/p>\\s*`,
         "i"
       ),
       ""
     )
 
-    // 6. Delete any empty <p> tags (including those containing only whitespace or &nbsp;).
+    // 15. Delete any empty <p> tags (including those containing only whitespace or &nbsp;).
     .replace(/<p>(?:\s|&nbsp;)*<\/p>/gi, "")
 
-    // 7. Delete any empty <div> tags (including those containing only whitespace or &nbsp;).
+    // 16. Delete any empty <div> tags (including those containing only whitespace or &nbsp;).
     .replace(/<div>(?:\s|&nbsp;)*<\/div>/gi, "")
 
-    // 8. Collapse stray text between </p> and <p> into its own <p> if it's substantial.
+    // 17. Collapse stray text between </p> and <p> into its own paragraph if substantial.
     .replace(
       /(<\/p>\s*)((?:[^<\r\n]+(?:\r?\n[^<\r\n]*)*)+)(\s*<p>)/gi,
       (match, prefix, content, suffix) => {
@@ -91,7 +102,7 @@ export function sanitizeHtml(
       }
     )
 
-    // 9. Similarly, wrap stray text after closing headings or divs into a new <p> if it's substantial.
+    // 18. Wrap stray text after closing headings or divs into a new paragraph if substantial.
     .replace(
       /(<\/(?:h[1-6]|div)>\s*)((?:[^<\r\n]+(?:\r?\n[^<\r\n]*)*)+)(\s*<(?:h[1-6]|div|p))/gi,
       (match, prefix, content, suffix) => {
@@ -103,7 +114,7 @@ export function sanitizeHtml(
       }
     )
 
-    // 10. Fix paragraphs that start with an opening double‐quote entity (&#x201C;) but lack a matching closing quote.
+    // 19. Fix paragraphs that start with an opening curly double quote (&#x201C;) but lack a matching closing quote.
     .replace(/<p>([\s\S]*?)<\/p>/gi, (match) => {
       if (/^<p>\s*&#x201C;/.test(match)) {
         const hasClosing =
@@ -117,7 +128,7 @@ export function sanitizeHtml(
       return match;
     })
 
-    // 11. Fix paragraphs that start with &quot; but lack a matching closing &quot;.
+    // 20. Fix paragraphs that start with &quot; but lack a matching closing &quot;.
     .replace(/<p>([\s\S]*?)<\/p>/gi, (match) => {
       if (/^<p>\s*&quot;/.test(match)) {
         const hasClosing = /&quot;(\s*<\/p>)$/.test(match);
@@ -130,12 +141,15 @@ export function sanitizeHtml(
       return match;
     })
 
-    // 12. Normalize any run of 4+ dots into exactly three ellipsis "..."
+    // 21. Normalize any run of 4+ dots into exactly three ellipsis.
     .replace(/\.{4,}/g, "...");
 
-  // 13. Remove translator notes from the last paragraphs
+  // 22. Extract all paragraph elements for later translator note removal.
   const paragraphs = cleanHtml.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || [];
 
+  let finalHtml = cleanHtml;
+
+  // 23. Remove trailing translator notes if found in the last few paragraphs.
   if (paragraphs.length > 0) {
     const lastFourStart = Math.max(0, paragraphs.length - 4);
     let foundTranslatorNoteIndex = -1;
@@ -154,19 +168,54 @@ export function sanitizeHtml(
         .split(/<p\b[^>]*>[\s\S]*?<\/p>/gi)
         .slice(-1)[0];
 
-      return (
+      finalHtml =
         beforeParagraphs +
         paragraphsToKeep.join("") +
-        (paragraphsToKeep.length > 0 ? afterParagraphs : "")
-      );
+        (paragraphsToKeep.length > 0 ? afterParagraphs : "");
     }
   }
 
-  return cleanHtml;
-}
+  // 24. Improvements applied in adjustSpacingAndQuotes
+  function adjustSpacingAndQuotes(html: string): string {
+    return html
+      .split(/(<[^>]+>)/g) // Preserve tags intact.
+      .map((segment) => {
+        // If this is a tag, leave it unchanged.
+        if (/^<[^>]+>$/.test(segment)) return segment;
 
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        let t = segment;
+
+        // 1. Correct closing curly quote used as opening (e.g., &#x201D; misused) and replace with opening curly quote.
+        t = t.replace(/([^\s])&#x201D;(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, "$1 &#x201C;");
+        t = t.replace(/(^|\s)&#x201D;(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, "$1&#x201C;");
+
+        // 2. Ensure there is a space before an opening curly quote if missing.
+        t = t.replace(/([^ \t\r\n])(&#x201C;)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, "$1 $2");
+
+        // 3. Move comma from before closing curly quote to after it.
+        t = t.replace(/,(&#x201D;)/g, "$1,");
+
+        // 4. Move comma from before straight or curly right quote to after it.
+        t = t.replace(/,([\"”])/g, "$1,");
+
+        // 5. Move comma from before &quot; to after it.
+        t = t.replace(/,(&quot;)/gi, "$1,");
+
+        // 6. Ensure there is a space before straight opening quotes if missing.
+        t = t.replace(/([^ \t\r\n])([\"“])(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, "$1 $2");
+        t = t.replace(/([^ \t\r\n])(&quot;)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/gi, "$1 $2");
+
+        // 7. Normalize spacing around equals sign.
+        t = t.replace(/(\S)=(\S)/g, "$1 = $2");
+        t = t.replace(/(\S)=\s/g, "$1 = ");
+        t = t.replace(/\s=(\S)/g, " = $1");
+
+        return t;
+      })
+      .join("");
+  }
+
+  return adjustSpacingAndQuotes(finalHtml);
 }
 
 export function extractChapterTitle(rawText: string): string {

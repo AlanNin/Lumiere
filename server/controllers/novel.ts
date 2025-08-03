@@ -120,16 +120,19 @@ export const novelController = {
     novelTitle,
     chapterNumber,
     chapterProgress,
+    removeDownloadOnRead,
   }: {
     novelTitle: string;
     chapterNumber: number;
     chapterProgress: number;
+    removeDownloadOnRead: boolean;
   }): Promise<boolean> {
     try {
       return await novelService.updateNovelChapterProgress({
         novelTitle,
         chapterNumber,
         chapterProgress,
+        removeDownloadOnRead,
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -285,14 +288,17 @@ export const novelController = {
   async markChaptersAsRead({
     novelTitle,
     chapterNumbers,
+    removeDownloadOnRead,
   }: {
     novelTitle: string;
     chapterNumbers: number[];
+    removeDownloadOnRead: boolean;
   }): Promise<boolean> {
     try {
       return await novelService.markChaptersAsRead({
         novelTitle,
         chapterNumbers,
+        removeDownloadOnRead,
       });
     } catch (error) {
       if (error instanceof Error) {

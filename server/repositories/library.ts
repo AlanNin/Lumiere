@@ -1,4 +1,3 @@
-import { NovelInfo } from "@/types/novel";
 import { db_client } from "../db/client";
 import {
   categories,
@@ -6,8 +5,9 @@ import {
   novels,
   novelChapters,
 } from "../db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql, lt } from "drizzle-orm";
 import { LibraryCategory } from "@/types/library";
+import { NovelInfo } from "@/types/novel";
 
 export const libraryRepository = {
   async getLibrary({
@@ -57,7 +57,7 @@ export const libraryRepository = {
           })
           .from(novels)
           .where(and(eq(novels.isSaved, 1), inArray(novels.title, novelTitles)))
-          .orderBy(novels.savedAt) // orden por fecha de guardado ascendente
+          .orderBy(novels.savedAt)
           .all();
       }
     } else {
@@ -80,11 +80,59 @@ export const libraryRepository = {
         .all();
     }
 
-    // Construir índice de orden para preservar dentro de categorías
+    // Build order index to preserve order within categories
     const orderIndex = new Map<string, number>();
     savedNovels.forEach((n, i) => orderIndex.set(n.title, i));
 
-    // Traer categorías y relaciones
+    const novelTitles = savedNovels.map((n) => n.title);
+
+    // Fetch unread chapter counts (progress < 100) for these novels
+    const unreadCountsRaw = novelTitles.length
+      ? await db_client
+          .select({
+            novelTitle: novelChapters.novelTitle,
+            unreadChapters: sql`COUNT(*)`.as("unreadChapters"),
+          })
+          .from(novelChapters)
+          .where(
+            and(
+              inArray(novelChapters.novelTitle, novelTitles),
+              lt(novelChapters.progress, 100)
+            )
+          )
+          .groupBy(novelChapters.novelTitle)
+          .all()
+      : [];
+
+    const unreadMap = new Map<string, number>();
+    unreadCountsRaw.forEach((row) => {
+      unreadMap.set(row.novelTitle, Number(row.unreadChapters) || 0);
+    });
+
+    // Fetch downloaded chapter counts for these novels
+    const downloadedCountsRaw = novelTitles.length
+      ? await db_client
+          .select({
+            novelTitle: novelChapters.novelTitle,
+            downloadedChapters: sql`COUNT(*)`.as("downloadedChapters"),
+          })
+          .from(novelChapters)
+          .where(
+            and(
+              inArray(novelChapters.novelTitle, novelTitles),
+              eq(novelChapters.downloaded, 1)
+            )
+          )
+          .groupBy(novelChapters.novelTitle)
+          .all()
+      : [];
+
+    const downloadedMap = new Map<string, number>();
+    downloadedCountsRaw.forEach((row) => {
+      downloadedMap.set(row.novelTitle, Number(row.downloadedChapters) || 0);
+    });
+
+    // Fetch categories and relations
     const dbCategories = await db_client
       .select({
         id: categories.id,
@@ -103,13 +151,13 @@ export const libraryRepository = {
       .from(novelCategories)
       .all();
 
-    // Inicializar mapa de categorías
+    // Initialize category map with NovelInfoLibrary[]
     const categoryMap = new Map<number, NovelInfo[]>();
     dbCategories.forEach((cat) => categoryMap.set(cat.id, []));
 
     const novelsWithoutCategory: NovelInfo[] = [];
 
-    // Llenar novelas en sus categorías (o sin categoría)
+    // Populate novels into categories (or uncategorized), injecting unreadChapters
     for (const n of savedNovels) {
       const info: NovelInfo = {
         title: n.title,
@@ -122,6 +170,8 @@ export const libraryRepository = {
         genres: n.genres,
         status: n.status,
         chapters: [],
+        unreadChapters: unreadMap.get(n.title) ?? 0,
+        downloadedChapters: downloadedMap.get(n.title) ?? 0,
       };
 
       const rels = novelCategoryRelations.filter(
@@ -137,7 +187,7 @@ export const libraryRepository = {
       }
     }
 
-    // Ordenar internamente cada grupo por el índice de inserción (savedAt)
+    // Sort each category internally by saved order
     for (const arr of categoryMap.values()) {
       arr.sort((a, b) => {
         const ai = orderIndex.get(a.title) ?? 0;
@@ -152,7 +202,7 @@ export const libraryRepository = {
       return ai - bi;
     });
 
-    // Armar resultado final
+    // Assemble final result
     const result: LibraryCategory[] = [];
     if (novelsWithoutCategory.length > 0) {
       result.push({

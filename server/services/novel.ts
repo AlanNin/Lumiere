@@ -135,7 +135,17 @@ export const novelService = {
         return chapterData;
       }
 
-      const novelChapterUrl = getNovelChapterUrl(novelTitleSlug, chapterNumber);
+      const novelStartsAtChapterZero = await novelRepository.checkIfNovelStartAtChapterZero(
+        {
+          novelTitle,
+        }
+      );
+
+      const novelChapterUrl = getNovelChapterUrl(
+        novelTitleSlug,
+        chapterNumber,
+        novelStartsAtChapterZero
+      );
 
       const scrapedChapter = await scrapeNovelChapter({
         novelChapterUrl,
@@ -215,17 +225,30 @@ export const novelService = {
     novelTitle,
     chapterNumber,
     chapterProgress,
+    removeDownloadOnRead,
   }: {
     novelTitle: string;
     chapterNumber: number;
     chapterProgress: number;
+    removeDownloadOnRead: boolean;
   }): Promise<boolean> {
     try {
-      return await novelRepository.updateNovelChapterProgress({
+      await novelRepository.updateNovelChapterProgress({
         novelTitle,
         chapterNumber,
         chapterProgress,
       });
+
+      if (removeDownloadOnRead && chapterProgress === 100) {
+        await novelRepository.removeDownloadedChapters([
+          {
+            novelTitle,
+            chapterNumber,
+          },
+        ]);
+      }
+
+      return true;
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
@@ -286,7 +309,17 @@ export const novelService = {
 
       const novelTitleSlug = slugify(novelTitle);
 
-      const novelChapterUrl = getNovelChapterUrl(novelTitleSlug, chapterNumber);
+      const novelStartsAtChapterZero = await novelRepository.checkIfNovelStartAtChapterZero(
+        {
+          novelTitle,
+        }
+      );
+
+      const novelChapterUrl = getNovelChapterUrl(
+        novelTitleSlug,
+        chapterNumber,
+        novelStartsAtChapterZero
+      );
 
       const scrapedChapter = await scrapeNovelChapter({
         novelChapterUrl,
@@ -413,15 +446,25 @@ export const novelService = {
   async markChaptersAsRead({
     novelTitle,
     chapterNumbers,
+    removeDownloadOnRead,
   }: {
     novelTitle: string;
     chapterNumbers: number[];
+    removeDownloadOnRead: boolean;
   }): Promise<boolean> {
     try {
-      return await novelRepository.markChaptersAsRead({
+      await novelRepository.markChaptersAsRead({
         novelTitle,
         chapterNumbers,
       });
+
+      if (removeDownloadOnRead) {
+        await novelRepository.removeDownloadedChapters(
+          chapterNumbers.map((c) => ({ novelTitle, chapterNumber: c }))
+        );
+      }
+
+      return true;
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
@@ -526,10 +569,16 @@ function getNovelChaptersMainSourceUrl(novelTitleSlug: string) {
   )}/book/${novelTitleSlug}/chapters`;
 }
 
-function getNovelChapterUrl(novelTitleSlug: string, chapterNumber: number) {
+function getNovelChapterUrl(
+  novelTitleSlug: string,
+  chapterNumber: number,
+  novelStartsAtChapterZero?: boolean
+) {
   return `${String(
     process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
-  )}/book/${novelTitleSlug}/chapter-${chapterNumber}`;
+  )}/book/${novelTitleSlug}/chapter-${
+    novelStartsAtChapterZero ? chapterNumber + 1 : chapterNumber
+  }`;
 }
 
 function mergeNovelsScrapedWithStored(

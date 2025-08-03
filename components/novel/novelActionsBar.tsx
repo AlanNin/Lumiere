@@ -18,12 +18,13 @@ import {
   EyeClosed,
   Trash2,
 } from "lucide-react-native";
-import { cn } from "@/lib/cn";
 import { colors } from "@/lib/constants";
 import { novelController } from "@/server/controllers/novel";
 import { DownloadChapter } from "@/types/download";
 import { Chapter } from "@/types/novel";
 import { useFocusEffect } from "expo-router";
+import { useConfig } from "@/providers/appConfig";
+import { invalidateQueries } from "@/providers/reactQuery";
 
 const ANIM_DURATION = 150;
 
@@ -49,6 +50,10 @@ export default function NovelActionsBar({
   // ─── Hooks & Refs ─────────────────────────────────────────────────────────
   const insets = useSafeAreaInsets();
   const visible = selectedChapters.length > 0;
+  const [removeDownloadOnRead] = useConfig<boolean>(
+    "removeDownloadOnRead",
+    false
+  );
 
   // Animation values
   const translateY = useRef(new Animated.Value(100)).current;
@@ -64,13 +69,10 @@ export default function NovelActionsBar({
   }
 
   // Derive button states
-  const hasMultipleSelected = selectedChapters.length > 1;
   const shouldMarkAsBookmarked = selectedChapters.some((c) => !c.bookMarked);
   const shouldMarkAsRead = selectedChapters.some((c) => c.progress! < 100);
   const shouldUnMarkAsRead = selectedChapters.some((c) => c.progress! === 100);
   const shouldDownload = selectedChapters.some((c) => !c.downloaded);
-  const shouldCenterActions =
-    hasMultipleSelected && (shouldMarkAsRead || shouldUnMarkAsRead);
   const singularSelectedChapterNumber =
     selectedChapters.length > 0 ? selectedChapters[0].number : null;
 
@@ -113,8 +115,12 @@ export default function NovelActionsBar({
       novelController.markChaptersAsRead({
         novelTitle,
         chapterNumbers: selectedChapters.map((c) => c.number),
+        removeDownloadOnRead,
       }),
-    onSuccess,
+    onSuccess: () => {
+      onSuccess();
+      invalidateQueries("library");
+    },
   });
 
   const { mutate: unmarkRead } = useMutation({
@@ -128,7 +134,10 @@ export default function NovelActionsBar({
         novelTitle,
         chapterNumbers: selectedChapters.map((c) => c.number),
       }),
-    onSuccess,
+    onSuccess: () => {
+      onSuccess();
+      invalidateQueries("library");
+    },
   });
 
   const { mutate: queueDownload } = useMutation({
@@ -251,10 +260,7 @@ export default function NovelActionsBar({
   return (
     <Animated.View
       style={[animatedStyle]}
-      className={cn(
-        "absolute inset-x-0 bottom-0 flex flex-row gap-x-4 items-center justify-between px-8 py-6 bg-layout_background",
-        shouldCenterActions && "justify-center gap-x-20"
-      )}
+      className="absolute inset-x-0 bottom-0 flex flex-row gap-x-4 items-center justify-between px-8 py-6 bg-layout_background"
     >
       {/* Bookmark button */}
       <TouchableOpacity className="p-2" onPress={handleBookmark}>

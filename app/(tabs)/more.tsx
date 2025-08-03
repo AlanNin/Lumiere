@@ -115,7 +115,7 @@ export default function MoreScreen() {
 
 function OptionsWrapper({ children }: { children: ReactNode }) {
   return (
-    <View className="flex flex-col gap-y-8 items-center px-5 py-8">
+    <View className="flex flex-col gap-y-4 items-center px-5 py-6">
       {children}
     </View>
   );

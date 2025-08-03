@@ -28,6 +28,8 @@ export type Novel = {
   rank?: number;
   isSaved?: boolean;
   savedAt?: string;
+  unreadChapters?: number;
+  downloadedChapters?: number;
 };
 
 export type NovelInfo = Novel & {

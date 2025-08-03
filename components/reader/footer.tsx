@@ -47,7 +47,7 @@ export default function ReaderFooter({
     >
       <Text
         className="text-center opacity-75"
-        style={{ color: styles.body.color, fontSize: styles.p.fontSize - 2 }}
+        style={{ color: styles.body.color }}
       >
         Finished: Chapter {chapter.number}{" "}
         {chapter.title ? `- ${chapter.title}` : ""}
@@ -55,27 +55,25 @@ export default function ReaderFooter({
 
       {chapter.nextChapter ? (
         <TouchableOpacity
-          className="bg-primary_dark py-3 px-6 w-full rounded-xl flex items-center justify-center"
+          className="bg-primary_dark py-3 px-6 w-full rounded-2xl flex items-center justify-center"
           onPress={handleNextChapter}
         >
-          <Text className="text-center" style={{ fontSize: styles.p.fontSize }}>
+          <Text className="text-center text-lg">
             Next: Chapter {chapter.nextChapter.number}{" "}
             {chapter.nextChapter.title ? `- ${chapter.nextChapter.title}` : ""}
           </Text>
         </TouchableOpacity>
       ) : (
         <Text
-          className="text-center opacity-75 italic"
+          className="text-center opacity-75 italic ext-lg"
           style={{
             color: styles.body.color,
-            fontSize: styles.p.fontSize,
           }}
         >
           <Text
-            className="font-medium"
+            className="font-medium text-lg"
             style={{
               color: styles.body.color,
-              fontSize: styles.p.fontSize,
             }}
           >
             {chapter.novelTitle}

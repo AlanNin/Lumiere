@@ -106,6 +106,8 @@ const renderNovels = ({
                   },
                 }}
                 isStored={true}
+                unreadChapters={item.unreadChapters}
+                downloadedChapters={item.downloadedChapters}
               />
             );
           }}

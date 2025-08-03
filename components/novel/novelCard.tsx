@@ -24,6 +24,8 @@ export default function NovelCard({
   containerStyle,
   showSavedBadge,
   isStored = false,
+  unreadChapters,
+  downloadedChapters,
 }: {
   title: string;
   imageUri: string;
@@ -35,10 +37,17 @@ export default function NovelCard({
   containerStyle?: StyleProp<ViewStyle>;
   showSavedBadge?: boolean;
   isStored?: boolean | undefined;
+  unreadChapters?: number;
+  downloadedChapters?: number;
 }) {
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
   const isOnline = useIsOnline();
+  const hasUnreadChapters = unreadChapters !== undefined && unreadChapters > 0;
+  const hasDownloadedChapters =
+    downloadedChapters !== undefined && downloadedChapters > 0;
+  const hasUnreadOrDownloadedChapters =
+    hasUnreadChapters || hasDownloadedChapters;
 
   async function handlePress() {
     if (!isOnline && !isStored) {
@@ -108,6 +117,20 @@ export default function NovelCard({
           bottom: 0,
         }}
       />
+      {hasUnreadOrDownloadedChapters && (
+        <View className="absolute top-3 left-3 flex flex-row rounded-md overflow-hidden">
+          {hasDownloadedChapters && (
+            <View className="bg-secondary py-1 px-1.5">
+              <Text className="text-sm leading-4">{downloadedChapters}</Text>
+            </View>
+          )}
+          {hasUnreadChapters && (
+            <View className="bg-primary py-1 px-1.5">
+              <Text className="text-sm leading-4">{unreadChapters}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {showSavedBadge && (
         <View className="absolute top-3 left-3 bg-primary rounded-md p-1">

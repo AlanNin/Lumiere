@@ -1,6 +1,6 @@
 import { Text } from "@/components/defaults";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { TouchableOpacity } from "react-native";
 import { getReactQueryCacheSizeInMB, resetCache } from "@/providers/reactQuery";
 import ClearCacheDrawer from "./clearCacheDrawer";
@@ -23,7 +23,7 @@ export default function ClearCache() {
   return (
     <>
       <TouchableOpacity
-        className="flex flex-col gap-y-2 p-4"
+        className="flex flex-col gap-y-2 px-5 py-2"
         onPress={() => bottomClearCacheDrawerRef.current?.present()}
       >
         <Text className="font-medium">Clear Cache</Text>

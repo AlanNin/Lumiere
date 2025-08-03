@@ -23,7 +23,7 @@ export default function OptionButton({
   return (
     <TouchableOpacity
       className={cn(
-        "flex flex-row gap-x-6 items-center w-full",
+        "flex flex-row gap-x-6 py-2 items-center w-full",
         disabled && "opacity-50"
       )}
       onPress={onPress}

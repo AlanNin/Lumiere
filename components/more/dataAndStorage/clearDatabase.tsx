@@ -25,7 +25,7 @@ export default function ClearDatabase() {
   return (
     <>
       <TouchableOpacity
-        className="flex flex-col gap-y-2 p-4"
+        className="flex flex-col gap-y-2 px-5 py-2"
         onPress={() => bottomClearDatabaseDrawerRef.current?.present()}
       >
         <Text className="font-medium">Clear Database</Text>
