@@ -25,6 +25,18 @@ const AnimatedFlashList = Animated.createAnimatedComponent<
   FlashListProps<Category>
 >(FlashList);
 
+function SortAZModalButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity className="p-2" onPress={onPress}>
+      <ArrowDownAZ
+        color={colors.muted_foreground}
+        size={20}
+        strokeWidth={1.6}
+      />
+    </TouchableOpacity>
+  );
+}
+
 export default function CategoriesScreen() {
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -51,21 +63,6 @@ export default function CategoriesScreen() {
   function handleUpdateCategory(category: Category) {
     setCategoryToUpdate(category);
     bottomDrawerUpsertRef.current?.present();
-  }
-
-  function SortAZModalButton() {
-    return (
-      <TouchableOpacity
-        className="p-2"
-        onPress={() => bottomDrawerAZRef.current?.present()}
-      >
-        <ArrowDownAZ
-          color={colors.muted_foreground}
-          size={20}
-          strokeWidth={1.6}
-        />
-      </TouchableOpacity>
-    );
   }
 
   const { mutate: changeCategorySortOrder } = useMutation({
@@ -110,7 +107,11 @@ export default function CategoriesScreen() {
         title="Categories"
         renderBackButton
         scrollY={scrollY}
-        customRightContent={SortAZModalButton()}
+        customRightContent={
+          <SortAZModalButton
+            onPress={() => bottomDrawerAZRef.current?.present()}
+          />
+        }
       />
       {categories && categories?.length > 0 ? (
         <AnimatedFlashList

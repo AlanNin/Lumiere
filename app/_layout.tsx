@@ -16,7 +16,6 @@ import { useEffect } from "react";
 import { Frown } from "lucide-react-native";
 import Error from "@/components/statics/error";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { PrefetchLibrary } from "@/lib/prefetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ChapterDownloadQueueProvider } from "@/providers/chapterDownloadQueue";
 import { NovelRefreshQueueProvider } from "@/providers/novelRefreshQueue";
@@ -32,11 +31,10 @@ SplashScreen.setOptions({
 export default function RootLayout() {
   useDrizzleStudio(db_expo);
   const { success, error } = useMigrations(db_client, migrations);
-  const { requestNotificationPermissions } = usePermissions();
+  const { RequestNotificationPermissions } = usePermissions();
 
   useEffect(() => {
-    requestNotificationPermissions();
-    PrefetchLibrary();
+    RequestNotificationPermissions();
 
     if (success !== undefined) {
       SplashScreen.hideAsync();

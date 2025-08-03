@@ -52,6 +52,7 @@ const renderNovels = ({
   onSearchInExplorer,
   onRefreshLibrary,
   getIsRefreshing,
+  isOnline,
 }: {
   novels: Novel[];
   width: number;
@@ -60,9 +61,9 @@ const renderNovels = ({
   onSearchInExplorer: () => void;
   onRefreshLibrary: (titles: string[]) => void;
   getIsRefreshing: () => boolean;
+  isOnline: boolean;
 }) => {
   const isRefreshing = getIsRefreshing();
-  const isOnline = useIsOnlineDirect();
 
   function handleRefresh() {
     if (!isOnline) {
@@ -148,6 +149,8 @@ export default function HomeScreen() {
   const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
   const { enqueueLibraryRefresh, isLibraryRefreshing } = useNovelRefreshQueue();
 
+  const isOnline = useIsOnlineDirect();
+
   function handleSearchInExplorer() {
     setIsSearchOpen(false);
     setSearchQuery("");
@@ -224,10 +227,10 @@ export default function HomeScreen() {
   const renderScenes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return sortedCategories.reduce((scenes, category) => {
+    return sortedCategories.reduce((scenes, library) => {
       const filteredNovels =
         query.length > 0
-          ? category.novels.filter((novel) => {
+          ? library.novels.filter((novel) => {
               const q = query;
               const genresArray = novel.genres
                 .split(",")
@@ -240,9 +243,9 @@ export default function HomeScreen() {
                 genresArray.includes(q)
               );
             })
-          : category.novels;
+          : library.novels;
 
-      scenes[category.id.toString()] = () =>
+      scenes[library.id.toString()] = () =>
         renderNovels({
           novels: filteredNovels,
           width,
@@ -250,13 +253,14 @@ export default function HomeScreen() {
           keyboardShown,
           onSearchInExplorer: handleSearchInExplorer,
           onRefreshLibrary: (titles) =>
-            enqueueLibraryRefresh(category.id, titles),
-          getIsRefreshing: () => isLibraryRefreshing(category.id),
+            enqueueLibraryRefresh([{ libraryId: library.id, titles }]),
+          getIsRefreshing: () => isLibraryRefreshing(library.id),
+          isOnline,
         });
 
       return scenes;
     }, {} as { [key: string]: () => ReactNode });
-  }, [sortedCategories, width, searchQuery, keyboardShown]);
+  }, [sortedCategories, width, searchQuery, keyboardShown, isOnline]);
 
   const validIndex = Math.min(
     Math.max(index, 0),

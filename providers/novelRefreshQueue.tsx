@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { novelController } from "@/server/controllers/novel";
 import { invalidateQueries } from "@/providers/reactQuery";
+import { useIsOnlineDirect } from "@/hooks/network";
 
 const TASK_NAME = "NOVEL_REFRESH_TASK";
 const STORAGE_KEY = "NOVEL_REFRESH_QUEUE";
@@ -183,6 +184,30 @@ export function useNovelRefreshStore() {
   const [currentItem, setCurrentItem] = useState<RefreshItem | null>(null);
   const processingRef = useRef(false);
   const cancelRequestedRef = useRef(false);
+  const isOnline = useIsOnlineDirect();
+  const [isWaitingForConnection, setIsWaitingForConnection] = useState(false);
+
+  useEffect(() => {
+    const handleConnection = async () => {
+      if (!isOnline) {
+        setIsWaitingForConnection(true);
+        return;
+      }
+
+      if (isWaitingForConnection) {
+        setIsWaitingForConnection(false);
+
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const queue: RefreshItem[] = raw ? JSON.parse(raw) : [];
+
+        if (queue.length > 0 && !processingRef.current) {
+          setTimeout(() => void processQueue(), 100);
+        }
+      }
+    };
+
+    void handleConnection();
+  }, [isOnline]);
 
   const loadQueue = useCallback(async (): Promise<RefreshItem[]> => {
     try {
@@ -221,6 +246,11 @@ export function useNovelRefreshStore() {
   }, [currentItem]);
 
   const processQueue = useCallback(async () => {
+    if (!isOnline) {
+      setIsWaitingForConnection(true);
+      return;
+    }
+
     if (processingRef.current) return;
     processingRef.current = true;
     cancelRequestedRef.current = false;
@@ -288,7 +318,7 @@ export function useNovelRefreshStore() {
     }
     await updateRefreshNotification(null, 0);
     processingRef.current = false;
-  }, [loadQueue, saveQueue]);
+  }, [loadQueue, saveQueue, isOnline]);
 
   // Initialization
   useEffect(() => {
@@ -367,28 +397,42 @@ export function useNovelRefreshStore() {
     [loadQueue, saveQueue, processQueue]
   );
 
-  // Enqueue refresh for entire library
   const enqueueLibraryRefresh = useCallback(
-    async (categoryId: number, titles: string[]) => {
+    async (
+      categories: {
+        libraryId: number;
+        titles: string[];
+      }[]
+    ) => {
       const list = await loadQueue();
-      const key = `library:${categoryId}`;
-      if (list.find((item) => item.key === key)) return;
+      const existingKeys = new Set(list.map((item) => item.key));
 
-      const newItem: RefreshItem = {
-        key,
-        type: "library",
-        data: titles,
-      };
-      const updated = [...list, newItem];
-      await saveQueue(updated);
-      void processQueue();
-      try {
-        await BackgroundTask.registerTaskAsync(TASK_NAME);
-      } catch (e) {
-        console.warn(
-          "Failed to register background task after enqueueLibraryRefresh:",
-          e
-        );
+      const newItems: RefreshItem[] = [];
+
+      for (const { libraryId, titles } of categories) {
+        const key = `library:${libraryId}`;
+        if (existingKeys.has(key)) continue;
+
+        newItems.push({
+          key,
+          type: "library",
+          data: titles,
+        });
+      }
+
+      if (newItems.length > 0) {
+        const updated = [...list, ...newItems];
+        await saveQueue(updated);
+        void processQueue();
+
+        try {
+          await BackgroundTask.registerTaskAsync(TASK_NAME);
+        } catch (e) {
+          console.warn(
+            "Failed to register background task after enqueueLibraryRefresh:",
+            e
+          );
+        }
       }
     },
     [loadQueue, saveQueue, processQueue]
@@ -455,7 +499,7 @@ export function useNovelRefreshStore() {
     isInQueue,
     getRefreshStatus,
     cancelCurrentRefresh,
-    enqueueRefresh: enqueueNovelRefresh, // backward compat
+    enqueueRefresh: enqueueNovelRefresh,
     currentTitle:
       currentItem?.type === "novel" ? (currentItem.data as string) : null,
   };
