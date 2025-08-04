@@ -139,6 +139,7 @@ export default function ReaderComponent({
             lineHeight: styles.body.lineHeight,
             color: styles.body.color,
             marginBottom: styles.h4.marginBottom + 6,
+            textAlign: styles.body.textAlign,
             fontWeight: String(styles.h4.fontWeight) as TextStyle["fontWeight"],
           }}
         >
@@ -194,6 +195,7 @@ export default function ReaderComponent({
                   fontSize: styles.p.fontSize,
                   lineHeight: styles.body.lineHeight,
                   color: styles.body.color,
+                  textAlign: styles.body.textAlign,
                 }}
               >
                 {text}
