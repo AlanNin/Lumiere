@@ -82,8 +82,7 @@ const invalidateNovelQueries = ({
 }) => {
   invalidateQueries(
     ["novel-info", novelTitle],
-    ["novel-chapter", novelTitle, chapterNumber],
-    "library"
+    ["novel-chapter", novelTitle, chapterNumber]
   );
 };
 
@@ -549,8 +548,7 @@ export function useQueueDownloadStore() {
           // Invalidate cache for the failed chapter
           invalidateQueries(
             ["novel-info", current.novelTitle],
-            ["novel-chapter", current.novelTitle, current.chapterNumber],
-            "library"
+            ["novel-chapter", current.novelTitle, current.chapterNumber]
           );
         }
       }

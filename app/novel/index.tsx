@@ -387,9 +387,12 @@ export default function NovelScreen() {
         <View className="px-5 gap-y-5">
           <NovelTopButtons
             novelTitle={novelInfo.title}
-            novelIsSaved={novelInfo.isSaved ?? false}
+            dbNovelIsSaved={novelInfo.isSaved ?? false}
             handleOpenCategoryDrawer={() =>
               bottomDrawerCategoryRef.current?.present()
+            }
+            handleCloseCategoryDrawer={() =>
+              bottomDrawerCategoryRef.current?.dismiss()
             }
             categories={categories}
           />

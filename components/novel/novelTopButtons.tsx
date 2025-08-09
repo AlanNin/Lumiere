@@ -8,18 +8,22 @@ import { cn } from "@/lib/cn";
 import { invalidateQueries } from "@/providers/reactQuery";
 import { getNovelUrl } from "@/lib/novel";
 import { Category } from "@/types/category";
+import { useState } from "react";
 
 export default function NovelTopButtons({
   novelTitle,
-  novelIsSaved,
+  dbNovelIsSaved,
   handleOpenCategoryDrawer,
+  handleCloseCategoryDrawer,
   categories,
 }: {
   novelTitle: string;
-  novelIsSaved: boolean;
+  dbNovelIsSaved: boolean;
   handleOpenCategoryDrawer: () => void;
+  handleCloseCategoryDrawer: () => void;
   categories: Category[] | undefined;
 }) {
+  const [novelIsSaved, setNovelIsSaved] = useState(dbNovelIsSaved);
   const novelUrl = getNovelUrl(novelTitle);
   function openInBrowser() {
     Linking.openURL(novelUrl);
@@ -34,15 +38,23 @@ export default function NovelTopButtons({
         title: novelTitle,
         saved: !novelIsSaved,
       }),
+    onMutate: () => {
+      setNovelIsSaved(!novelIsSaved);
+
+      if (!novelIsSaved && categories && categories.length > 0) {
+        handleOpenCategoryDrawer();
+      }
+    },
     onSuccess: () => {
       invalidateQueries(
         "library",
         ["novel-info", novelTitle],
         ["explore-novels"]
       );
-      if (!novelIsSaved && categories && categories.length > 0) {
-        handleOpenCategoryDrawer();
-      }
+    },
+    onError: () => {
+      setNovelIsSaved(dbNovelIsSaved);
+      handleCloseCategoryDrawer();
     },
   });
 
