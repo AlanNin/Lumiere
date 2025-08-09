@@ -16,6 +16,7 @@ import { DownloadChapter } from "@/types/download";
 import { invalidateQueries } from "@/providers/reactQuery";
 import * as Notifications from "expo-notifications";
 import { useIsOnlineDirect } from "@/hooks/network";
+import { ToastAndroid } from "react-native";
 
 const TASK_NAME = "DOWNLOAD_QUEUE_TASK";
 const STORAGE_KEY = "DOWNLOAD_QUEUE";
@@ -646,6 +647,11 @@ export function useQueueDownloadStore() {
   // Function to add chapters to queueDownload
   const enqueueDownload = useCallback(
     async (chapters: DownloadChapter[], priority: number = 2) => {
+      if (chapters.some((ch) => !ch.novelTitle || !ch.chapterNumber)) {
+        ToastAndroid.show("Download failed", ToastAndroid.SHORT);
+        return;
+      }
+
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];

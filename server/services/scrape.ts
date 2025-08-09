@@ -184,7 +184,8 @@ async function scrapeNovelMetadata(
 }
 
 async function scrapeNovelChaptersFromAjax(
-  novelChaptersAjaxUrl: string
+  novelChaptersAjaxUrl: string,
+  novelTitle: string
 ): Promise<Chapter[]> {
   const html = await fetch(novelChaptersAjaxUrl, {
     headers: DEFAULT_HEADERS,
@@ -204,7 +205,7 @@ async function scrapeNovelChaptersFromAjax(
       const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
       const title = extractChapterTitle(rawText);
 
-      return { number, title, url };
+      return { number, title, url, novelTitle };
     }
   );
 
@@ -242,7 +243,8 @@ async function scrapeNovelChaptersFromAjax(
 }
 
 async function scrapeNovelChaptersFromMainSource(
-  novelChaptersMainSourceUrl: string
+  novelChaptersMainSourceUrl: string,
+  novelTitle: string
 ): Promise<Chapter[]> {
   let currentPage = 1;
   const allChapters: Chapter[] = [];
@@ -273,7 +275,7 @@ async function scrapeNovelChaptersFromMainSource(
           `Chapter ${number}`;
         const title = extractChapterTitle(rawText);
 
-        return { number, title, url };
+        return { number, title, url, novelTitle };
       }
     );
 
@@ -299,7 +301,10 @@ export async function scrapeNovelInfo({
   let chapters: Chapter[] = [];
 
   try {
-    chapters = await scrapeNovelChaptersFromAjax(novelChaptersAjaxUrl);
+    chapters = await scrapeNovelChaptersFromAjax(
+      novelChaptersAjaxUrl,
+      metadata.title
+    );
   } catch (err) {
     console.warn("Ajax scraping failed:", err);
   }
@@ -307,7 +312,8 @@ export async function scrapeNovelInfo({
   if (!chapters || chapters.length === 0) {
     try {
       chapters = await scrapeNovelChaptersFromMainSource(
-        novelChaptersMainSourceUrl
+        novelChaptersMainSourceUrl,
+        metadata.title
       );
     } catch (err) {
       console.error("Main source scraping also failed:", err);
