@@ -40,10 +40,10 @@
           }
         }
       ],
-      "./patches/withAndroidDisplayCutout",
       "expo-sqlite",
       "expo-background-task",
-      ["expo-image-picker"]
+      ["expo-image-picker"],
+      "./plugins/withAndroidDisplayCutout"
     ],
     "scheme": "lumiere-scheme",
     "orientation": "portrait",
