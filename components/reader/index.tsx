@@ -8,8 +8,6 @@ import {
   ScrollView,
   TextStyle,
   View,
-  AppState,
-  AppStateStatus,
 } from 'react-native';
 import { colors } from '@/lib/constants';
 import { Chapter } from '@/types/novel';
@@ -24,6 +22,7 @@ import ReaderFooter from './footer';
 import * as Speech from 'expo-speech';
 import { Text } from '../defaults';
 import { extractContentFromHTML } from '@/lib/html';
+import { useDebouncedCallback } from '@/lib/debounce';
 
 export default function ReaderComponent({
   chapter,
@@ -46,6 +45,7 @@ export default function ReaderComponent({
   const [viewHeight, setViewHeight] = useState(0);
   const isAtTop = scrollY <= 0;
   const isAtBottom = scrollY + viewHeight >= contentHeight - 1;
+  const percentRef = useRef(0);
   const percent = (() => {
     const delta = contentHeight - viewHeight;
     if (delta <= 0) return 0;
@@ -59,10 +59,6 @@ export default function ReaderComponent({
   const lastIndexRef = useRef<number>(0);
   const stopRequestedRef = useRef<boolean>(false);
   const parragraphLongPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const manualTTSSelectionRef = useRef<boolean>(false);
-  const lastSavedProgressRef = useRef<number>(0);
-  const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const content = useMemo(() => extractContentFromHTML(chapter.content ?? ''), [chapter.content]);
   const title = content.title;
   const paragraphs = content.paragraphs;
@@ -81,11 +77,11 @@ export default function ReaderComponent({
   const userScrolledRef = useRef(false);
 
   const { mutate: updateNovelChapterProgress } = useMutation({
-    mutationFn: () =>
+    mutationFn: (progress: number) =>
       novelController.updateNovelChapterProgress({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number,
-        chapterProgress: percent,
+        chapterProgress: progress,
         removeDownloadOnRead,
       }),
     onSuccess: () => {
@@ -107,50 +103,6 @@ export default function ReaderComponent({
       invalidateQueries('history');
     },
   });
-
-  // Function to save progress immediately
-  const saveProgressNow = useCallback(() => {
-    if (!incognitoMode && percent !== lastSavedProgressRef.current) {
-      lastSavedProgressRef.current = percent;
-      if ((chapter.progress ?? 0) < 100) {
-        updateNovelChapterProgress();
-      }
-      updateNovelChapterReadAt();
-    }
-  }, [
-    incognitoMode,
-    percent,
-    chapter.progress,
-    updateNovelChapterProgress,
-    updateNovelChapterReadAt,
-  ]);
-
-  // Debounced save function
-  const saveProgressDebounced = useCallback(() => {
-    if (saveProgressTimeoutRef.current) {
-      clearTimeout(saveProgressTimeoutRef.current);
-    }
-
-    saveProgressTimeoutRef.current = setTimeout(() => {
-      saveProgressNow();
-    }, 2000); // Save after 2 seconds of inactivity
-  }, [saveProgressNow]);
-
-  // Handle app state changes (background/foreground)
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // App is going to background, save immediately
-        saveProgressNow();
-      }
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-
-    return () => {
-      subscription?.remove();
-    };
-  }, [saveProgressNow]);
 
   const scrollToParagraph = useCallback(
     (paragraphIndex: number) => {
@@ -211,7 +163,6 @@ export default function ReaderComponent({
                 if (!isTTSReading) return;
 
                 parragraphLongPressTimeoutRef.current = setTimeout(() => {
-                  manualTTSSelectionRef.current = true;
                   Speech.stop();
                   setTimeout(() => {
                     setIsTTSReading(true);
@@ -294,15 +245,10 @@ export default function ReaderComponent({
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, []);
 
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!userScrolledRef.current) userScrolledRef.current = true;
-      setScrollY(e.nativeEvent.contentOffset.y);
-      // Trigger debounced save when user scrolls
-      saveProgressDebounced();
-    },
-    [saveProgressDebounced]
-  );
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!userScrolledRef.current) userScrolledRef.current = true;
+    setScrollY(e.nativeEvent.contentOffset.y);
+  }, []);
 
   const onContentSizeChange = useCallback((_: number, h: number) => {
     setContentHeight(h);
@@ -328,7 +274,6 @@ export default function ReaderComponent({
       if (index >= paragraphs.length) {
         setIsTTSReading(false);
         setTtsIndex(null);
-        manualTTSSelectionRef.current = false;
         return;
       }
 
@@ -349,12 +294,10 @@ export default function ReaderComponent({
         onStopped: () => {
           if (!stopRequestedRef.current) {
             setIsTTSReading(false);
-            manualTTSSelectionRef.current = false;
           }
         },
         onError: () => {
           setIsTTSReading(false);
-          manualTTSSelectionRef.current = false;
         },
       });
     },
@@ -366,15 +309,31 @@ export default function ReaderComponent({
       stopRequestedRef.current = true;
       Speech.stop();
       setIsTTSReading(false);
-      manualTTSSelectionRef.current = false;
       return;
     }
 
     stopRequestedRef.current = false;
     setIsTTSReading(true);
-    manualTTSSelectionRef.current = false;
     readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
   };
+
+  const saveProgressNow = useCallback(() => {
+    if (incognitoMode) return;
+
+    const latestPercent = percentRef.current;
+
+    if ((chapter.progress ?? 0) < 100) {
+      updateNovelChapterProgress(latestPercent);
+      invalidateQueries('library');
+    }
+    updateNovelChapterReadAt();
+  }, [incognitoMode, percentRef, chapter.progress]);
+
+  const debouncedSaveProgressNow = useDebouncedCallback(saveProgressNow, 1000);
+
+  useEffect(() => {
+    percentRef.current = percent;
+  }, [percent]);
 
   useEffect(() => {
     speechSpeedRef.current = readerGeneralConfig.speechSpeed;
@@ -395,12 +354,9 @@ export default function ReaderComponent({
     return () => {
       NavigationBar.setVisibilityAsync('visible');
       StatusBar.setStatusBarHidden(false);
-      // Save progress on cleanup (when navigating back)
-      saveProgressNow();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (saveProgressTimeoutRef.current) clearTimeout(saveProgressTimeoutRef.current);
     };
-  }, [saveProgressNow]);
+  }, []);
 
   useEffect(() => {
     async function setBars() {
@@ -464,8 +420,7 @@ export default function ReaderComponent({
   }, [chapter.progress, contentHeight, viewHeight, paragraphPositions.current, ttsIndex]);
 
   useEffect(() => {
-    // Don't update paragraph tracking when TTS is active or when user manually selected a paragraph
-    if (!userScrolledRef.current || isTTSReading || manualTTSSelectionRef.current) return;
+    if (!userScrolledRef.current) return;
 
     if (
       paragraphPositions.current &&
@@ -493,18 +448,7 @@ export default function ReaderComponent({
         lastIndexRef.current = closestIndex;
       }
     }
-  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current, isTTSReading]);
-
-  // Auto-save progress periodically while reading
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!incognitoMode && percent > 0 && percent !== lastSavedProgressRef.current) {
-        saveProgressNow();
-      }
-    }, 30000); // Save every 30 seconds if progress has changed
-
-    return () => clearInterval(interval);
-  }, [incognitoMode, percent, saveProgressNow]);
+  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current]);
 
   useEffect(() => {
     async function getVoices() {
@@ -546,7 +490,10 @@ export default function ReaderComponent({
         onContentSizeChange={onContentSizeChange}
         onLayout={onLayout}
         onScrollBeginDrag={postponeHide}
-        onScrollEndDrag={postponeHide}
+        onScrollEndDrag={() => {
+          postponeHide();
+          debouncedSaveProgressNow();
+        }}
         contentContainerStyle={{
           paddingBottom: insets.bottom,
           paddingTop: insets.top,
