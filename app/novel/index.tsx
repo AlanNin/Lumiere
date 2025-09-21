@@ -169,11 +169,8 @@ export default function NovelScreen() {
     const inProgress = chapters.filter((c) => (c.progress ?? 0) > 0 && (c.progress ?? 0) < 100);
 
     if (inProgress.length === 0) {
-      // No chapters in progress, return the first chapter
-      const firstChapter = chapters.find(
-        (c) => c.number === Math.min(...chapters.map((ch) => ch.number))
-      );
-      return firstChapter || null;
+      // No chapters in progress, return null
+      return null;
     }
 
     // Return the chapter with the highest chapter number that has progress
