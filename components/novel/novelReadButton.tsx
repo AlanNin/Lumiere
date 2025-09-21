@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { TouchableOpacity } from "react-native";
+import { useCallback } from 'react';
+import { ToastAndroid, TouchableOpacity } from 'react-native';
 import Animated, {
   SharedValue,
   useAnimatedStyle,
@@ -8,11 +8,11 @@ import Animated, {
   Easing,
   FadeIn,
   FadeOut,
-} from "react-native-reanimated";
-import { Play } from "lucide-react-native";
-import { colors } from "@/lib/constants";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+} from 'react-native-reanimated';
+import { Play } from 'lucide-react-native';
+import { colors } from '@/lib/constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 const FIXED_BUTTON_WIDTH = {
   NOT_SCROLLING: {
@@ -41,8 +41,7 @@ export default function NovelReadButton({
 
   const shrink = useDerivedValue(() => {
     const y = scrollY.value;
-    const nearBottom =
-      maxScrollY !== undefined && y >= maxScrollY - CLOSE_TO_MAX_THRESHOLD;
+    const nearBottom = maxScrollY !== undefined && y >= maxScrollY - CLOSE_TO_MAX_THRESHOLD;
     return y > 0 && !nearBottom;
   });
 
@@ -51,9 +50,7 @@ export default function NovelReadButton({
     withTiming(
       shrink.value
         ? FIXED_BUTTON_WIDTH.SCROLLING
-        : FIXED_BUTTON_WIDTH.NOT_SCROLLING[
-            resumeFromNovelChapter ? "RESUME" : "START"
-          ],
+        : FIXED_BUTTON_WIDTH.NOT_SCROLLING[resumeFromNovelChapter ? 'RESUME' : 'START'],
       { duration: 300, easing: Easing.out(Easing.quad) }
     )
   );
@@ -88,31 +85,32 @@ export default function NovelReadButton({
     });
   }, [router, novelTitle, resumeFromNovelChapter, novelTotalChapters]);
 
+  const handleLongPress = useCallback(() => {
+    const hasResumeFromChapter = resumeFromNovelChapter !== undefined && resumeFromNovelChapter > 0;
+
+    if (!hasResumeFromChapter) return;
+
+    ToastAndroid.show(`Resume from chapter ${resumeFromNovelChapter}`, ToastAndroid.SHORT);
+  }, [resumeFromNovelChapter]);
+
   return (
     <Animated.View
       entering={FadeIn.duration(150)}
       exiting={FadeOut.duration(150)}
       className="absolute z-10 overflow-hidden rounded-xl"
-      style={buttonStyle}
-    >
+      style={buttonStyle}>
       <TouchableOpacity
         activeOpacity={0.8}
-        className="flex flex-row items-center gap-x-3 py-4 px-5 bg-primary_dark"
+        className="flex flex-row items-center gap-x-3 bg-primary_dark px-5 py-4"
         onPress={handlePress}
-      >
-        <Play
-          color={colors.foreground}
-          fill={colors.foreground}
-          size={16}
-          strokeWidth={1.6}
-        />
+        onLongPress={handleLongPress}>
+        <Play color={colors.foreground} fill={colors.foreground} size={16} strokeWidth={1.6} />
 
         <Animated.Text
           style={textStyle}
-          className="font-medium text-foreground text-lg"
-          numberOfLines={1}
-        >
-          {resumeFromNovelChapter ? "Resume" : "Start"}
+          className="text-lg font-medium text-foreground"
+          numberOfLines={1}>
+          {resumeFromNovelChapter ? 'Resume' : 'Start'}
         </Animated.Text>
       </TouchableOpacity>
     </Animated.View>

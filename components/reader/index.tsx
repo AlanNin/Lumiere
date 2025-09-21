@@ -1,6 +1,6 @@
-import * as StatusBar from "expo-status-bar";
-import * as NavigationBar from "expo-navigation-bar";
-import { useCallback, useEffect, useState, useRef, useMemo, use } from "react";
+import * as StatusBar from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import {
   LayoutChangeEvent,
   NativeScrollEvent,
@@ -8,20 +8,22 @@ import {
   ScrollView,
   TextStyle,
   View,
-} from "react-native";
-import { colors } from "@/lib/constants";
-import { Chapter } from "@/types/novel";
-import { useConfig } from "@/providers/appConfig";
-import { ReaderGeneralConfig, ReaderStyleConfig } from "@/types/appConfig";
-import { Style, VoiceIdentifier } from "@/types/reader";
-import ReaderLayout from "./layout";
-import { useMutation } from "@tanstack/react-query";
-import { novelController } from "@/server/controllers/novel";
-import { invalidateQueries } from "@/providers/reactQuery";
-import ReaderFooter from "./footer";
-import * as Speech from "expo-speech";
-import { Text } from "../defaults";
-import { extractContentFromHTML } from "@/lib/html";
+  AppState,
+  AppStateStatus,
+} from 'react-native';
+import { colors } from '@/lib/constants';
+import { Chapter } from '@/types/novel';
+import { useConfig } from '@/providers/appConfig';
+import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
+import { Style, VoiceIdentifier } from '@/types/reader';
+import ReaderLayout from './layout';
+import { useMutation } from '@tanstack/react-query';
+import { novelController } from '@/server/controllers/novel';
+import { invalidateQueries } from '@/providers/reactQuery';
+import ReaderFooter from './footer';
+import * as Speech from 'expo-speech';
+import { Text } from '../defaults';
+import { extractContentFromHTML } from '@/lib/html';
 
 export default function ReaderComponent({
   chapter,
@@ -51,29 +53,29 @@ export default function ReaderComponent({
     return Number.isNaN(p) ? 0 : Math.round(p);
   })();
   const hasInititalSeekedRef = useRef(false);
-  const [incognitoMode] = useConfig<boolean>("incognitoMode", false);
+  const [incognitoMode] = useConfig<boolean>('incognitoMode', false);
   const [ttsIndex, setTtsIndex] = useState<number | null>(null);
   const [isTTSReading, setIsTTSReading] = useState(false);
   const lastIndexRef = useRef<number>(0);
   const stopRequestedRef = useRef<boolean>(false);
   const parragraphLongPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const content = useMemo(() => extractContentFromHTML(chapter.content ?? ""), [
-    chapter.content,
-  ]);
+  const manualTTSSelectionRef = useRef<boolean>(false);
+  const lastSavedProgressRef = useRef<number>(0);
+  const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const content = useMemo(() => extractContentFromHTML(chapter.content ?? ''), [chapter.content]);
   const title = content.title;
   const paragraphs = content.paragraphs;
   const [availableVoices, setAvailableVoices] = useState<VoiceIdentifier[]>([]);
-  const [readerGeneralConfig, setReaderGeneralConfig] = useConfig<
-    ReaderGeneralConfig
-  >("readerGeneralConfig", {
-    showProgressSeekBar: false,
-    speechSpeed: 0.7,
-    voiceIdentifier: availableVoices[0]?.identifier,
-  });
-  const [removeDownloadOnRead] = useConfig<boolean>(
-    "removeDownloadOnRead",
-    false
+  const [readerGeneralConfig, setReaderGeneralConfig] = useConfig<ReaderGeneralConfig>(
+    'readerGeneralConfig',
+    {
+      showProgressSeekBar: false,
+      speechSpeed: 0.7,
+      voiceIdentifier: availableVoices[0]?.identifier,
+    }
   );
+  const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
   const speechSpeedRef = useRef(readerGeneralConfig.speechSpeed);
   const speechVoiceRef = useRef(readerGeneralConfig.voiceIdentifier);
   const userScrolledRef = useRef(false);
@@ -88,9 +90,9 @@ export default function ReaderComponent({
       }),
     onSuccess: () => {
       invalidateQueries(
-        ["novel-info", chapter.novelTitle],
-        ["novel-chapter", chapter.novelTitle, chapter.number],
-        "library"
+        ['novel-info', chapter.novelTitle],
+        ['novel-chapter', chapter.novelTitle, chapter.number],
+        'library'
       );
     },
   });
@@ -102,9 +104,53 @@ export default function ReaderComponent({
         chapterNumber: chapter.number,
       }),
     onSuccess: () => {
-      invalidateQueries("history");
+      invalidateQueries('history');
     },
   });
+
+  // Function to save progress immediately
+  const saveProgressNow = useCallback(() => {
+    if (!incognitoMode && percent !== lastSavedProgressRef.current) {
+      lastSavedProgressRef.current = percent;
+      if ((chapter.progress ?? 0) < 100) {
+        updateNovelChapterProgress();
+      }
+      updateNovelChapterReadAt();
+    }
+  }, [
+    incognitoMode,
+    percent,
+    chapter.progress,
+    updateNovelChapterProgress,
+    updateNovelChapterReadAt,
+  ]);
+
+  // Debounced save function
+  const saveProgressDebounced = useCallback(() => {
+    if (saveProgressTimeoutRef.current) {
+      clearTimeout(saveProgressTimeoutRef.current);
+    }
+
+    saveProgressTimeoutRef.current = setTimeout(() => {
+      saveProgressNow();
+    }, 2000); // Save after 2 seconds of inactivity
+  }, [saveProgressNow]);
+
+  // Handle app state changes (background/foreground)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // App is going to background, save immediately
+        saveProgressNow();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [saveProgressNow]);
 
   const scrollToParagraph = useCallback(
     (paragraphIndex: number) => {
@@ -129,8 +175,7 @@ export default function ReaderComponent({
       <View
         style={{
           paddingTop: styles.body.paddingTop,
-        }}
-      >
+        }}>
         <Text
           selectable
           style={{
@@ -140,9 +185,8 @@ export default function ReaderComponent({
             color: styles.body.color,
             marginBottom: styles.h4.marginBottom + 6,
             textAlign: styles.body.textAlign,
-            fontWeight: String(styles.h4.fontWeight) as TextStyle["fontWeight"],
-          }}
-        >
+            fontWeight: String(styles.h4.fontWeight) as TextStyle['fontWeight'],
+          }}>
           {title}
         </Text>
         {paragraphs.map((text: string, idx: number) => {
@@ -160,15 +204,14 @@ export default function ReaderComponent({
                 marginTop: -6,
                 marginBottom: styles.p.marginBottom - 6,
                 backgroundColor:
-                  shouldHighlight && ttsIndex === idx
-                    ? colors.primary_dark + 35
-                    : "transparent",
+                  shouldHighlight && ttsIndex === idx ? colors.primary_dark + 35 : 'transparent',
               }}
               key={idx}
               onTouchStart={() => {
                 if (!isTTSReading) return;
 
                 parragraphLongPressTimeoutRef.current = setTimeout(() => {
+                  manualTTSSelectionRef.current = true;
                   Speech.stop();
                   setTimeout(() => {
                     setIsTTSReading(true);
@@ -187,8 +230,7 @@ export default function ReaderComponent({
                   clearTimeout(parragraphLongPressTimeoutRef.current);
                   parragraphLongPressTimeoutRef.current = null;
                 }
-              }}
-            >
+              }}>
               <Text
                 selectable={!isTTSReading}
                 style={{
@@ -196,8 +238,7 @@ export default function ReaderComponent({
                   lineHeight: styles.body.lineHeight,
                   color: styles.body.color,
                   textAlign: styles.body.textAlign,
-                }}
-              >
+                }}>
                 {text}
               </Text>
             </View>
@@ -253,10 +294,15 @@ export default function ReaderComponent({
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, []);
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!userScrolledRef.current) userScrolledRef.current = true;
-    setScrollY(e.nativeEvent.contentOffset.y);
-  }, []);
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!userScrolledRef.current) userScrolledRef.current = true;
+      setScrollY(e.nativeEvent.contentOffset.y);
+      // Trigger debounced save when user scrolls
+      saveProgressDebounced();
+    },
+    [saveProgressDebounced]
+  );
 
   const onContentSizeChange = useCallback((_: number, h: number) => {
     setContentHeight(h);
@@ -282,6 +328,7 @@ export default function ReaderComponent({
       if (index >= paragraphs.length) {
         setIsTTSReading(false);
         setTtsIndex(null);
+        manualTTSSelectionRef.current = false;
         return;
       }
 
@@ -293,7 +340,7 @@ export default function ReaderComponent({
       }, 100);
 
       Speech.speak(paragraphs[index], {
-        language: "en-US",
+        language: 'en-US',
         rate: speechSpeedRef.current,
         voice: speechVoiceRef.current,
         onDone: () => {
@@ -302,10 +349,12 @@ export default function ReaderComponent({
         onStopped: () => {
           if (!stopRequestedRef.current) {
             setIsTTSReading(false);
+            manualTTSSelectionRef.current = false;
           }
         },
         onError: () => {
           setIsTTSReading(false);
+          manualTTSSelectionRef.current = false;
         },
       });
     },
@@ -317,11 +366,13 @@ export default function ReaderComponent({
       stopRequestedRef.current = true;
       Speech.stop();
       setIsTTSReading(false);
+      manualTTSSelectionRef.current = false;
       return;
     }
 
     stopRequestedRef.current = false;
     setIsTTSReading(true);
+    manualTTSSelectionRef.current = false;
     readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
   };
 
@@ -339,21 +390,17 @@ export default function ReaderComponent({
   }, []);
 
   useEffect(() => {
-    NavigationBar.setVisibilityAsync("hidden");
+    NavigationBar.setVisibilityAsync('hidden');
     StatusBar.setStatusBarHidden(true);
     return () => {
-      NavigationBar.setVisibilityAsync("visible");
+      NavigationBar.setVisibilityAsync('visible');
       StatusBar.setStatusBarHidden(false);
-      if (!incognitoMode) {
-        if ((chapter.progress ?? 0) < 100) {
-          updateNovelChapterProgress();
-          invalidateQueries("library");
-        }
-        updateNovelChapterReadAt();
-      }
+      // Save progress on cleanup (when navigating back)
+      saveProgressNow();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (saveProgressTimeoutRef.current) clearTimeout(saveProgressTimeoutRef.current);
     };
-  }, []);
+  }, [saveProgressNow]);
 
   useEffect(() => {
     async function setBars() {
@@ -362,10 +409,10 @@ export default function ReaderComponent({
       }
 
       if (layoutVisible) {
-        await NavigationBar.setVisibilityAsync("visible");
+        await NavigationBar.setVisibilityAsync('visible');
         await StatusBar.setStatusBarHidden(false);
       } else {
-        await NavigationBar.setVisibilityAsync("hidden");
+        await NavigationBar.setVisibilityAsync('hidden');
         await StatusBar.setStatusBarHidden(true);
       }
     }
@@ -396,8 +443,7 @@ export default function ReaderComponent({
       chapter.progress !== undefined &&
       chapter.progress < 100
     ) {
-      const scrollYTarget =
-        (chapter.progress / 100) * (contentHeight - viewHeight);
+      const scrollYTarget = (chapter.progress / 100) * (contentHeight - viewHeight);
 
       let closestIndex = 0;
       let closestDistance = Infinity;
@@ -415,16 +461,11 @@ export default function ReaderComponent({
       setTtsIndex(closestIndex);
       lastIndexRef.current = closestIndex;
     }
-  }, [
-    chapter.progress,
-    contentHeight,
-    viewHeight,
-    paragraphPositions.current,
-    ttsIndex,
-  ]);
+  }, [chapter.progress, contentHeight, viewHeight, paragraphPositions.current, ttsIndex]);
 
   useEffect(() => {
-    if (!userScrolledRef.current) return;
+    // Don't update paragraph tracking when TTS is active or when user manually selected a paragraph
+    if (!userScrolledRef.current || isTTSReading || manualTTSSelectionRef.current) return;
 
     if (
       paragraphPositions.current &&
@@ -452,12 +493,23 @@ export default function ReaderComponent({
         lastIndexRef.current = closestIndex;
       }
     }
-  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current]);
+  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current, isTTSReading]);
+
+  // Auto-save progress periodically while reading
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!incognitoMode && percent > 0 && percent !== lastSavedProgressRef.current) {
+        saveProgressNow();
+      }
+    }, 30000); // Save every 30 seconds if progress has changed
+
+    return () => clearInterval(interval);
+  }, [incognitoMode, percent, saveProgressNow]);
 
   useEffect(() => {
     async function getVoices() {
       const voices = await Speech.getAvailableVoicesAsync();
-      const englishVoices = voices.filter((v) => v.language === "en-US");
+      const englishVoices = voices.filter((v) => v.language === 'en-US');
       setAvailableVoices(englishVoices);
     }
     getVoices();
@@ -482,8 +534,7 @@ export default function ReaderComponent({
       isTTSReading={isTTSReading}
       readerGeneralConfig={readerGeneralConfig}
       setReaderGeneralConfig={setReaderGeneralConfig}
-      availableVoices={availableVoices}
-    >
+      availableVoices={availableVoices}>
       <ScrollView
         ref={scrollViewRef}
         style={{
@@ -501,8 +552,7 @@ export default function ReaderComponent({
           paddingTop: insets.top,
         }}
         onTouchStart={handleTouchStart}
-        onTouchEndCapture={handleTouchEndCapture}
-      >
+        onTouchEndCapture={handleTouchEndCapture}>
         {renderContent}
         <ReaderFooter chapter={chapter} styles={styles} insets={insets} />
       </ScrollView>
@@ -511,11 +561,7 @@ export default function ReaderComponent({
 }
 
 // handles reader styles, including default styles and user-defined styles (these are stored in the app config)
-export function getReaderStyles({
-  insets,
-}: {
-  insets: { top: number; bottom: number };
-}): {
+export function getReaderStyles({ insets }: { insets: { top: number; bottom: number } }): {
   styles: Style;
   setReaderStylesConfig: (styles: ReaderStyleConfig) => void;
 } {
@@ -523,7 +569,7 @@ export function getReaderStyles({
     body: {
       backgroundColor: colors.background,
       color: colors.grayscale_foreground,
-      textAlign: "left",
+      textAlign: 'left',
       lineHeight: 24,
     },
     h4: {
@@ -532,9 +578,10 @@ export function getReaderStyles({
     p: { fontSize: 16 },
   };
 
-  const [readerStyleConfig, setReaderStylesConfig] = useConfig<
-    ReaderStyleConfig
-  >("readerStyleConfig", defaultReaderStyle);
+  const [readerStyleConfig, setReaderStylesConfig] = useConfig<ReaderStyleConfig>(
+    'readerStyleConfig',
+    defaultReaderStyle
+  );
 
   const styles: Style = useMemo(() => {
     return {

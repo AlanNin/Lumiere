@@ -1,66 +1,51 @@
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
-import { novelController } from "@/server/controllers/novel";
-import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Dimensions,
-  RefreshControl,
-  ToastAndroid,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import {
-  Chapter,
-  NovelChaptersFilter,
-  NovelChaptersSortUI,
-} from "@/types/novel";
-import { Library, ListFilter, Telescope } from "lucide-react-native";
-import { Text } from "@/components/defaults";
-import { useRouter } from "expo-router";
-import NovelChapter from "@/components/novel/novelChapter";
-import NovelDetails from "@/components/novel/novelDetails";
-import NovelTopButtons from "@/components/novel/novelTopButtons";
-import NovelDescription from "@/components/novel/novelDescription";
-import NovelGenres from "@/components/novel/novelGenres";
-import NovelHeader from "@/components/novel/novelHeader";
-import NovelReadButton from "@/components/novel/novelReadButton";
-import { FlashList, FlashListProps } from "@shopify/flash-list";
-import Loading from "@/components/statics/loading";
-import Error from "@/components/statics/error";
-import { useChapterDownloadQueue } from "@/providers/chapterDownloadQueue";
-import { DownloadChapter } from "@/types/download";
-import { colors } from "@/lib/constants";
-import NovelActionsBar from "@/components/novel/novelActionsBar";
-import { useHaptics } from "@/hooks/useHaptics";
-import NovelRemoveDownloadDrawer from "@/components/novel/novelRemoveDownloadDrawer";
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import NovelChaptersFilterDrawer from "@/components/novel/novelChaptersFilterDrawer";
-import { useConfig } from "@/providers/appConfig";
-import { applyNovelChaptersFiltersAndSort } from "@/lib/novel";
-import { useNovelRefreshQueue } from "@/providers/novelRefreshQueue";
-import NovelFindChapterDrawer from "@/components/novel/novelFindChapterDrawer";
-import NovelDownloadChaptersDrawer from "@/components/novel/novelDownloadChaptersDrawer";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import NovelMoreChapterDrawer from "@/components/novel/novelMoreChapterDrawer";
-import NovelCategoryDrawer from "@/components/novel/novelCategoryDrawer";
-import { categoryController } from "@/server/controllers/category";
-import ModeIndicator from "@/components/modeIndicator";
-import { useIsOnline } from "@/providers/network";
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { useQuery } from '@tanstack/react-query';
+import { novelController } from '@/server/controllers/novel';
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, RefreshControl, ToastAndroid, TouchableOpacity, View } from 'react-native';
+import { Chapter, NovelChaptersFilter, NovelChaptersSortUI } from '@/types/novel';
+import { Library, ListFilter, Telescope } from 'lucide-react-native';
+import { Text } from '@/components/defaults';
+import { useRouter } from 'expo-router';
+import NovelChapter from '@/components/novel/novelChapter';
+import NovelDetails from '@/components/novel/novelDetails';
+import NovelTopButtons from '@/components/novel/novelTopButtons';
+import NovelDescription from '@/components/novel/novelDescription';
+import NovelGenres from '@/components/novel/novelGenres';
+import NovelHeader from '@/components/novel/novelHeader';
+import NovelReadButton from '@/components/novel/novelReadButton';
+import { FlashList, FlashListProps } from '@shopify/flash-list';
+import Loading from '@/components/statics/loading';
+import Error from '@/components/statics/error';
+import { useChapterDownloadQueue } from '@/providers/chapterDownloadQueue';
+import { DownloadChapter } from '@/types/download';
+import { colors } from '@/lib/constants';
+import NovelActionsBar from '@/components/novel/novelActionsBar';
+import { useHaptics } from '@/hooks/useHaptics';
+import NovelRemoveDownloadDrawer from '@/components/novel/novelRemoveDownloadDrawer';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import NovelChaptersFilterDrawer from '@/components/novel/novelChaptersFilterDrawer';
+import { useConfig } from '@/providers/appConfig';
+import { applyNovelChaptersFiltersAndSort } from '@/lib/novel';
+import { useNovelRefreshQueue } from '@/providers/novelRefreshQueue';
+import NovelFindChapterDrawer from '@/components/novel/novelFindChapterDrawer';
+import NovelDownloadChaptersDrawer from '@/components/novel/novelDownloadChaptersDrawer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import NovelMoreChapterDrawer from '@/components/novel/novelMoreChapterDrawer';
+import NovelCategoryDrawer from '@/components/novel/novelCategoryDrawer';
+import { categoryController } from '@/server/controllers/category';
+import ModeIndicator from '@/components/modeIndicator';
+import { useIsOnline } from '@/providers/network';
 
-const AnimatedFlashList = Animated.createAnimatedComponent<
-  FlashListProps<Chapter>
->(FlashList);
+const AnimatedFlashList = Animated.createAnimatedComponent<FlashListProps<Chapter>>(FlashList);
 
 export default function NovelScreen() {
   const router = useRouter();
 
   // Local pathname state
   const { title, isSaved: isSavedParam } = useLocalSearchParams();
-  const isSaved = isSavedParam ? isSavedParam === "1" : false;
+  const isSaved = isSavedParam ? isSavedParam === '1' : false;
 
   // States
   const insets = useSafeAreaInsets();
@@ -68,28 +53,22 @@ export default function NovelScreen() {
   const scrollY = useSharedValue(0);
   const [listLoaded, setListLoaded] = useState(false);
   const [selectedChapters, setSelectedChapters] = useState<Chapter[]>([]);
-  const windowHeight = Dimensions.get("window").height;
+  const windowHeight = Dimensions.get('window').height;
   const [contentHeight, setContentHeight] = useState(0);
   const maxScrollY = Math.max(0, contentHeight - windowHeight);
-  const [chaptersToDelete, setChaptersToDelete] = useState<DownloadChapter[]>(
-    []
+  const [chaptersToDelete, setChaptersToDelete] = useState<DownloadChapter[]>([]);
+  const [novelChaptersFilter] = useConfig<Record<string, NovelChaptersFilter['value']>>(
+    `novelChaptersFilter-${String(title)}`,
+    {}
   );
-  const [novelChaptersFilter] = useConfig<
-    Record<string, NovelChaptersFilter["value"]>
-  >(`novelChaptersFilter-${String(title)}`, {});
-  const [novelChaptersSort] = useConfig<NovelChaptersSortUI>(
-    `novelChaptersSort-${String(title)}`,
-    {
-      key: "by_chapter",
-      label: "By Chapter",
-      order: "asc",
-    }
-  );
-  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
+  const [novelChaptersSort] = useConfig<NovelChaptersSortUI>(`novelChaptersSort-${String(title)}`, {
+    key: 'by_chapter',
+    label: 'By Chapter',
+    order: 'asc',
+  });
+  const [downloadedOnly] = useConfig<boolean>('downloadedOnly', false);
   const hasChaptersFilterApplied = useMemo(() => {
-    return Object.values(novelChaptersFilter).some(
-      (v) => v === "checked" || v === "indeterminate"
-    );
+    return Object.values(novelChaptersFilter).some((v) => v === 'checked' || v === 'indeterminate');
   }, [novelChaptersFilter]);
   const [highlightChapter, setHighlightChapter] = useState<number | null>(null);
   const isOnline = useIsOnline();
@@ -108,13 +87,13 @@ export default function NovelScreen() {
     isLoading: isLoadingNovel,
     refetch: refetchNovelInfo,
   } = useQuery({
-    queryKey: ["novel-info", title],
+    queryKey: ['novel-info', title],
     queryFn: () => novelController.getNovel({ novelTitle: String(title) }),
     staleTime: 1000 * 60 * 5,
   });
 
   const { data: categories } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ['categories'],
     queryFn: () => categoryController.getCategories(),
   });
 
@@ -124,7 +103,7 @@ export default function NovelScreen() {
       novelInfo.chapters,
       {
         ...novelChaptersFilter,
-        downloaded: downloadedOnly ? "checked" : novelChaptersFilter.downloaded,
+        downloaded: downloadedOnly ? 'checked' : novelChaptersFilter.downloaded,
       },
       novelChaptersSort
     );
@@ -137,8 +116,7 @@ export default function NovelScreen() {
   const prevQueueDownloadLengthRef = useRef<number>(queueDownload.length);
 
   const downloadingSet = useMemo(
-    () =>
-      new Set(queueDownload.map((c) => `${c.novelTitle}-${c.chapterNumber}`)),
+    () => new Set(queueDownload.map((c) => `${c.novelTitle}-${c.chapterNumber}`)),
     [queueDownload]
   );
 
@@ -164,72 +142,59 @@ export default function NovelScreen() {
     const chapters = novelChapters;
     if (!chapters?.length) return null;
 
-    // find the lowest chapter number in the list
-    const minChapterNumber = Math.min(...chapters.map((c) => c.number));
-
     // 1) Find the highest-numbered chapter that is fully read (progress === 100)
     const fullyRead = chapters.filter((c) => (c.progress ?? 0) === 100);
-    const maxReadNumber = fullyRead.length
-      ? Math.max(...fullyRead.map((c) => c.number))
-      : 0;
+    const maxReadNumber = fullyRead.length ? Math.max(...fullyRead.map((c) => c.number)) : 0;
 
-    // 2) If there is a next chapter after the last fully read, and it has some progress (<100 but >0), resume there
-    const nextAfterRead = chapters.find(
-      (c) =>
-        c.number === maxReadNumber + 1 &&
-        (c.progress ?? 0) > 0 &&
-        (c.progress ?? 0) < 100
-    );
-    if (nextAfterRead) {
-      return nextAfterRead;
-    }
-
-    // 3) If no chapter in progress after last read, return the next unread chapter,
-    //    but skip it if it's the very first one (lowest number) with 0 progress
-    const nextUnread = chapters.find(
-      (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) === 0
-    );
-    if (
-      nextUnread &&
-      !(
-        nextUnread.number === minChapterNumber &&
-        (nextUnread.progress ?? 0) === 0
-      )
-    ) {
-      return nextUnread;
-    }
-
-    // 4) Otherwise, fall back to any chapter in progress (1–99%), picking the highest number
-    const inProgress = chapters.filter(
-      (c) => (c.progress ?? 0) > 0 && (c.progress ?? 0) < 100
-    );
-    if (inProgress.length > 0) {
-      return inProgress.reduce((prev, c) =>
-        c.number > prev.number ? c : prev
+    // 2) If there are fully read chapters, prioritize the next chapter after the last fully read one
+    if (maxReadNumber > 0) {
+      // First, check if the next chapter exists and has some progress
+      const nextAfterRead = chapters.find(
+        (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) > 0 && (c.progress ?? 0) < 100
       );
+      if (nextAfterRead) {
+        return nextAfterRead;
+      }
+
+      // If next chapter has no progress, check if it exists and is unread
+      const nextUnread = chapters.find(
+        (c) => c.number === maxReadNumber + 1 && (c.progress ?? 0) === 0
+      );
+      if (nextUnread) {
+        return nextUnread;
+      }
     }
 
-    // 5) If nothing applies, return null
-    return null;
+    // 3) If no fully read chapters, or no next chapter available, find chapters with progress
+    const inProgress = chapters.filter((c) => (c.progress ?? 0) > 0 && (c.progress ?? 0) < 100);
+
+    if (inProgress.length === 0) {
+      // No chapters in progress, return the first chapter
+      const firstChapter = chapters.find(
+        (c) => c.number === Math.min(...chapters.map((ch) => ch.number))
+      );
+      return firstChapter || null;
+    }
+
+    // Return the chapter with the highest chapter number that has progress
+    const highestChapterWithProgress = inProgress.reduce((prev, current) => {
+      return current.number > prev.number ? current : prev;
+    });
+
+    return highestChapterWithProgress;
   }, [novelChapters]);
 
   const handleChapterPress = useCallback(
-    ({
-      chapterNumber,
-      downloaded,
-    }: {
-      chapterNumber: number;
-      downloaded?: boolean;
-    }) => {
+    ({ chapterNumber, downloaded }: { chapterNumber: number; downloaded?: boolean }) => {
       if (!isOnline && !downloaded) {
-        ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+        ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
         return;
       }
 
       router.push({
-        pathname: "/novel/reader",
+        pathname: '/novel/reader',
         params: {
-          novelTitle: novelInfo?.title ?? "",
+          novelTitle: novelInfo?.title ?? '',
           chapterNumber,
           downloaded: downloaded ? 1 : 0,
         },
@@ -282,10 +247,7 @@ export default function NovelScreen() {
   }, []);
 
   const handleSelectAllChapters = useCallback(() => {
-    if (
-      !novelInfo?.chapters ||
-      selectedChapters.length === novelInfo?.chapters.length
-    ) {
+    if (!novelInfo?.chapters || selectedChapters.length === novelInfo?.chapters.length) {
       return;
     }
 
@@ -323,9 +285,7 @@ export default function NovelScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: Chapter }) => {
-      const isDownloading = downloadingSet.has(
-        `${item.novelTitle}-${item.number}`
-      );
+      const isDownloading = downloadingSet.has(`${item.novelTitle}-${item.number}`);
 
       const isHighlighted = highlightChapter === item.number;
 
@@ -341,27 +301,18 @@ export default function NovelScreen() {
         />
       );
     },
-    [
-      downloadingSet,
-      selectedChapters,
-      highlightChapter,
-      handleChapterPress,
-      handleDownloadPress,
-    ]
+    [downloadingSet, selectedChapters, highlightChapter, handleChapterPress, handleDownloadPress]
   );
 
   function handleRefresh() {
     if (!isOnline) {
-      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
     enqueueRefresh([String(title)]);
   }
 
-  const keyExtractor = useCallback(
-    (item: Chapter) => `${item.number}-${item.title}`,
-    []
-  );
+  const keyExtractor = useCallback((item: Chapter) => `${item.number}-${item.title}`, []);
 
   const extraDeps = useMemo(
     () => ({
@@ -384,40 +335,29 @@ export default function NovelScreen() {
           status={novelInfo.status}
           title={novelInfo.title}
         />
-        <View className="px-5 gap-y-5">
+        <View className="gap-y-5 px-5">
           <NovelTopButtons
             novelTitle={novelInfo.title}
             dbNovelIsSaved={novelInfo.isSaved ?? false}
-            handleOpenCategoryDrawer={() =>
-              bottomDrawerCategoryRef.current?.present()
-            }
-            handleCloseCategoryDrawer={() =>
-              bottomDrawerCategoryRef.current?.dismiss()
-            }
+            handleOpenCategoryDrawer={() => bottomDrawerCategoryRef.current?.present()}
+            handleCloseCategoryDrawer={() => bottomDrawerCategoryRef.current?.dismiss()}
             categories={categories}
           />
           <NovelDescription description={novelInfo.description} />
         </View>
-        <NovelGenres
-          genres={novelInfo.genres.split(",").map((g) => g.trim())}
-        />
-        <View className="flex flex-row items-center justify-between px-5 -mb-2">
+        <NovelGenres genres={novelInfo.genres.split(',').map((g) => g.trim())} />
+        <View className="-mb-2 flex flex-row items-center justify-between px-5">
           <Text className="text-lg font-medium text-muted_foreground">
             {novelChapters.length} Chapters
           </Text>
           <TouchableOpacity
-            className="p-2 -mr-2"
+            className="-mr-2 p-2"
             onPress={() => {
               setSelectedChapters([]);
               bottomDrawerChaptersFilterRef.current?.present();
-            }}
-          >
+            }}>
             <ListFilter
-              color={
-                hasChaptersFilterApplied
-                  ? colors.primary
-                  : colors.muted_foreground
-              }
+              color={hasChaptersFilterApplied ? colors.primary : colors.muted_foreground}
               size={20}
               strokeWidth={1.6}
               className="p-2"
@@ -432,11 +372,11 @@ export default function NovelScreen() {
     if (!novelInfo) return null;
 
     const title = hasChaptersFilterApplied
-      ? "Try clearing or adjusting your filters to see more chapters."
-      : "A blank page, no chapters yet.";
+      ? 'Try clearing or adjusting your filters to see more chapters.'
+      : 'A blank page, no chapters yet.';
 
     return (
-      <View className="flex-1 min-h-52">
+      <View className="min-h-52 flex-1">
         <Error title={title} Icon={Library} />
       </View>
     );
@@ -473,7 +413,7 @@ export default function NovelScreen() {
         title="This story has yet to be written."
         Icon={Telescope}
         pressable={{
-          title: "Go back to the library",
+          title: 'Go back to the library',
           onPress: () => router.back(),
         }}
       />
@@ -483,7 +423,7 @@ export default function NovelScreen() {
   return (
     <View className="flex-1">
       <ModeIndicator />
-      <View className="flex-1 bg-background relative">
+      <View className="relative flex-1 bg-background">
         <NovelHeader
           scrollY={scrollY}
           novelTitle={novelInfo.title}
@@ -491,15 +431,9 @@ export default function NovelScreen() {
           handleClearSelectedChapters={handleClearSelectedChapters}
           handleSelectAllChapters={handleSelectAllChapters}
           handleSelectRemainingChapters={handleSelectRemainingChapters}
-          handleOpenSearchChapterDrawer={() =>
-            bottomDrawerSearchChapterRef.current?.present()
-          }
-          handleOpenDownloadChaptersDrawer={() =>
-            bottomDraweChaptersDownloadRef.current?.present()
-          }
-          handleOpenMoreChapterDrawer={() =>
-            bottomDrawerMoreRef.current?.present()
-          }
+          handleOpenSearchChapterDrawer={() => bottomDrawerSearchChapterRef.current?.present()}
+          handleOpenDownloadChaptersDrawer={() => bottomDraweChaptersDownloadRef.current?.present()}
+          handleOpenMoreChapterDrawer={() => bottomDrawerMoreRef.current?.present()}
         />
 
         <AnimatedFlashList
@@ -514,8 +448,7 @@ export default function NovelScreen() {
           scrollEventThrottle={16}
           contentContainerStyle={{
             paddingBottom:
-              insets.bottom +
-              (allChaptersCompleted || novelChapters.length === 0 ? 12 : 84),
+              insets.bottom + (allChaptersCompleted || novelChapters.length === 0 ? 12 : 84),
           }}
           removeClippedSubviews={true}
           onLoad={() => setListLoaded(true)}
@@ -540,9 +473,7 @@ export default function NovelScreen() {
               scrollY={scrollY}
               novelTitle={novelInfo.title}
               novelTotalChapters={novelChapters.length}
-              resumeFromNovelChapter={
-                resumeChapter ? resumeChapter.number : undefined
-              }
+              resumeFromNovelChapter={resumeChapter ? resumeChapter.number : undefined}
               maxScrollY={maxScrollY}
             />
           )}
@@ -554,7 +485,7 @@ export default function NovelScreen() {
           refetchNovelInfo={refetchNovelInfo}
           enqueueDownload={enqueueDownload}
           onOpenDeleteChaptersDrawer={handleOpenDeleteChaptersDrawer}
-          isSortAsc={novelChaptersSort.order === "asc"}
+          isSortAsc={novelChaptersSort.order === 'asc'}
         />
 
         <NovelRemoveDownloadDrawer
@@ -579,9 +510,7 @@ export default function NovelScreen() {
           bottomDrawerRef={bottomDraweChaptersDownloadRef}
           novelTitle={novelInfo.title}
           chapters={novelInfo?.chapters ?? []}
-          currentChapter={
-            resumeChapter ? Math.max(resumeChapter.number - 1, 1) : 1
-          }
+          currentChapter={resumeChapter ? Math.max(resumeChapter.number - 1, 1) : 1}
           maxChapters={novelChapters.length}
           allChaptersCompleted={allChaptersCompleted}
           hasDownloadedChapters={hasDownloadedChapters}
