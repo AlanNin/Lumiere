@@ -13,6 +13,7 @@ import { Play } from 'lucide-react-native';
 import { colors } from '@/lib/constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Chapter } from '@/types/novel';
 
 const FIXED_BUTTON_WIDTH = {
   NOT_SCROLLING: {
@@ -32,7 +33,7 @@ export default function NovelReadButton({
 }: {
   scrollY: SharedValue<number>;
   novelTitle: string;
-  resumeFromNovelChapter?: number;
+  resumeFromNovelChapter?: Chapter;
   novelTotalChapters: number;
   maxScrollY?: number;
 }) {
@@ -50,7 +51,7 @@ export default function NovelReadButton({
     withTiming(
       shrink.value
         ? FIXED_BUTTON_WIDTH.SCROLLING
-        : FIXED_BUTTON_WIDTH.NOT_SCROLLING[resumeFromNovelChapter ? 'RESUME' : 'START'],
+        : FIXED_BUTTON_WIDTH.NOT_SCROLLING[resumeFromNovelChapter?.number ? 'RESUME' : 'START'],
       { duration: 300, easing: Easing.out(Easing.quad) }
     )
   );
@@ -73,25 +74,28 @@ export default function NovelReadButton({
   }));
 
   const handlePress = useCallback(() => {
-    const chapter = resumeFromNovelChapter ?? 1;
+    const chapterNumber = resumeFromNovelChapter?.number ?? 1;
+    const isChapterDownloaded = resumeFromNovelChapter?.downloaded ? 1 : 0;
 
     router.push({
       pathname: `/novel/reader`,
       params: {
         novelTitle,
-        chapterNumber: chapter,
+        chapterNumber: chapterNumber,
         totalChapters: novelTotalChapters,
+        downloaded: isChapterDownloaded,
       },
     });
-  }, [router, novelTitle, resumeFromNovelChapter, novelTotalChapters]);
+  }, [router, novelTitle, resumeFromNovelChapter?.number, novelTotalChapters]);
 
   const handleLongPress = useCallback(() => {
-    const hasResumeFromChapter = resumeFromNovelChapter !== undefined && resumeFromNovelChapter > 0;
+    const hasResumeFromChapter =
+      resumeFromNovelChapter?.number !== undefined && resumeFromNovelChapter.number > 0;
 
     if (!hasResumeFromChapter) return;
 
-    ToastAndroid.show(`Resume from chapter ${resumeFromNovelChapter}`, ToastAndroid.SHORT);
-  }, [resumeFromNovelChapter]);
+    ToastAndroid.show(`Resume from chapter ${resumeFromNovelChapter.number}`, ToastAndroid.SHORT);
+  }, [resumeFromNovelChapter?.number]);
 
   return (
     <Animated.View
@@ -110,7 +114,7 @@ export default function NovelReadButton({
           style={textStyle}
           className="text-lg font-medium text-foreground"
           numberOfLines={1}>
-          {resumeFromNovelChapter ? 'Resume' : 'Start'}
+          {resumeFromNovelChapter?.number ? 'Resume' : 'Start'}
         </Animated.Text>
       </TouchableOpacity>
     </Animated.View>

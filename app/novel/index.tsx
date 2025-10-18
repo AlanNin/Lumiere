@@ -97,10 +97,12 @@ export default function NovelScreen() {
     queryFn: () => categoryController.getCategories(),
   });
 
+  const nonMutatedChapters = useMemo(() => novelInfo?.chapters ?? [], [novelInfo?.chapters]);
+
   const novelChapters = useMemo<Chapter[]>(() => {
     if (!novelInfo) return [];
     return applyNovelChaptersFiltersAndSort(
-      novelInfo.chapters,
+      nonMutatedChapters,
       {
         ...novelChaptersFilter,
         downloaded: downloadedOnly ? 'checked' : novelChaptersFilter.downloaded,
@@ -170,7 +172,12 @@ export default function NovelScreen() {
 
     if (inProgress.length === 0) {
       // No chapters in progress, return null
-      return null;
+      if (chapters[0].number === nonMutatedChapters[0].number) {
+        return null;
+      } else {
+        // No chapters in progress, but first chapter is not the first chapter in the novel, meaning it's probably filtered
+        return chapters[0];
+      }
     }
 
     // Return the chapter with the highest chapter number that has progress
@@ -470,7 +477,7 @@ export default function NovelScreen() {
               scrollY={scrollY}
               novelTitle={novelInfo.title}
               novelTotalChapters={novelChapters.length}
-              resumeFromNovelChapter={resumeChapter ? resumeChapter.number : undefined}
+              resumeFromNovelChapter={resumeChapter ? resumeChapter : undefined}
               maxScrollY={maxScrollY}
             />
           )}
