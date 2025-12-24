@@ -1,23 +1,20 @@
-import {
-  GestureResponderEvent,
-  ToastAndroid,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { Text } from "../defaults";
-import { Chapter } from "@/types/novel";
-import { Style } from "@/types/reader";
-import { useRouter } from "expo-router";
-import { useIsOnline } from "@/providers/network";
+import { ToastAndroid, TouchableOpacity, View } from 'react-native';
+import { Text } from '../defaults';
+import { Chapter } from '@/types/novel';
+import { Style } from '@/types/reader';
+import { useRouter } from 'expo-router';
+import { useIsOnline } from '@/providers/network';
 
 export default function ReaderFooter({
   chapter,
   styles,
   insets,
+  handleSetChapterRead,
 }: {
   chapter: Chapter;
   styles: Style;
   insets: { top: number; bottom: number };
+  handleSetChapterRead: () => void;
 }) {
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -26,12 +23,14 @@ export default function ReaderFooter({
     if (!chapter.nextChapter) return;
 
     if (!isOnline && !chapter.nextChapter.downloaded) {
-      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
 
+    handleSetChapterRead();
+
     router.replace({
-      pathname: "/novel/reader",
+      pathname: '/novel/reader',
       params: {
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.nextChapter.number,
@@ -42,42 +41,34 @@ export default function ReaderFooter({
 
   return (
     <View
-      className="px-5 gap-y-4 flex flex-col items-center justify-center mt-4"
-      style={{ marginBottom: insets.bottom + 12 }}
-    >
-      <Text
-        className="text-center opacity-75"
-        style={{ color: styles.body.color }}
-      >
-        Finished: Chapter {chapter.number}{" "}
-        {chapter.title ? `- ${chapter.title}` : ""}
+      className="mt-4 flex flex-col items-center justify-center gap-y-4 px-5"
+      style={{ marginBottom: insets.bottom + 12 }}>
+      <Text className="text-center opacity-75" style={{ color: styles.body.color }}>
+        Finished: Chapter {chapter.number} {chapter.title ? `- ${chapter.title}` : ''}
       </Text>
 
       {chapter.nextChapter ? (
         <TouchableOpacity
-          className="bg-primary_dark py-3 px-6 w-full rounded-2xl flex items-center justify-center"
-          onPress={handleNextChapter}
-        >
+          className="flex w-full items-center justify-center rounded-2xl bg-primary_dark px-6 py-3"
+          onPress={handleNextChapter}>
           <Text className="text-center text-lg">
-            Next: Chapter {chapter.nextChapter.number}{" "}
-            {chapter.nextChapter.title ? `- ${chapter.nextChapter.title}` : ""}
+            Next: Chapter {chapter.nextChapter.number}{' '}
+            {chapter.nextChapter.title ? `- ${chapter.nextChapter.title}` : ''}
           </Text>
         </TouchableOpacity>
       ) : (
         <Text
-          className="text-center opacity-75 italic ext-lg"
+          className="ext-lg text-center italic opacity-75"
           style={{
             color: styles.body.color,
-          }}
-        >
+          }}>
           <Text
-            className="font-medium text-lg"
+            className="text-lg font-medium"
             style={{
               color: styles.body.color,
-            }}
-          >
+            }}>
             {chapter.novelTitle}
-          </Text>{" "}
+          </Text>{' '}
           has reached its end.
         </Text>
       )}

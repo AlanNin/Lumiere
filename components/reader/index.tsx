@@ -88,7 +88,7 @@ export default function ReaderComponent({
       invalidateQueries(
         ['novel-info', chapter.novelTitle],
         ['novel-chapter', chapter.novelTitle, chapter.number],
-        'library'
+        ['library']
       );
     },
   });
@@ -324,7 +324,6 @@ export default function ReaderComponent({
 
     if ((chapter.progress ?? 0) < 100) {
       updateNovelChapterProgress(latestPercent);
-      invalidateQueries('library');
     }
     updateNovelChapterReadAt();
   }, [incognitoMode, percentRef, chapter.progress]);
@@ -501,7 +500,15 @@ export default function ReaderComponent({
         onTouchStart={handleTouchStart}
         onTouchEndCapture={handleTouchEndCapture}>
         {renderContent}
-        <ReaderFooter chapter={chapter} styles={styles} insets={insets} />
+        <ReaderFooter
+          chapter={chapter}
+          styles={styles}
+          insets={insets}
+          handleSetChapterRead={() => {
+            updateNovelChapterProgress(100);
+            updateNovelChapterReadAt();
+          }}
+        />
       </ScrollView>
     </ReaderLayout>
   );

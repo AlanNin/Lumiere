@@ -1,20 +1,16 @@
-import { colors } from "@/lib/constants";
-import { useIsOnline } from "@/providers/network";
-import { Chapter } from "@/types/novel";
-import { useRouter } from "expo-router";
+import { colors } from '@/lib/constants';
+import { useIsOnline } from '@/providers/network';
+import { Chapter } from '@/types/novel';
+import { useRouter } from 'expo-router';
 import {
   ArrowDownFromLine,
   ArrowUpFromLine,
   ChevronLeft,
   ChevronRight,
   Settings,
-} from "lucide-react-native";
-import { Pressable, ToastAndroid, TouchableOpacity } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useDerivedValue,
-  withTiming,
-} from "react-native-reanimated";
+} from 'lucide-react-native';
+import { Pressable, ToastAndroid, TouchableOpacity } from 'react-native';
+import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
 
 export default function ReaderBottomBar({
   layoutVisible,
@@ -53,12 +49,12 @@ export default function ReaderBottomBar({
     if (!chapter.previousChapter) return;
 
     if (!isOnline && !chapter.previousChapter.downloaded) {
-      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
 
     router.replace({
-      pathname: "/novel/reader",
+      pathname: '/novel/reader',
       params: {
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.previousChapter.number,
@@ -71,12 +67,12 @@ export default function ReaderBottomBar({
     if (!chapter.nextChapter) return;
 
     if (!isOnline && !chapter.nextChapter.downloaded) {
-      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
 
     router.replace({
-      pathname: "/novel/reader",
+      pathname: '/novel/reader',
       params: {
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.nextChapter.number,
@@ -88,36 +84,27 @@ export default function ReaderBottomBar({
   return (
     <Animated.View
       style={animatedBottomBarStyle}
-      className="absolute bottom-0 inset-x-0 bg-layout_background"
-      pointerEvents={layoutVisible ? "auto" : "none"}
-    >
+      className="absolute inset-x-0 bottom-0 bg-layout_background"
+      pointerEvents={layoutVisible ? 'auto' : 'none'}>
       <Pressable
         onPress={postponeHide}
         className="flex flex-row items-center justify-between gap-x-6"
         style={{
           padding: 20,
           paddingBottom: insets.bottom + 20,
-        }}
-      >
+        }}>
         <TouchableOpacity
           disabled={!chapter.previousChapter}
           onPress={handlePreviousChapter}
-          className="p-2 -m-2"
-        >
+          className="-m-2 p-2">
           <ChevronLeft
-            color={
-              !chapter.previousChapter ? colors.grayscale : colors.foreground
-            }
+            color={!chapter.previousChapter ? colors.grayscale : colors.foreground}
             size={24}
             strokeWidth={1.6}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={scrollToTop}
-          disabled={isAtTop}
-          className="p-2 -m-2"
-        >
+        <TouchableOpacity onPress={scrollToTop} disabled={isAtTop} className="-m-2 p-2">
           <ArrowUpFromLine
             color={isAtTop ? colors.grayscale : colors.foreground}
             size={24}
@@ -125,11 +112,7 @@ export default function ReaderBottomBar({
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={scrollToBottom}
-          disabled={isAtBottom}
-          className="p-2 -m-2"
-        >
+        <TouchableOpacity onPress={scrollToBottom} disabled={isAtBottom} className="-m-2 p-2">
           <ArrowDownFromLine
             color={isAtBottom ? colors.grayscale : colors.foreground}
             size={24}
@@ -137,18 +120,14 @@ export default function ReaderBottomBar({
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleOpenBottomDrawerConfig}
-          className="p-2 -m-2"
-        >
+        <TouchableOpacity onPress={handleOpenBottomDrawerConfig} className="-m-2 p-2">
           <Settings color={colors.foreground} size={24} strokeWidth={1.6} />
         </TouchableOpacity>
 
         <TouchableOpacity
           disabled={!chapter.nextChapter}
           onPress={handleNextChapter}
-          className="p-2 -m-2"
-        >
+          className="-m-2 p-2">
           <ChevronRight
             color={!chapter.nextChapter ? colors.grayscale : colors.foreground}
             size={24}
