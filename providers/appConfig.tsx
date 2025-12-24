@@ -1,13 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  ReactNode,
-  FC,
-} from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, FC } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define the type for the configuration
 type ConfigType = object | string | number | boolean | undefined;
@@ -35,8 +27,7 @@ export const useConfig = <T extends ConfigType>(
   const { config, saveConfig } = useContext(ConfigContext);
 
   // Get the current config value for the key
-  const currentConfig =
-    config[key] !== undefined ? (config[key] as T) : defaultValue;
+  const currentConfig = config[key] !== undefined ? (config[key] as T) : defaultValue;
 
   // Function to update the config for the key
   const updateConfig = useCallback(
@@ -74,7 +65,7 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
 
         setConfig(loadedConfigs);
       } catch (error) {
-        console.error("Failed to load configs:", error);
+        console.error('Failed to load configs:', error);
       }
     };
 
@@ -83,13 +74,10 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
 
   // Function to save a config for a specific key
   const saveConfig = useCallback(
-    async (
-      key: string,
-      newConfig: ConfigType | ((prevState: ConfigType) => ConfigType)
-    ) => {
+    async (key: string, newConfig: ConfigType | ((prevState: ConfigType) => ConfigType)) => {
       try {
         const configToSave =
-          typeof newConfig === "function"
+          typeof newConfig === 'function'
             ? (newConfig as (prevState: ConfigType) => ConfigType)(config[key])
             : newConfig;
 
@@ -104,9 +92,5 @@ export const ConfigProvider: FC<ConfigProviderProps> = ({ children }) => {
     [config]
   );
 
-  return (
-    <ConfigContext.Provider value={{ config, saveConfig }}>
-      {children}
-    </ConfigContext.Provider>
-  );
+  return <ConfigContext.Provider value={{ config, saveConfig }}>{children}</ConfigContext.Provider>;
 };

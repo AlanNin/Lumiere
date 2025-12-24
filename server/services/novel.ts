@@ -1,16 +1,16 @@
-import { Explore } from "@/types/explore";
-import { Chapter, Novel, NovelInfo } from "@/types/novel";
-import { ExploreSection } from "../controllers/novel";
+import { Explore } from '@/types/explore';
+import { Chapter, Novel, NovelInfo } from '@/types/novel';
+import { ExploreSection } from '../controllers/novel';
 import {
   scrapeNovelChapter,
   scrapeNovelInfo,
   scrapeNovelsExplore,
   scrapeNovelsSearch,
-} from "./scrape";
-import { novelRepository } from "../repositories/novel";
-import { DownloadChapter } from "@/types/download";
-import slugify from "@/lib/slug";
-import { saveImage } from "@/lib/file-system";
+} from './scrape';
+import { novelRepository } from '../repositories/novel';
+import { DownloadChapter } from '@/types/download';
+import slugify from '@/lib/slug';
+import { saveImage } from '@/lib/file-system';
 
 export const novelService = {
   async getExploreSection({
@@ -20,8 +20,8 @@ export const novelService = {
     section: ExploreSection;
     pageNumber?: number;
   }): Promise<Explore> {
-    if (section === "search") {
-      throw new Error("Use scrapeExploreSearch() for search section.");
+    if (section === 'search') {
+      throw new Error('Use scrapeExploreSearch() for search section.');
     }
 
     const novelsExploreUrl = getNovelsExploreUrl(section, pageNumber);
@@ -40,13 +40,9 @@ export const novelService = {
     };
   },
 
-  async getExploreSearch({
-    searchQuery,
-  }: {
-    searchQuery: string;
-  }): Promise<Explore> {
+  async getExploreSearch({ searchQuery }: { searchQuery: string }): Promise<Explore> {
     if (searchQuery.length === 0) {
-      throw new Error("Search query cannot be empty.");
+      throw new Error('Search query cannot be empty.');
     }
 
     const searchNovelsUrl = getNovelSearchUrl(searchQuery);
@@ -63,11 +59,7 @@ export const novelService = {
     };
   },
 
-  async getNovel({
-    novelTitle,
-  }: {
-    novelTitle: NovelInfo["title"];
-  }): Promise<NovelInfo> {
+  async getNovel({ novelTitle }: { novelTitle: NovelInfo['title'] }): Promise<NovelInfo> {
     try {
       const novelTitleSlug = slugify(novelTitle);
 
@@ -81,9 +73,7 @@ export const novelService = {
 
       const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
       const novelChaptersAjaxUrl = getNovelChaptersAjaxUrl(novelTitleSlug);
-      const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(
-        novelTitleSlug
-      );
+      const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(novelTitleSlug);
 
       info = await scrapeNovelInfo({
         novelInfoUrl,
@@ -92,7 +82,7 @@ export const novelService = {
       });
 
       if (!info) {
-        throw new Error("Failed to scrape novel info");
+        throw new Error('Failed to scrape novel info');
       }
 
       const { uri: savedImageUri } = await saveImage({
@@ -108,7 +98,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -122,10 +112,7 @@ export const novelService = {
     try {
       const novelTitleSlug = slugify(novelTitle);
 
-      let chapterData = await novelRepository.getNovelChapter(
-        novelTitle,
-        chapterNumber
-      );
+      let chapterData = await novelRepository.getNovelChapter(novelTitle, chapterNumber);
 
       if (!chapterData) {
         return null;
@@ -135,11 +122,9 @@ export const novelService = {
         return chapterData;
       }
 
-      const novelStartsAtChapterZero = await novelRepository.checkIfNovelStartAtChapterZero(
-        {
-          novelTitle,
-        }
-      );
+      const novelStartsAtChapterZero = await novelRepository.checkIfNovelStartAtChapterZero({
+        novelTitle,
+      });
 
       const novelChapterUrl = getNovelChapterUrl(
         novelTitleSlug,
@@ -153,7 +138,7 @@ export const novelService = {
       });
 
       if (!scrapedChapter) {
-        throw new Error("Failed to scrape novel chapter");
+        throw new Error('Failed to scrape novel chapter');
       }
 
       chapterData.content = scrapedChapter.content;
@@ -163,7 +148,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -186,7 +171,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -196,9 +181,7 @@ export const novelService = {
 
       const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
       const novelChaptersAjaxUrl = getNovelChaptersAjaxUrl(novelTitleSlug);
-      const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(
-        novelTitleSlug
-      );
+      const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(novelTitleSlug);
 
       const info = await scrapeNovelInfo({
         novelInfoUrl,
@@ -207,7 +190,7 @@ export const novelService = {
       });
 
       if (!info) {
-        throw new Error("Failed to scrape novel info");
+        throw new Error('Failed to scrape novel info');
       }
 
       await novelRepository.refreshNovel(info);
@@ -217,7 +200,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -253,7 +236,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -273,7 +256,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -281,19 +264,16 @@ export const novelService = {
     novelTitle,
     customImageUri,
   }: {
-    novelTitle: NovelInfo["title"];
+    novelTitle: NovelInfo['title'];
     customImageUri: string;
   }): Promise<boolean> {
     try {
-      return await novelRepository.updateNovelCustomImage(
-        novelTitle,
-        customImageUri
-      );
+      return await novelRepository.updateNovelCustomImage(novelTitle, customImageUri);
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -309,11 +289,9 @@ export const novelService = {
 
       const novelTitleSlug = slugify(novelTitle);
 
-      const novelStartsAtChapterZero = await novelRepository.checkIfNovelStartAtChapterZero(
-        {
-          novelTitle,
-        }
-      );
+      const novelStartsAtChapterZero = await novelRepository.checkIfNovelStartAtChapterZero({
+        novelTitle,
+      });
 
       const novelChapterUrl = getNovelChapterUrl(
         novelTitleSlug,
@@ -327,7 +305,7 @@ export const novelService = {
       });
 
       if (!scrapedChapter) {
-        throw new Error("Failed to scrape novel chapter");
+        throw new Error('Failed to scrape novel chapter');
       }
 
       const content = scrapedChapter.content;
@@ -345,7 +323,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -362,24 +340,22 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
   async removeAllDownloadedChaptersFromNovels({
     novelTitles,
   }: {
-    novelTitles: NovelInfo["title"][];
+    novelTitles: NovelInfo['title'][];
   }): Promise<boolean> {
     try {
-      return await novelRepository.removeAllDownloadedChaptersFromNovels(
-        novelTitles
-      );
+      return await novelRepository.removeAllDownloadedChaptersFromNovels(novelTitles);
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -399,7 +375,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -419,7 +395,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -439,7 +415,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -469,7 +445,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -489,7 +465,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -509,15 +485,11 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
-  async checkIfIsStored({
-    novelTitle,
-  }: {
-    novelTitle: string;
-  }): Promise<boolean> {
+  async checkIfIsStored({ novelTitle }: { novelTitle: string }): Promise<boolean> {
     try {
       return await novelRepository.checkIfIsStored({
         novelTitle,
@@ -526,7 +498,7 @@ export const novelService = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 };
@@ -534,10 +506,10 @@ export const novelService = {
 // Helper functions
 function getNovelsExploreUrl(section: ExploreSection, pageNumber: number) {
   const EXPLORE_SECTION_MAP: Record<ExploreSection, string> = {
-    popular: "popular",
-    "latest-releases": "latest-release",
-    new: "new",
-    search: "",
+    popular: 'popular',
+    'latest-releases': 'latest-release',
+    new: 'new',
+    search: '',
   };
 
   return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/genre-all/sort-${
@@ -552,21 +524,15 @@ function getNovelSearchUrl(searchQuery: string) {
 }
 
 function getNovelInfoUrl(novelTitleSlug: string) {
-  return `${String(
-    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
-  )}/book/${novelTitleSlug}`;
+  return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/book/${novelTitleSlug}`;
 }
 
 function getNovelChaptersAjaxUrl(novelTitleSlug: string) {
-  return `${String(
-    process.env.EXPO_PUBLIC_SCRAPE_CHAPTERS_LIST_URL
-  )}?novelId=${novelTitleSlug}`;
+  return `${String(process.env.EXPO_PUBLIC_SCRAPE_CHAPTERS_LIST_URL)}?novelId=${novelTitleSlug}`;
 }
 
 function getNovelChaptersMainSourceUrl(novelTitleSlug: string) {
-  return `${String(
-    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
-  )}/book/${novelTitleSlug}/chapters`;
+  return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/book/${novelTitleSlug}/chapters`;
 }
 
 function getNovelChapterUrl(
@@ -574,43 +540,37 @@ function getNovelChapterUrl(
   chapterNumber: number,
   novelStartsAtChapterZero?: boolean
 ) {
-  return `${String(
-    process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
-  )}/book/${novelTitleSlug}/chapter-${
+  return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/book/${novelTitleSlug}/chapter-${
     novelStartsAtChapterZero ? chapterNumber + 1 : chapterNumber
   }`;
 }
 
-function mergeNovelsScrapedWithStored(
-  scrapedNovels: Novel[]
-): Promise<Novel[]> {
+function mergeNovelsScrapedWithStored(scrapedNovels: Novel[]): Promise<Novel[]> {
   return Promise.all(
-    scrapedNovels.map(
-      async (scraped): Promise<Novel> => {
-        const stored = await novelRepository.findNovel({
-          novelTitle: scraped.title,
-        });
+    scrapedNovels.map(async (scraped): Promise<Novel> => {
+      const stored = await novelRepository.findNovel({
+        novelTitle: scraped.title,
+      });
 
-        if (stored) {
-          return {
-            title: stored.title,
-            imageUrl: stored.imageUrl,
-            customImageUri: stored.customImageUri,
-            rating: stored.rating ?? 0,
-            rank: stored.rank ?? 0,
-            isSaved: stored.isSaved,
-          };
-        }
-
+      if (stored) {
         return {
-          title: scraped.title,
-          imageUrl: scraped.imageUrl,
-          customImageUri: null,
-          rating: scraped.rating ?? 0,
-          rank: scraped.rank ?? 0,
-          isSaved: false,
+          title: stored.title,
+          imageUrl: stored.imageUrl,
+          customImageUri: stored.customImageUri,
+          rating: stored.rating ?? 0,
+          rank: stored.rank ?? 0,
+          isSaved: stored.isSaved,
         };
       }
-    )
+
+      return {
+        title: scraped.title,
+        imageUrl: scraped.imageUrl,
+        customImageUri: null,
+        rating: scraped.rating ?? 0,
+        rank: scraped.rank ?? 0,
+        isSaved: false,
+      };
+    })
   );
 }

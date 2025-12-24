@@ -42,15 +42,15 @@ export type NovelInfo = Novel & {
 };
 
 export type NovelChaptersFilter = {
-  key: "downloaded" | "unread" | "bookmarked";
-  value?: "checked" | "indeterminate" | "unchecked";
+  key: 'downloaded' | 'unread' | 'bookmarked';
+  value?: 'checked' | 'indeterminate' | 'unchecked';
 };
 
 export type NovelChaptersFilterUI = NovelChaptersFilter & {
   label: string;
 };
 
-export type NovelChaptersSort = { key: "by_chapter"; order?: "asc" | "desc" };
+export type NovelChaptersSort = { key: 'by_chapter'; order?: 'asc' | 'desc' };
 
 export type NovelChaptersSortUI = NovelChaptersSort & {
   label: string;

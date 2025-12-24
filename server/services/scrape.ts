@@ -1,21 +1,21 @@
-import { Chapter, Novel, NovelInfo } from "@/types/novel";
-import cheerio from "cheerio";
-import { extractChapterTitle, insertTitleHtml, sanitizeHtml } from "@/lib/html";
-import { colors } from "@/lib/constants";
+import { Chapter, Novel, NovelInfo } from '@/types/novel';
+import cheerio from 'cheerio';
+import { extractChapterTitle, insertTitleHtml, sanitizeHtml } from '@/lib/html';
+import { colors } from '@/lib/constants';
 import {
   ScrapeNovelChapter,
   ScrapeNovelInfo,
   ScrapeNovelsExplore,
   ScrapeNovelsSearch,
-} from "@/types/scrape";
+} from '@/types/scrape';
 
 const DEFAULT_HEADERS = {
-  "User-Agent": "Mozilla/5.0",
-  Accept: "application/json, text/html;q=0.9,*/*;q=0.8",
-  "Content-Type": "application/x-www-form-urlencoded",
+  'User-Agent': 'Mozilla/5.0',
+  Accept: 'application/json, text/html;q=0.9,*/*;q=0.8',
+  'Content-Type': 'application/x-www-form-urlencoded',
 };
 
-type NovelMetadata = Omit<NovelInfo, "chapters">;
+type NovelMetadata = Omit<NovelInfo, 'chapters'>;
 
 export async function scrapeNovelsExplore({
   novelsExploreUrl,
@@ -31,24 +31,19 @@ export async function scrapeNovelsExplore({
   const novels: Novel[] = [];
 
   // Each novel-item under #list-novel
-  $("#list-novel .novel-item").each((_: number, el: cheerio.Element) => {
-    const anchor = $(el).find("a").first();
-    const title =
-      anchor.attr("title")?.trim() || anchor.find(".novel-title").text().trim();
-    const url = anchor.attr("href") || "";
+  $('#list-novel .novel-item').each((_: number, el: cheerio.Element) => {
+    const anchor = $(el).find('a').first();
+    const title = anchor.attr('title')?.trim() || anchor.find('.novel-title').text().trim();
+    const url = anchor.attr('href') || '';
 
     // Fetch Image
-    const imgEl = anchor.find("figure.novel-cover img").first();
-    const dataSrc = imgEl.attr("data-src")?.trim();
-    const src = imgEl.attr("src")?.trim();
-    const imageUrl = dataSrc
-      ? dataSrc
-      : src && !src.startsWith("data:")
-      ? src
-      : "";
+    const imgEl = anchor.find('figure.novel-cover img').first();
+    const dataSrc = imgEl.attr('data-src')?.trim();
+    const src = imgEl.attr('src')?.trim();
+    const imageUrl = dataSrc ? dataSrc : src && !src.startsWith('data:') ? src : '';
 
     // Rank badge: <span class="badge _bl">R 11774</span>
-    const rankText = anchor.find("span.badge._bl").text().trim();
+    const rankText = anchor.find('span.badge._bl').text().trim();
     const rankMatch = rankText.match(/(\d+)/);
     const rank = rankMatch ? parseInt(rankMatch[1], 10) : undefined;
 
@@ -59,15 +54,13 @@ export async function scrapeNovelsExplore({
 
   // Determine totalPages by scanning all pagination links for ?page=N
   let totalPages = 1;
-  $('.pagination a.page-link[href*="?page="]').each(
-    (_: number, link: cheerio.Element) => {
-      const href = $(link).attr("href")!;
-      const m = href.match(/[?&]page=(\d+)/);
-      if (m) {
-        totalPages = Math.max(totalPages, parseInt(m[1], 10));
-      }
+  $('.pagination a.page-link[href*="?page="]').each((_: number, link: cheerio.Element) => {
+    const href = $(link).attr('href')!;
+    const m = href.match(/[?&]page=(\d+)/);
+    if (m) {
+      totalPages = Math.max(totalPages, parseInt(m[1], 10));
     }
-  );
+  });
 
   return { novels, totalPages };
 }
@@ -77,7 +70,7 @@ export async function scrapeNovelsSearch({
 }: ScrapeNovelsSearch): Promise<{ novels: Novel[] }> {
   const response = await fetch(searchNovelsUrl, {
     headers: DEFAULT_HEADERS,
-    method: "GET",
+    method: 'GET',
   });
 
   if (!response.ok) {
@@ -89,13 +82,13 @@ export async function scrapeNovelsSearch({
 
   const novels: Novel[] = [];
 
-  $(".novel-item").each((_: number, el: cheerio.Element) => {
-    const anchor = $(el).find("a").first();
-    const title = anchor.find(".novel-title").text().trim();
-    const novelUrl = anchor.attr("href") ?? "";
-    const imageUrl = anchor.find(".novel-cover img").attr("src") ?? "";
+  $('.novel-item').each((_: number, el: cheerio.Element) => {
+    const anchor = $(el).find('a').first();
+    const title = anchor.find('.novel-title').text().trim();
+    const novelUrl = anchor.attr('href') ?? '';
+    const imageUrl = anchor.find('.novel-cover img').attr('src') ?? '';
     // extract rank from the first .novel-stats strong, e.g. "Rank 98"
-    const rankText = anchor.find(".novel-stats strong").text().trim();
+    const rankText = anchor.find('.novel-stats strong').text().trim();
     const rankMatch = rankText.match(/Rank\s+(\d+)/i);
     const rank = rankMatch ? parseInt(rankMatch[1], 10) : undefined;
 
@@ -111,54 +104,45 @@ export async function scrapeNovelsSearch({
   return { novels };
 }
 
-async function scrapeNovelMetadata(
-  novelInfoUrl: string
-): Promise<NovelMetadata | null> {
+async function scrapeNovelMetadata(novelInfoUrl: string): Promise<NovelMetadata | null> {
   const html = await fetch(novelInfoUrl, {
     headers: DEFAULT_HEADERS,
   }).then((r) => r.text());
-  if (!html) throw new Error("Novel metadata not found");
+  if (!html) throw new Error('Novel metadata not found');
 
   const $ = cheerio.load(html);
 
-  const title = $("header.novel-header h1.novel-title").text().trim();
+  const title = $('header.novel-header h1.novel-title').text().trim();
   if (!title) return null;
 
   const imageUrl =
-    $("header.novel-header .cover img").attr("data-src") ||
-    $("header.novel-header .cover img").attr("src") ||
-    "";
+    $('header.novel-header .cover img').attr('data-src') ||
+    $('header.novel-header .cover img').attr('src') ||
+    '';
 
-  const authors = $(
-    'header.novel-header .author a.property-item span[itemprop="author"]'
-  )
+  const authors = $('header.novel-header .author a.property-item span[itemprop="author"]')
     .map((_: number, el: cheerio.Element) => $(el).text().trim())
     .get()
-    .join(", ");
+    .join(', ');
 
-  const ratingRaw = parseFloat(
-    $(".rating-star .my-rating").attr("data-rating") || "0"
-  );
+  const ratingRaw = parseFloat($('.rating-star .my-rating').attr('data-rating') || '0');
   const rating = Number.isFinite(ratingRaw) ? ratingRaw : 0;
 
-  const rankText = $(".rating .rank strong").text().trim();
+  const rankText = $('.rating .rank strong').text().trim();
   const rankMatch = rankText.match(/\d+/);
   const rank = rankMatch ? parseInt(rankMatch[0], 10) : 0;
 
   const status =
-    $(".header-stats .completed").text().trim() ||
-    $('.header-stats span small:contains("Status")')
-      .prev("strong")
-      .text()
-      .trim() ||
-    "";
+    $('.header-stats .completed').text().trim() ||
+    $('.header-stats span small:contains("Status")').prev('strong').text().trim() ||
+    '';
 
-  const genres = $(".categories ul li a.property-item")
+  const genres = $('.categories ul li a.property-item')
     .map((_: number, el: cheerio.Element) => $(el).text().trim())
     .get()
-    .join(",");
+    .join(',');
 
-  const summaryParas: string[] = $("div.summary .content p")
+  const summaryParas: string[] = $('div.summary .content p')
     .map((_: number, p: cheerio.Element) => $(p).text().trim())
     .get()
     .filter((t: string) => t.length > 0)
@@ -166,10 +150,10 @@ async function scrapeNovelMetadata(
 
   const description =
     summaryParas.length > 0
-      ? summaryParas.join("\n\n")
+      ? summaryParas.join('\n\n')
       : $('article[itemprop="itemReviewed"] meta[itemprop="description"]')
-          .attr("content")
-          ?.trim() || "";
+          .attr('content')
+          ?.trim() || '';
 
   return {
     title,
@@ -190,24 +174,22 @@ async function scrapeNovelChaptersFromAjax(
   const html = await fetch(novelChaptersAjaxUrl, {
     headers: DEFAULT_HEADERS,
   }).then((r) => r.text());
-  if (!html) throw new Error("Chapters not found");
+  if (!html) throw new Error('Chapters not found');
 
   const $ = cheerio.load(html);
-  const items = $(".list-chapter li").toArray();
+  const items = $('.list-chapter li').toArray();
 
-  const chapters: Chapter[] = items.map(
-    (liEl: cheerio.Element, idx: number) => {
-      const li = $(liEl);
-      const rawText = li.find(".nchr-text, .chapter-title").text().trim();
-      const url = li.find("a").attr("href") || "";
+  const chapters: Chapter[] = items.map((liEl: cheerio.Element, idx: number) => {
+    const li = $(liEl);
+    const rawText = li.find('.nchr-text, .chapter-title').text().trim();
+    const url = li.find('a').attr('href') || '';
 
-      const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
-      const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
-      const title = extractChapterTitle(rawText);
+    const numMatch = rawText.match(/^(?:Chapter\s*)?(\d+)/i);
+    const number = numMatch ? parseInt(numMatch[1], 10) : idx + 1;
+    const title = extractChapterTitle(rawText);
 
-      return { number, title, url, novelTitle };
-    }
-  );
+    return { number, title, url, novelTitle };
+  });
 
   chapters.sort((a, b) => a.number - b.number);
 
@@ -222,9 +204,9 @@ async function scrapeNovelChaptersFromAjax(
   }
   if (duplicated.length) {
     console.warn(
-      `⚠️ Capítulos duplicados detectados en los números: ${[
-        ...new Set(duplicated),
-      ].join(", ")}. Se conservan ambos sin reindexar.`
+      `⚠️ Capítulos duplicados detectados en los números: ${[...new Set(duplicated)].join(
+        ', '
+      )}. Se conservan ambos sin reindexar.`
     );
   }
 
@@ -254,34 +236,30 @@ async function scrapeNovelChaptersFromMainSource(
       currentPage === 1
         ? novelChaptersMainSourceUrl
         : `${novelChaptersMainSourceUrl}?page=${currentPage}`;
-    const html = await fetch(pageUrl, { headers: DEFAULT_HEADERS }).then((r) =>
-      r.text()
-    );
+    const html = await fetch(pageUrl, { headers: DEFAULT_HEADERS }).then((r) => r.text());
     if (!html) break;
 
     const $ = cheerio.load(html);
 
     // Parse chapters in current page
-    const items = $("ul.chapter-list li").toArray();
-    const chapters: Chapter[] = items.map(
-      (liEl: cheerio.Element, idx: number) => {
-        const li = $(liEl);
-        const url = li.find("a").attr("href") || "";
-        const numberText = li.find(".chapter-no").text().trim();
-        const number = parseInt(numberText, 10) || idx;
-        const rawText =
-          li.find(".chapter-title").text().trim() ||
-          li.find("a").attr("title")?.trim() ||
-          `Chapter ${number}`;
-        const title = extractChapterTitle(rawText);
+    const items = $('ul.chapter-list li').toArray();
+    const chapters: Chapter[] = items.map((liEl: cheerio.Element, idx: number) => {
+      const li = $(liEl);
+      const url = li.find('a').attr('href') || '';
+      const numberText = li.find('.chapter-no').text().trim();
+      const number = parseInt(numberText, 10) || idx;
+      const rawText =
+        li.find('.chapter-title').text().trim() ||
+        li.find('a').attr('title')?.trim() ||
+        `Chapter ${number}`;
+      const title = extractChapterTitle(rawText);
 
-        return { number, title, url, novelTitle };
-      }
-    );
+      return { number, title, url, novelTitle };
+    });
 
     allChapters.push(...chapters);
 
-    const nextPageLink = $(".pagination .page-link[rel='next']").attr("href");
+    const nextPageLink = $(".pagination .page-link[rel='next']").attr('href');
     if (!nextPageLink) break;
 
     currentPage++;
@@ -301,12 +279,9 @@ export async function scrapeNovelInfo({
   let chapters: Chapter[] = [];
 
   try {
-    chapters = await scrapeNovelChaptersFromAjax(
-      novelChaptersAjaxUrl,
-      metadata.title
-    );
+    chapters = await scrapeNovelChaptersFromAjax(novelChaptersAjaxUrl, metadata.title);
   } catch (err) {
-    console.warn("Ajax scraping failed:", err);
+    console.warn('Ajax scraping failed:', err);
   }
 
   if (!chapters || chapters.length === 0) {
@@ -316,8 +291,8 @@ export async function scrapeNovelInfo({
         metadata.title
       );
     } catch (err) {
-      console.error("Main source scraping also failed:", err);
-      throw new Error("Failed to scrape chapters from both sources.");
+      console.error('Main source scraping also failed:', err);
+      throw new Error('Failed to scrape chapters from both sources.');
     }
   }
 
@@ -340,12 +315,11 @@ export async function scrapeNovelChapter({
   const $ = cheerio.load(html);
 
   // --- 1) Novel title ---
-  const $titleLink = $(".titles a.booktitle").first();
-  const novelTitle =
-    $titleLink.attr("title")?.trim() || $titleLink.text().trim() || "";
+  const $titleLink = $('.titles a.booktitle').first();
+  const novelTitle = $titleLink.attr('title')?.trim() || $titleLink.text().trim() || '';
 
   // --- 2) Raw chapter title, e.g. "Chapter 1 Just an old Book" ---
-  const rawTitle = $(".titles .chapter-title").first().text().trim();
+  const rawTitle = $('.titles .chapter-title').first().text().trim();
 
   // --- 3) Parse out number & subtitle safely ---
   let number: number;
@@ -366,7 +340,7 @@ export async function scrapeNovelChapter({
 
   // --- 4) Chapter content ---
   // pick up only the reader HTML
-  const $contentDiv = $("#chapter-container #content");
+  const $contentDiv = $('#chapter-container #content');
   if (!$contentDiv.length) {
     throw new Error("Couldn't find the chapter content container");
   }

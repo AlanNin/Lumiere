@@ -1,9 +1,9 @@
-import { Explore } from "@/types/explore";
-import { Chapter, NovelInfo } from "@/types/novel";
-import { novelService } from "../services/novel";
-import { DownloadChapter } from "@/types/download";
+import { Explore } from '@/types/explore';
+import { Chapter, NovelInfo } from '@/types/novel';
+import { novelService } from '../services/novel';
+import { DownloadChapter } from '@/types/download';
 
-export type ExploreSection = "popular" | "latest-releases" | "new" | "search";
+export type ExploreSection = 'popular' | 'latest-releases' | 'new' | 'search';
 
 export const novelController = {
   async exploreNovels({
@@ -18,9 +18,9 @@ export const novelController = {
     try {
       let data: Explore;
 
-      if (section === "search") {
+      if (section === 'search') {
         data = await novelService.getExploreSearch({
-          searchQuery: searchQuery ?? "",
+          searchQuery: searchQuery ?? '',
         });
       } else {
         data = await novelService.getExploreSection({ section, pageNumber });
@@ -31,15 +31,11 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
-  async getNovel({
-    novelTitle,
-  }: {
-    novelTitle: NovelInfo["title"];
-  }): Promise<NovelInfo> {
+  async getNovel({ novelTitle }: { novelTitle: NovelInfo['title'] }): Promise<NovelInfo> {
     try {
       let data: NovelInfo;
 
@@ -50,7 +46,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -74,7 +70,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -97,7 +93,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -112,7 +108,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -138,7 +134,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -158,7 +154,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -166,7 +162,7 @@ export const novelController = {
     novelTitle,
     customImageUri,
   }: {
-    novelTitle: NovelInfo["title"];
+    novelTitle: NovelInfo['title'];
     customImageUri: string;
   }): Promise<boolean> {
     try {
@@ -178,7 +174,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -189,7 +185,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -204,14 +200,14 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
   async removeAllDownloadedChaptersFromNovels({
     novelTitles,
   }: {
-    novelTitles: NovelInfo["title"][];
+    novelTitles: NovelInfo['title'][];
   }): Promise<boolean> {
     try {
       return await novelService.removeAllDownloadedChaptersFromNovels({
@@ -221,7 +217,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -241,7 +237,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -261,7 +257,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -281,7 +277,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -304,7 +300,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -324,7 +320,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -344,15 +340,11 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
-  async checkIfIsStored({
-    novelTitle,
-  }: {
-    novelTitle: string;
-  }): Promise<boolean> {
+  async checkIfIsStored({ novelTitle }: { novelTitle: string }): Promise<boolean> {
     try {
       return await novelService.checkIfIsStored({
         novelTitle,
@@ -361,7 +353,7 @@ export const novelController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 };

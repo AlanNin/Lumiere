@@ -329,7 +329,7 @@ export default function ReaderComponent({
     updateNovelChapterReadAt();
   }, [incognitoMode, percentRef, chapter.progress]);
 
-  const debouncedSaveProgressNow = useDebouncedCallback(saveProgressNow, 1000);
+  const debouncedSaveProgressNow = useDebouncedCallback(saveProgressNow, 300);
 
   useEffect(() => {
     percentRef.current = percent;

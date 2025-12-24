@@ -1,14 +1,13 @@
-import { View } from "react-native";
-import { Chapter } from "@/types/novel";
-import { ReactNode, useRef } from "react";
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import ReaderStyleConfigDrawer from "./configDrawer";
-import { ReaderGeneralConfig, ReaderStyleConfig } from "@/types/appConfig";
-import ReaderTopBar from "./topBar";
-import ReaderBottomBar from "./bottomBar";
-import ProgressSeekBar from "./progressSeekBar";
-import { useConfig } from "@/providers/appConfig";
-import { VoiceIdentifier } from "@/types/reader";
+import { View } from 'react-native';
+import { Chapter } from '@/types/novel';
+import { ReactNode, useRef } from 'react';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import ReaderStyleConfigDrawer from './configDrawer';
+import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
+import ReaderTopBar from './topBar';
+import ReaderBottomBar from './bottomBar';
+import ProgressSeekBar from './progressSeekBar';
+import { VoiceIdentifier } from '@/types/reader';
 
 export default function ReaderLayout({
   children,
@@ -58,10 +57,7 @@ export default function ReaderLayout({
   };
 
   return (
-    <View
-      className="flex-1 relative"
-      style={{ backgroundColor: styles.body.backgroundColor }}
-    >
+    <View className="relative flex-1" style={{ backgroundColor: styles.body.backgroundColor }}>
       {/* children - reader component */}
       {children}
 
@@ -108,7 +104,7 @@ export default function ReaderLayout({
         setReaderStylesConfig={setReaderStylesConfig}
         readerGeneralConfig={readerGeneralConfig}
         setReaderGeneralConfig={setReaderGeneralConfig}
-        pointerEvents={layoutVisible ? "auto" : "none"}
+        pointerEvents={layoutVisible ? 'auto' : 'none'}
         availableVoices={availableVoices}
       />
     </View>
