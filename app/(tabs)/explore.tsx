@@ -178,7 +178,7 @@ export default function ExploreScreen() {
   } = useInfiniteQuery({
     queryKey: [
       'explore-novels',
-      isSearchOpen ? `search-${debouncedSearchQuery}` : selectedFilter.key,
+      debouncedSearchQuery.length > 0 && `search-${debouncedSearchQuery}`,
     ],
     queryFn: ({ pageParam }) =>
       novelController.exploreNovels({

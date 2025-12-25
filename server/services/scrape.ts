@@ -78,30 +78,13 @@ export async function scrapeNovelsSearch({
     throw new Error(`Failed to fetch search results for "${searchNovelsUrl}"`);
   }
 
-  const { html: rawHtml } = (await response.json()) as { html: string };
-  const $ = cheerio.load(rawHtml);
+  const json = await response.json();
 
-  const novels: Novel[] = [];
-
-  $('.novel-item').each((_: number, el: cheerio.Element) => {
-    const anchor = $(el).find('a').first();
-    const title = anchor.find('.novel-title').text().trim();
-    const novelUrl = anchor.attr('href') ?? '';
-    const image = anchor.find('.novel-cover img').attr('src') ?? '';
-    const imageUrl = process.env.EXPO_PUBLIC_SCRAPE_SITE_URL + image;
-    // extract rank from the first .novel-stats strong, e.g. "Rank 98"
-    const rankText = anchor.find('.novel-stats strong').text().trim();
-    const rankMatch = rankText.match(/Rank\s+(\d+)/i);
-    const rank = rankMatch ? parseInt(rankMatch[1], 10) : undefined;
-
-    if (title && novelUrl) {
-      novels.push({
-        title,
-        imageUrl,
-        rank: rank,
-      });
-    }
-  });
+  const novels: Novel[] = json.data.map((item: any) => ({
+    title: item.title,
+    imageUrl: `${process.env.EXPO_PUBLIC_SCRAPE_SITE_URL}/${item.image}`,
+    rank: item.rank,
+  }));
 
   return { novels };
 }
