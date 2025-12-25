@@ -1,28 +1,20 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import NovelCard from "@/components/novel/novelCard";
-import TabHeader from "@/components/tabHeader";
-import {
-  FlatList,
-  ToastAndroid,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
-} from "react-native";
-import { Novel } from "@/types/novel";
-import { TabView, TabBar } from "react-native-tab-view";
-import { colors } from "@/lib/constants";
-import { Telescope } from "lucide-react-native";
-import Quote from "@/components/statics/quote";
-import { useQuery } from "@tanstack/react-query";
-import { libraryController } from "@/server/controllers/library";
-import { Text } from "@/components/defaults";
-import { useKeyboard } from "@react-native-community/hooks";
-import { cn } from "@/lib/cn";
-import { useRouter } from "expo-router";
-import { useNovelRefreshQueue } from "@/providers/novelRefreshQueue";
-import { RefreshControl } from "react-native-gesture-handler";
-import { useConfig } from "@/providers/appConfig";
-import { useIsOnlineDirect } from "@/hooks/network";
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import NovelCard from '@/components/novel/novelCard';
+import TabHeader from '@/components/tabHeader';
+import { FlatList, ToastAndroid, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Novel } from '@/types/novel';
+import { TabView, TabBar } from 'react-native-tab-view';
+import { colors } from '@/lib/constants';
+import { Telescope } from 'lucide-react-native';
+import Quote from '@/components/statics/quote';
+import { useQuery } from '@tanstack/react-query';
+import { libraryController } from '@/server/controllers/library';
+import { Text } from '@/components/defaults';
+import { useRouter } from 'expo-router';
+import { useNovelRefreshQueue } from '@/providers/novelRefreshQueue';
+import { RefreshControl } from 'react-native-gesture-handler';
+import { useConfig } from '@/providers/appConfig';
+import { useIsOnlineDirect } from '@/hooks/network';
 
 const renderTabBar = (props: any) => (
   <TabBar
@@ -34,7 +26,7 @@ const renderTabBar = (props: any) => (
       paddingLeft: 4,
       paddingRight: 4,
     }}
-    tabStyle={{ width: "auto" }}
+    tabStyle={{ width: 'auto' }}
     indicatorStyle={{
       backgroundColor: colors.primary,
       width: 0.6,
@@ -48,7 +40,6 @@ const renderNovels = ({
   novels,
   width,
   searchQuery,
-  keyboardShown,
   onSearchInExplorer,
   onRefreshLibrary,
   getIsRefreshing,
@@ -57,7 +48,6 @@ const renderNovels = ({
   novels: Novel[];
   width: number;
   searchQuery: string;
-  keyboardShown: boolean;
   onSearchInExplorer: () => void;
   onRefreshLibrary: (titles: string[]) => void;
   getIsRefreshing: () => boolean;
@@ -67,7 +57,7 @@ const renderNovels = ({
 
   function handleRefresh() {
     if (!isOnline) {
-      ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+      ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
     onRefreshLibrary(novels.map((n) => n.title));
@@ -77,9 +67,8 @@ const renderNovels = ({
     <View className="flex-1">
       {searchQuery.length > 0 && isOnline && (
         <TouchableOpacity
-          className="my-1 py-2 flex items-center justify-center"
-          onPress={onSearchInExplorer}
-        >
+          className="my-1 flex items-center justify-center py-2"
+          onPress={onSearchInExplorer}>
           <Text className="text-center text-primary" style={{ marginTop: 16 }}>
             Search for "{searchQuery}" in the explorer
           </Text>
@@ -96,10 +85,10 @@ const renderNovels = ({
               <NovelCard
                 title={item.title}
                 imageUri={item.customImageUri ?? item.imageUrl}
-                containerClassName={index && index % 2 ? "ml-2" : "mr-2"}
+                containerClassName={index && index % 2 ? 'ml-2' : 'mr-2'}
                 containerStyle={{ maxWidth }}
                 href={{
-                  pathname: "/novel",
+                  pathname: '/novel',
                   params: {
                     title: item.title,
                     isSaved: item.isSaved ? 1 : 0,
@@ -125,16 +114,8 @@ const renderNovels = ({
           }
         />
       ) : (
-        <View
-          className={cn(
-            "items-center justify-center flex",
-            keyboardShown ? (isOnline ? "h-[32%]" : "h-[36%]") : "flex-1"
-          )}
-        >
-          <Quote
-            quote="No tales have wandered into this corner yet."
-            Icon={Telescope}
-          />
+        <View className="flex flex-1 items-center justify-center">
+          <Quote quote="No tales have wandered into this corner yet." Icon={Telescope} />
         </View>
       )}
     </View>
@@ -144,36 +125,31 @@ const renderNovels = ({
 export default function HomeScreen() {
   const [index, setIndex] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const { width } = useWindowDimensions();
-  const { keyboardShown } = useKeyboard();
   const router = useRouter();
-  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
+  const [downloadedOnly] = useConfig<boolean>('downloadedOnly', false);
   const { enqueueLibraryRefresh, isLibraryRefreshing } = useNovelRefreshQueue();
 
   const isOnline = useIsOnlineDirect();
 
   function handleSearchInExplorer() {
     setIsSearchOpen(false);
-    setSearchQuery("");
+    setSearchQuery('');
     router.push({
-      pathname: "/explore",
+      pathname: '/explore',
       params: { searchQuery },
     });
   }
 
-  const defaultLibrary = [
-    { id: 0, label: "Default", novels: [], sortOrder: 0 },
-  ];
+  const defaultLibrary = [{ id: 0, label: 'Default', novels: [], sortOrder: 0 }];
 
   const { data: libraryCategories = defaultLibrary, isLoading } = useQuery({
-    queryKey: ["library", downloadedOnly],
+    queryKey: ['library', downloadedOnly],
     queryFn: () => libraryController.getLibrary({ downloadedOnly }),
   });
 
-  const selectedCategories = libraryCategories?.length
-    ? libraryCategories
-    : defaultLibrary;
+  const selectedCategories = libraryCategories?.length ? libraryCategories : defaultLibrary;
 
   const hasAnyNovels = selectedCategories.some(
     (cat) => Array.isArray(cat.novels) && cat.novels.length > 0
@@ -188,9 +164,7 @@ export default function HomeScreen() {
     return sortedCategories.map((cat) => {
       const filtered = q.length
         ? cat.novels.filter((novel) => {
-            const genresArray = novel.genres
-              .split(",")
-              .map((g) => g.trim().toLowerCase());
+            const genresArray = novel.genres.split(',').map((g) => g.trim().toLowerCase());
 
             return (
               novel.title.toLowerCase().includes(q) ||
@@ -212,10 +186,7 @@ export default function HomeScreen() {
     () =>
       filteredCategories.map((cat) => ({
         key: cat.id.toString(),
-        title:
-          searchQuery.length > 0
-            ? `${cat.label} (${cat.filteredNovels.length})`
-            : cat.label,
+        title: searchQuery.length > 0 ? `${cat.label} (${cat.filteredNovels.length})` : cat.label,
       })),
     [filteredCategories]
   );
@@ -229,45 +200,42 @@ export default function HomeScreen() {
   const renderScenes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return sortedCategories.reduce((scenes, library) => {
-      const filteredNovels =
-        query.length > 0
-          ? library.novels.filter((novel) => {
-              const q = query;
-              const genresArray = novel.genres
-                .split(",")
-                .map((g) => g.trim().toLowerCase());
+    return sortedCategories.reduce(
+      (scenes, library) => {
+        const filteredNovels =
+          query.length > 0
+            ? library.novels.filter((novel) => {
+                const q = query;
+                const genresArray = novel.genres.split(',').map((g) => g.trim().toLowerCase());
 
-              return (
-                novel.title.toLowerCase().includes(q) ||
-                novel.author.toLowerCase().includes(q) ||
-                novel.description.toLowerCase().includes(q) ||
-                genresArray.includes(q)
-              );
-            })
-          : library.novels;
+                return (
+                  novel.title.toLowerCase().includes(q) ||
+                  novel.author.toLowerCase().includes(q) ||
+                  novel.description.toLowerCase().includes(q) ||
+                  genresArray.includes(q)
+                );
+              })
+            : library.novels;
 
-      scenes[library.id.toString()] = () =>
-        renderNovels({
-          novels: filteredNovels,
-          width,
-          searchQuery,
-          keyboardShown,
-          onSearchInExplorer: handleSearchInExplorer,
-          onRefreshLibrary: (titles) =>
-            enqueueLibraryRefresh([{ libraryId: library.id, titles }]),
-          getIsRefreshing: () => isLibraryRefreshing(library.id),
-          isOnline,
-        });
+        scenes[library.id.toString()] = () =>
+          renderNovels({
+            novels: filteredNovels,
+            width,
+            searchQuery,
+            onSearchInExplorer: handleSearchInExplorer,
+            onRefreshLibrary: (titles) =>
+              enqueueLibraryRefresh([{ libraryId: library.id, titles }]),
+            getIsRefreshing: () => isLibraryRefreshing(library.id),
+            isOnline,
+          });
 
-      return scenes;
-    }, {} as { [key: string]: () => ReactNode });
-  }, [sortedCategories, width, searchQuery, keyboardShown, isOnline]);
+        return scenes;
+      },
+      {} as { [key: string]: () => ReactNode }
+    );
+  }, [sortedCategories, width, searchQuery, isOnline]);
 
-  const validIndex = Math.min(
-    Math.max(index, 0),
-    Math.max(routes.length - 1, 0)
-  );
+  const validIndex = Math.min(Math.max(index, 0), Math.max(routes.length - 1, 0));
 
   const renderContent = () => {
     if (isLoading) {
@@ -277,10 +245,7 @@ export default function HomeScreen() {
     if (routes.length === 0) {
       return (
         <View className="flex-1">
-          <Quote
-            quote="No tales have wandered into this corner yet."
-            Icon={Telescope}
-          />
+          <Quote quote="No tales have wandered into this corner yet." Icon={Telescope} />
         </View>
       );
     }

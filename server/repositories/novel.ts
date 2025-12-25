@@ -1,14 +1,14 @@
-import { Chapter, NovelInfo } from "@/types/novel";
-import { db_client } from "../db/client";
-import { novelCategories, novelChapters, novels } from "../db/schema";
-import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
-import { DownloadChapter } from "@/types/download";
+import { Chapter, NovelInfo } from '@/types/novel';
+import { db_client } from '../db/client';
+import { novelCategories, novelChapters, novels } from '../db/schema';
+import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
+import { DownloadChapter } from '@/types/download';
 
 export const novelRepository = {
   async findNovel({
     novelTitle,
   }: {
-    novelTitle: NovelInfo["title"];
+    novelTitle: NovelInfo['title'];
   }): Promise<(NovelInfo & { chapters: Chapter[] }) | null> {
     try {
       const novelRows = await db_client
@@ -74,18 +74,18 @@ export const novelRepository = {
           progress: Number(c.progress),
           bookMarked: Boolean(c.bookMarked),
           downloaded: Boolean(c.downloaded),
-          content: c.content === null ? "" : String(c.content),
+          content: c.content === null ? '' : String(c.content),
           readAt: String(c.readAt),
         })),
       };
 
       return novelInfo;
     } catch (error) {
-      console.error("findNovel failed:", error);
+      console.error('findNovel failed:', error);
       if (error instanceof Error) {
         throw new Error(`Failed to find novel: ${error.message}`);
       }
-      throw new Error("An unknown error occurred while finding novel.");
+      throw new Error('An unknown error occurred while finding novel.');
     }
   },
 
@@ -118,9 +118,9 @@ export const novelRepository = {
       });
       return true;
     } catch (error) {
-      console.error("Failed to save novel:", error);
+      console.error('Failed to save novel:', error);
       if (error instanceof Error) throw error;
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -141,43 +141,33 @@ export const novelRepository = {
           .where(eq(novels.title, title));
 
         if (upd.changes === 0) {
-          throw new Error("NOVEL_NOT_FOUND");
+          throw new Error('NOVEL_NOT_FOUND');
         }
 
         if (!saved) {
-          await tx
-            .delete(novelCategories)
-            .where(eq(novelCategories.novelTitle, title))
-            .run();
+          await tx.delete(novelCategories).where(eq(novelCategories.novelTitle, title)).run();
           return;
         }
 
-        await tx
-          .delete(novelCategories)
-          .where(eq(novelCategories.novelTitle, title))
-          .run();
+        await tx.delete(novelCategories).where(eq(novelCategories.novelTitle, title)).run();
 
         if (categoriesId && categoriesId.length > 0) {
           const rows = categoriesId.map((catId) => ({
             novelTitle: title,
             categoryId: catId,
           }));
-          await tx
-            .insert(novelCategories)
-            .values(rows)
-            .onConflictDoNothing()
-            .run();
+          await tx.insert(novelCategories).values(rows).onConflictDoNothing().run();
         }
       });
 
       return true;
     } catch (error) {
-      if (error instanceof Error && error.message === "NOVEL_NOT_FOUND") {
+      if (error instanceof Error && error.message === 'NOVEL_NOT_FOUND') {
         return false;
       }
-      console.error("Failed to set library status:", error);
+      console.error('Failed to set library status:', error);
       if (error instanceof Error) throw error;
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -226,25 +216,19 @@ export const novelRepository = {
             .update(novelChapters)
             .set({ title: chap.title })
             .where(
-              and(
-                eq(novelChapters.novelTitle, novel.title),
-                eq(novelChapters.number, chap.number)
-              )
+              and(eq(novelChapters.novelTitle, novel.title), eq(novelChapters.number, chap.number))
             );
         }
       });
 
       return true;
     } catch (e) {
-      console.error("Failed to refresh novel:", e);
+      console.error('Failed to refresh novel:', e);
       throw e;
     }
   },
 
-  async getNovelChapter(
-    novelTitle: string,
-    chapterNumber: number
-  ): Promise<Chapter | null> {
+  async getNovelChapter(novelTitle: string, chapterNumber: number): Promise<Chapter | null> {
     try {
       const row = await db_client
         .select({
@@ -258,10 +242,7 @@ export const novelRepository = {
         })
         .from(novelChapters)
         .where(
-          and(
-            eq(novelChapters.novelTitle, novelTitle),
-            eq(novelChapters.number, chapterNumber)
-          )
+          and(eq(novelChapters.novelTitle, novelTitle), eq(novelChapters.number, chapterNumber))
         )
         .get();
 
@@ -275,10 +256,7 @@ export const novelRepository = {
         })
         .from(novelChapters)
         .where(
-          and(
-            eq(novelChapters.novelTitle, novelTitle),
-            gt(novelChapters.number, chapterNumber)
-          )
+          and(eq(novelChapters.novelTitle, novelTitle), gt(novelChapters.number, chapterNumber))
         )
         .orderBy(asc(novelChapters.number))
         .limit(1)
@@ -292,10 +270,7 @@ export const novelRepository = {
         })
         .from(novelChapters)
         .where(
-          and(
-            eq(novelChapters.novelTitle, novelTitle),
-            lt(novelChapters.number, chapterNumber)
-          )
+          and(eq(novelChapters.novelTitle, novelTitle), lt(novelChapters.number, chapterNumber))
         )
         .orderBy(desc(novelChapters.number))
         .limit(1)
@@ -327,7 +302,7 @@ export const novelRepository = {
 
       return chapter;
     } catch (e) {
-      console.error("Failed to get novel chapter:", e);
+      console.error('Failed to get novel chapter:', e);
       throw e;
     }
   },
@@ -370,19 +345,14 @@ export const novelRepository = {
     const { changes } = await db_client
       .update(novelChapters)
       .set({ readAt: sql`DATETIME('now', 'localtime')` })
-      .where(
-        and(
-          eq(novelChapters.novelTitle, novelTitle),
-          eq(novelChapters.number, chapterNumber)
-        )
-      )
+      .where(and(eq(novelChapters.novelTitle, novelTitle), eq(novelChapters.number, chapterNumber)))
       .run();
 
     return changes > 0;
   },
 
   async updateNovelCustomImage(
-    novelTitle: NovelInfo["title"],
+    novelTitle: NovelInfo['title'],
     customImageUri: string
   ): Promise<boolean> {
     try {
@@ -390,7 +360,7 @@ export const novelRepository = {
         await tx
           .update(novels)
           .set({
-            customImageUri: customImageUri === "" ? null : customImageUri,
+            customImageUri: customImageUri === '' ? null : customImageUri,
           })
           .where(eq(novels.title, novelTitle))
           .run();
@@ -400,7 +370,7 @@ export const novelRepository = {
 
       return true;
     } catch (e) {
-      console.error("Failed to update novel cover:", e);
+      console.error('Failed to update novel cover:', e);
       throw e;
     }
   },
@@ -409,10 +379,7 @@ export const novelRepository = {
     try {
       const { novelTitle, chapterNumber, chapterContent } = chapter;
 
-      if (
-        typeof chapterContent !== "string" ||
-        chapterContent.trim().length === 0
-      ) {
+      if (typeof chapterContent !== 'string' || chapterContent.trim().length === 0) {
         return false;
       }
 
@@ -421,10 +388,7 @@ export const novelRepository = {
           .update(novelChapters)
           .set({ downloaded: 1, content: chapterContent })
           .where(
-            and(
-              eq(novelChapters.novelTitle, novelTitle),
-              eq(novelChapters.number, chapterNumber)
-            )
+            and(eq(novelChapters.novelTitle, novelTitle), eq(novelChapters.number, chapterNumber))
           )
           .run();
         return result;
@@ -432,7 +396,7 @@ export const novelRepository = {
 
       return (res?.changes ?? 0) > 0;
     } catch (e) {
-      console.error("Failed to download chapter:", e);
+      console.error('Failed to download chapter:', e);
       throw e;
     }
   },
@@ -441,17 +405,13 @@ export const novelRepository = {
     chapters: Array<{ novelTitle: string; chapterNumber: number }>
   ): Promise<boolean> {
     if (!Array.isArray(chapters)) {
-      throw new Error("Expected chapters to be an array");
+      throw new Error('Expected chapters to be an array');
     }
     const valid: typeof chapters = [];
     const skipped: typeof chapters = [];
 
     for (const ch of chapters) {
-      if (
-        ch &&
-        typeof ch.novelTitle === "string" &&
-        Number.isInteger(ch.chapterNumber)
-      ) {
+      if (ch && typeof ch.novelTitle === 'string' && Number.isInteger(ch.chapterNumber)) {
         valid.push(ch);
       } else {
         skipped.push(ch);
@@ -475,9 +435,7 @@ export const novelRepository = {
         let changes = 0;
 
         for (const [novelTitle, numbers] of Object.entries(groups)) {
-          const uniqueNumbers = Array.from(new Set(numbers)).sort(
-            (a, b) => a - b
-          );
+          const uniqueNumbers = Array.from(new Set(numbers)).sort((a, b) => a - b);
 
           const res = await tx
             .update(novelChapters)
@@ -498,14 +456,12 @@ export const novelRepository = {
 
       return totalChanges > 0;
     } catch (e) {
-      console.error("Failed to reset downloaded chapters:", e);
+      console.error('Failed to reset downloaded chapters:', e);
       throw e;
     }
   },
 
-  async removeAllDownloadedChaptersFromNovels(
-    novelTitles: NovelInfo["title"][]
-  ): Promise<boolean> {
+  async removeAllDownloadedChaptersFromNovels(novelTitles: NovelInfo['title'][]): Promise<boolean> {
     const uniqueNovels = Array.from(new Set(novelTitles)).sort();
 
     try {
@@ -514,10 +470,7 @@ export const novelRepository = {
           .update(novelChapters)
           .set({ downloaded: 0, content: null })
           .where(
-            and(
-              eq(novelChapters.downloaded, 1),
-              inArray(novelChapters.novelTitle, uniqueNovels)
-            )
+            and(eq(novelChapters.downloaded, 1), inArray(novelChapters.novelTitle, uniqueNovels))
           )
           .run();
 
@@ -526,7 +479,7 @@ export const novelRepository = {
 
       return result.changes > 0;
     } catch (e) {
-      console.error("Failed to remove downloaded chapters:", e);
+      console.error('Failed to remove downloaded chapters:', e);
       throw e;
     }
   },
@@ -552,7 +505,7 @@ export const novelRepository = {
       .run();
 
     if (changes === 0) {
-      throw new Error("NO_CHAPTERS_UPDATED");
+      throw new Error('NO_CHAPTERS_UPDATED');
     }
 
     return true;
@@ -579,7 +532,7 @@ export const novelRepository = {
       .run();
 
     if (changes === 0) {
-      throw new Error("NO_CHAPTERS_UPDATED");
+      throw new Error('NO_CHAPTERS_UPDATED');
     }
 
     return true;
@@ -604,7 +557,7 @@ export const novelRepository = {
       .get();
 
     if (!chapter) {
-      throw new Error("NO_CHAPTER_FOUND");
+      throw new Error('NO_CHAPTER_FOUND');
     }
 
     const newBookmarked = chapter.bookMarked === 1 ? 0 : 1;
@@ -616,7 +569,7 @@ export const novelRepository = {
       .run();
 
     if (changes === 0) {
-      throw new Error("NO_CHAPTERS_UPDATED");
+      throw new Error('NO_CHAPTERS_UPDATED');
     }
     return true;
   },
@@ -642,7 +595,7 @@ export const novelRepository = {
       .run();
 
     if (changes === 0) {
-      throw new Error("NO_CHAPTERS_UPDATED");
+      throw new Error('NO_CHAPTERS_UPDATED');
     }
     return true;
   },
@@ -668,7 +621,7 @@ export const novelRepository = {
       .run();
 
     if (changes === 0) {
-      throw new Error("NO_CHAPTERS_UPDATED");
+      throw new Error('NO_CHAPTERS_UPDATED');
     }
     return true;
   },
@@ -685,22 +638,13 @@ export const novelRepository = {
     const { changes } = await db_client
       .update(novelChapters)
       .set({ progress: 100 })
-      .where(
-        and(
-          eq(novelChapters.novelTitle, novelTitle),
-          lt(novelChapters.number, uptoChapter)
-        )
-      )
+      .where(and(eq(novelChapters.novelTitle, novelTitle), lt(novelChapters.number, uptoChapter)))
       .run();
 
     return changes > 0;
   },
 
-  async checkIfIsStored({
-    novelTitle,
-  }: {
-    novelTitle: string;
-  }): Promise<boolean> {
+  async checkIfIsStored({ novelTitle }: { novelTitle: string }): Promise<boolean> {
     try {
       const novelRow = await db_client
         .select()
@@ -713,19 +657,13 @@ export const novelRepository = {
       }
       return true;
     } catch (error) {
-      console.error("Failed to check if novel is stored:", error);
+      console.error('Failed to check if novel is stored:', error);
       if (error instanceof Error) throw error;
-      throw new Error(
-        "An unknown error occurred while checking if novel is stored."
-      );
+      throw new Error('An unknown error occurred while checking if novel is stored.');
     }
   },
 
-  async checkIfNovelStartAtChapterZero({
-    novelTitle,
-  }: {
-    novelTitle: string;
-  }): Promise<boolean> {
+  async checkIfNovelStartAtChapterZero({ novelTitle }: { novelTitle: string }): Promise<boolean> {
     try {
       const row = await db_client
         .select({ number: novelChapters.number })
@@ -738,11 +676,97 @@ export const novelRepository = {
       if (!row) return false;
       return Number(row.number) === 0;
     } catch (error) {
-      console.error("Failed to check if novel starts at chapter zero:", error);
+      console.error('Failed to check if novel starts at chapter zero:', error);
       if (error instanceof Error) throw error;
-      throw new Error(
-        "An unknown error occurred in checkIfNovelStartAtChapterZero."
-      );
+      throw new Error('An unknown error occurred in checkIfNovelStartAtChapterZero.');
+    }
+  },
+
+  async getLastRead(): Promise<Chapter | null> {
+    try {
+      const lastRead = await db_client
+        .select({
+          id: novelChapters.id,
+          novelTitle: novelChapters.novelTitle,
+          number: novelChapters.number,
+          title: novelChapters.title,
+          progress: novelChapters.progress,
+          bookMarked: novelChapters.bookMarked,
+          downloaded: novelChapters.downloaded,
+          content: novelChapters.content,
+          readAt: novelChapters.readAt,
+        })
+        .from(novelChapters)
+        .where(sql`${novelChapters.readAt} IS NOT NULL`)
+        .orderBy(desc(novelChapters.readAt))
+        .limit(1)
+        .get();
+
+      if (!lastRead) return null;
+
+      const next = await db_client
+        .select({
+          number: novelChapters.number,
+          title: novelChapters.title,
+          downloaded: novelChapters.downloaded,
+        })
+        .from(novelChapters)
+        .where(
+          and(
+            eq(novelChapters.novelTitle, lastRead.novelTitle),
+            gt(novelChapters.number, lastRead.number)
+          )
+        )
+        .orderBy(asc(novelChapters.number))
+        .limit(1)
+        .get();
+
+      const previous = await db_client
+        .select({
+          number: novelChapters.number,
+          title: novelChapters.title,
+          downloaded: novelChapters.downloaded,
+        })
+        .from(novelChapters)
+        .where(
+          and(
+            eq(novelChapters.novelTitle, lastRead.novelTitle),
+            lt(novelChapters.number, lastRead.number)
+          )
+        )
+        .orderBy(desc(novelChapters.number))
+        .limit(1)
+        .get();
+
+      return {
+        id: Number(lastRead.id),
+        novelTitle: lastRead.novelTitle,
+        number: Number(lastRead.number),
+        title: String(lastRead.title),
+        progress: Number(lastRead.progress),
+        bookMarked: Boolean(lastRead.bookMarked),
+        downloaded: Boolean(lastRead.downloaded),
+        content: lastRead.content ? String(lastRead.content) : undefined,
+        readAt: String(lastRead.readAt),
+        previousChapter: previous
+          ? {
+              number: Number(previous.number),
+              title: String(previous.title),
+              downloaded: Boolean(previous.downloaded),
+            }
+          : undefined,
+        nextChapter: next
+          ? {
+              number: Number(next.number),
+              title: String(next.title),
+              downloaded: Boolean(next.downloaded),
+            }
+          : undefined,
+      };
+    } catch (error) {
+      console.error('Failed to get last read novel:', error);
+      if (error instanceof Error) throw error;
+      throw new Error('An unknown error occurred.');
     }
   },
 };

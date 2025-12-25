@@ -1,11 +1,11 @@
-import OptionButton from "@/components/more/optionButton";
-import Separator from "@/components/separator";
-import { useChapterDownloadQueue } from "@/providers/chapterDownloadQueue";
-import { useSafeAreaPaddings } from "@/hooks/useSafeAreaPaddings";
+import OptionButton from '@/components/more/optionButton';
+import Separator from '@/components/separator';
+import { useChapterDownloadQueue } from '@/providers/chapterDownloadQueue';
+import { useSafeAreaPaddings } from '@/hooks/useSafeAreaPaddings';
 
-import { useConfig } from "@/providers/appConfig";
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useConfig } from '@/providers/appConfig';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import {
   ArrowDownToLine,
   CalendarSync,
@@ -14,36 +14,26 @@ import {
   Info,
   Tags,
   VenetianMask,
-} from "lucide-react-native";
-import { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+} from 'lucide-react-native';
+import { ReactNode } from 'react';
+import { ScrollView, View } from 'react-native';
 
 export default function MoreScreen() {
   const router = useRouter();
   const { getPaddingTop } = useSafeAreaPaddings();
   const paddingTop = getPaddingTop();
 
-  const [downloadedOnly, setDownloadedOnly] = useConfig<boolean>(
-    "downloadedOnly",
-    false
-  );
-  const [incognitoMode, setIncognitoMode] = useConfig<boolean>(
-    "incognitoMode",
-    false
-  );
+  const [downloadedOnly, setDownloadedOnly] = useConfig<boolean>('downloadedOnly', false);
+  const [incognitoMode, setIncognitoMode] = useConfig<boolean>('incognitoMode', false);
 
-  const {
-    queueDownload,
-    areDownloadsPaused,
-    isWaitingForConnection,
-  } = useChapterDownloadQueue();
+  const { queueDownload, areDownloadsPaused, isWaitingForConnection } = useChapterDownloadQueue();
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView showsVerticalScrollIndicator={false} className="flex-1 bg-background">
       <View className="flex-1" style={{ paddingTop: paddingTop }}>
-        <View className="w-full h-52 flex items-center justify-center">
+        <View className="flex h-52 w-full items-center justify-center">
           <Image
-            source={require("@/assets/icon-transparent.png")}
+            source={require('@/assets/icon-transparent.png')}
             contentFit="contain"
             style={{ width: 64, height: 64 }}
           />
@@ -74,24 +64,24 @@ export default function MoreScreen() {
               queueDownload.length > 0
                 ? `${
                     isWaitingForConnection
-                      ? "Waiting for connection"
+                      ? 'Waiting for connection'
                       : areDownloadsPaused
-                      ? "Paused"
-                      : "Donwloading"
+                        ? 'Paused'
+                        : 'Donwloading'
                   } • ${queueDownload.length} remaining`
                 : undefined
             }
-            onPress={() => router.push("/(more)/downloadQueue")}
+            onPress={() => router.push('/(more)/downloadQueue')}
           />
           <OptionButton
             Icon={Tags}
             label="Categories"
-            onPress={() => router.push("/(more)/categories")}
+            onPress={() => router.push('/(more)/categories')}
           />
           <OptionButton
             Icon={Database}
             label="Data & Storage"
-            onPress={() => router.push("/(more)/dataAndStorage")}
+            onPress={() => router.push('/(more)/dataAndStorage')}
           />
           <OptionButton
             Icon={CalendarSync}
@@ -102,11 +92,7 @@ export default function MoreScreen() {
         </OptionsWrapper>
         <Separator />
         <OptionsWrapper>
-          <OptionButton
-            Icon={Info}
-            label="About"
-            onPress={() => router.push("/(more)/about")}
-          />
+          <OptionButton Icon={Info} label="About" onPress={() => router.push('/(more)/about')} />
         </OptionsWrapper>
       </View>
     </ScrollView>
@@ -114,9 +100,5 @@ export default function MoreScreen() {
 }
 
 function OptionsWrapper({ children }: { children: ReactNode }) {
-  return (
-    <View className="flex flex-col gap-y-4 items-center px-5 py-6">
-      {children}
-    </View>
-  );
+  return <View className="flex flex-col items-center gap-y-4 px-5 py-6">{children}</View>;
 }

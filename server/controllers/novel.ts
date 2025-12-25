@@ -356,4 +356,15 @@ export const novelController = {
       throw new Error('An unknown error occurred.');
     }
   },
+
+  async getLastRead(): Promise<Chapter> {
+    try {
+      return await novelService.getLastRead();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error('An unknown error occurred.');
+    }
+  },
 };

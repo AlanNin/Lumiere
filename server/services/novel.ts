@@ -501,6 +501,23 @@ export const novelService = {
       throw new Error('An unknown error occurred.');
     }
   },
+
+  async getLastRead(): Promise<Chapter> {
+    try {
+      const lastRead = await novelRepository.getLastRead();
+
+      if (!lastRead) {
+        throw new Error('Failed to get last read novel');
+      }
+
+      return lastRead;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error.message;
+      }
+      throw new Error('An unknown error occurred.');
+    }
+  },
 };
 
 // Helper functions

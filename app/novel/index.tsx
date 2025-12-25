@@ -440,34 +440,36 @@ export default function NovelScreen() {
           handleOpenMoreChapterDrawer={() => bottomDrawerMoreRef.current?.present()}
         />
 
-        <AnimatedFlashList
-          ref={listRef}
-          ListHeaderComponent={ListHeader}
-          data={novelChapters}
-          extraData={extraDeps}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          estimatedItemSize={44}
-          onScroll={scrollYHandler}
-          scrollEventThrottle={16}
-          contentContainerStyle={{
-            paddingBottom:
-              insets.bottom + (allChaptersCompleted || novelChapters.length === 0 ? 12 : 84),
-          }}
-          removeClippedSubviews={true}
-          onLoad={() => setListLoaded(true)}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing(String(title))}
-              onRefresh={handleRefresh}
-              progressBackgroundColor={colors.primary}
-              colors={[colors.primary_foreground]}
-            />
-          }
-          ListEmptyComponent={EmptyChaptersComponent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={(_, height) => setContentHeight(height)}
-        />
+        <View className="flex-1">
+          <AnimatedFlashList
+            ref={listRef}
+            ListHeaderComponent={ListHeader}
+            data={novelChapters}
+            extraData={extraDeps}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            estimatedItemSize={44}
+            onScroll={scrollYHandler}
+            scrollEventThrottle={16}
+            contentContainerStyle={{
+              paddingBottom:
+                insets.bottom + (allChaptersCompleted || novelChapters.length === 0 ? 12 : 84),
+            }}
+            removeClippedSubviews={true}
+            onLoad={() => setListLoaded(true)}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing(String(title))}
+                onRefresh={handleRefresh}
+                progressBackgroundColor={colors.primary}
+                colors={[colors.primary_foreground]}
+              />
+            }
+            ListEmptyComponent={EmptyChaptersComponent}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={(_, height) => setContentHeight(height)}
+          />
+        </View>
 
         {listLoaded &&
           novelChapters.length > 0 &&

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import FilterCategory from "@/components/explore/filterCategory";
-import TabHeader from "@/components/tabHeader";
-import NovelCard from "@/components/novel/novelCard";
-import { Novel } from "@/types/novel";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import FilterCategory from '@/components/explore/filterCategory';
+import TabHeader from '@/components/tabHeader';
+import NovelCard from '@/components/novel/novelCard';
+import { Novel } from '@/types/novel';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,10 +12,10 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
-} from "react-native";
-import { colors } from "@/lib/constants";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { ExploreSection, novelController } from "@/server/controllers/novel";
+} from 'react-native';
+import { colors } from '@/lib/constants';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { ExploreSection, novelController } from '@/server/controllers/novel';
 import {
   LucideIcon,
   Telescope,
@@ -25,14 +25,12 @@ import {
   Globe,
   History,
   WifiOff,
-} from "lucide-react-native";
-import useDebounce from "@/hooks/useDebounce";
-import Quote from "@/components/statics/quote";
-import Loading from "@/components/statics/loading";
-import { useKeyboard } from "@react-native-community/hooks";
-import { cn } from "@/lib/cn";
-import { useLocalSearchParams } from "expo-router";
-import { useIsOnline } from "@/providers/network";
+} from 'lucide-react-native';
+import useDebounce from '@/hooks/useDebounce';
+import Quote from '@/components/statics/quote';
+import Loading from '@/components/statics/loading';
+import { useLocalSearchParams } from 'expo-router';
+import { useIsOnline } from '@/providers/network';
 
 type FilterOption = {
   key: ExploreSection;
@@ -53,17 +51,11 @@ function RenderNovels({
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
 }) {
-  const { keyboardShown } = useKeyboard();
   const isOnline = useIsOnline();
 
   if (!novels || novels.length === 0) {
     return (
-      <View
-        className={cn(
-          "items-center justify-center flex",
-          keyboardShown ? "h-[36%]" : "flex-1"
-        )}
-      >
+      <View className="flex flex-1 items-center justify-center">
         <Quote quote="Archives empty. Try another search." Icon={Telescope} />
       </View>
     );
@@ -76,11 +68,7 @@ function RenderNovels({
       const scrollHeight = contentSize.height;
       const clientHeight = layoutMeasurement.height;
 
-      if (
-        hasNextPage &&
-        !isFetchingNextPage &&
-        scrollHeight - scrollTop <= clientHeight + 200
-      ) {
+      if (hasNextPage && !isFetchingNextPage && scrollHeight - scrollTop <= clientHeight + 200) {
         if (isOnline) {
           fetchNextPage();
         }
@@ -101,10 +89,10 @@ function RenderNovels({
             <NovelCard
               title={item.title}
               imageUri={item.customImageUri ?? item.imageUrl}
-              containerClassName={index && index % 2 ? "ml-2" : "mr-2"}
+              containerClassName={index && index % 2 ? 'ml-2' : 'mr-2'}
               containerStyle={{ maxWidth }}
               href={{
-                pathname: "/novel",
+                pathname: '/novel',
                 params: {
                   title: item.title,
                   isSaved: item.isSaved ? 1 : 0,
@@ -120,7 +108,7 @@ function RenderNovels({
         ListFooterComponent={() => (
           <>
             {isFetchingNextPage && (
-              <View className="h-28 w-full items-center justify-center flex flex-col">
+              <View className="flex h-28 w-full flex-col items-center justify-center">
                 <ActivityIndicator size="large" color={colors.grayscale} />
               </View>
             )}
@@ -134,53 +122,50 @@ function RenderNovels({
 export default function ExploreScreen() {
   const { searchQuery: paramSearchQuery } = useLocalSearchParams();
   const { width } = useWindowDimensions();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const { keyboardShown } = useKeyboard();
   const isOnline = useIsOnline();
 
   const allFilterOptions: FilterOption[] = useMemo(
     () => [
       {
-        key: "search" as ExploreSection,
-        label: "Search",
+        key: 'search' as ExploreSection,
+        label: 'Search',
         Icon: Search,
       },
       {
-        key: "popular",
-        label: "Popular",
+        key: 'popular',
+        label: 'Popular',
         Icon: Heart,
       },
       {
-        key: "latest-releases",
-        label: "Latest",
+        key: 'latest-releases',
+        label: 'Latest',
         Icon: BadgeAlert,
       },
       {
-        key: "new",
-        label: "New",
+        key: 'new',
+        label: 'New',
         Icon: History,
       },
     ],
     []
   );
 
-  const [selectedFilter, setSelectedFilter] = useState<FilterOption>(
-    allFilterOptions[1]
-  );
+  const [selectedFilter, setSelectedFilter] = useState<FilterOption>(allFilterOptions[1]);
 
   const filterOptions = useMemo(() => {
     if (isSearchOpen) {
       return allFilterOptions;
     } else {
-      return allFilterOptions.filter((option) => option.key !== "search");
+      return allFilterOptions.filter((option) => option.key !== 'search');
     }
   }, [isSearchOpen, allFilterOptions]);
 
   function handleChangeFilter(filter: FilterOption) {
     setSelectedFilter(filter);
-    setSearchQuery("");
+    setSearchQuery('');
     setIsSearchOpen(false);
   }
 
@@ -192,20 +177,18 @@ export default function ExploreScreen() {
     isLoading: isLoadingNovels,
   } = useInfiniteQuery({
     queryKey: [
-      "explore-novels",
+      'explore-novels',
       isSearchOpen ? `search-${debouncedSearchQuery}` : selectedFilter.key,
     ],
     queryFn: ({ pageParam }) =>
       novelController.exploreNovels({
-        section: isSearchOpen ? "search" : selectedFilter.key,
+        section: isSearchOpen ? 'search' : selectedFilter.key,
         pageNumber: pageParam,
         searchQuery: debouncedSearchQuery,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.pageNumber! < lastPage.totalPages!
-        ? lastPage.pageNumber! + 1
-        : undefined,
+      lastPage.pageNumber! < lastPage.totalPages! ? lastPage.pageNumber! + 1 : undefined,
     enabled: isOnline,
   });
 
@@ -213,9 +196,7 @@ export default function ExploreScreen() {
 
   function renderOpenInBrowserButton() {
     function handlePress() {
-      Linking.openURL(
-        `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/home`
-      );
+      Linking.openURL(`${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/home`);
     }
 
     return (
@@ -251,11 +232,7 @@ export default function ExploreScreen() {
             <FilterCategory
               label={item.label}
               Icon={item.Icon}
-              selected={
-                isSearchOpen
-                  ? item.key === "search"
-                  : item.key === selectedFilter.key
-              }
+              selected={isSearchOpen ? item.key === 'search' : item.key === selectedFilter.key}
               onPress={() => handleChangeFilter(item)}
             />
           )}
@@ -267,26 +244,13 @@ export default function ExploreScreen() {
         />
       </View>
       {isSearchOpen && debouncedSearchQuery.length === 0 ? (
-        <View
-          className={cn(
-            "items-center justify-center flex",
-            keyboardShown ? "h-[36%]" : "flex-1"
-          )}
-        >
-          <Quote
-            quote="Type a name, and perhaps a tale will answer."
-            Icon={Search}
-          />
+        <View className="flex flex-1 items-center justify-center">
+          <Quote quote="Type a name, and perhaps a tale will answer." Icon={Search} />
         </View>
       ) : (
         <>
           {isLoadingNovels ? (
-            <View
-              className={cn(
-                "items-center justify-center flex",
-                keyboardShown ? "h-[36%]" : "flex-1"
-              )}
-            >
+            <View className="flex flex-1 items-center justify-center">
               <Loading />
             </View>
           ) : (

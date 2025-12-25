@@ -40,7 +40,8 @@ export async function scrapeNovelsExplore({
     const imgEl = anchor.find('figure.novel-cover img').first();
     const dataSrc = imgEl.attr('data-src')?.trim();
     const src = imgEl.attr('src')?.trim();
-    const imageUrl = dataSrc ? dataSrc : src && !src.startsWith('data:') ? src : '';
+    const image = dataSrc ? dataSrc : src && !src.startsWith('data:') ? src : '';
+    const imageUrl = process.env.EXPO_PUBLIC_SCRAPE_SITE_URL + image;
 
     // Rank badge: <span class="badge _bl">R 11774</span>
     const rankText = anchor.find('span.badge._bl').text().trim();
@@ -86,7 +87,8 @@ export async function scrapeNovelsSearch({
     const anchor = $(el).find('a').first();
     const title = anchor.find('.novel-title').text().trim();
     const novelUrl = anchor.attr('href') ?? '';
-    const imageUrl = anchor.find('.novel-cover img').attr('src') ?? '';
+    const image = anchor.find('.novel-cover img').attr('src') ?? '';
+    const imageUrl = process.env.EXPO_PUBLIC_SCRAPE_SITE_URL + image;
     // extract rank from the first .novel-stats strong, e.g. "Rank 98"
     const rankText = anchor.find('.novel-stats strong').text().trim();
     const rankMatch = rankText.match(/Rank\s+(\d+)/i);

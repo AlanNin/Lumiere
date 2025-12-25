@@ -1,9 +1,9 @@
-import { useConfig } from "@/providers/appConfig";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useConfig } from '@/providers/appConfig';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function useSafeAreaPaddings() {
-  const [downloadedOnly] = useConfig<boolean>("downloadedOnly", false);
-  const [incognitoMode] = useConfig<boolean>("incognitoMode", false);
+  const [downloadedOnly] = useConfig<boolean>('downloadedOnly', false);
+  const [incognitoMode] = useConfig<boolean>('incognitoMode', false);
   const insets = useSafeAreaInsets();
 
   const isModeIndicatorVisible = downloadedOnly || incognitoMode;
@@ -15,5 +15,5 @@ export function useSafeAreaPaddings() {
     return insets.top;
   }
 
-  return { getPaddingTop };
+  return { getPaddingTop, bottom: insets.bottom };
 }

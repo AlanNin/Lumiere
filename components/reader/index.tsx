@@ -88,7 +88,8 @@ export default function ReaderComponent({
       invalidateQueries(
         ['novel-info', chapter.novelTitle],
         ['novel-chapter', chapter.novelTitle, chapter.number],
-        ['library']
+        ['library'],
+        ['lastRead']
       );
     },
   });
