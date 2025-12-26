@@ -704,6 +704,36 @@ export const novelRepository = {
 
       if (!lastRead) return null;
 
+      let base = lastRead;
+
+      if (Number(lastRead.progress) >= 100) {
+        const nextUnread = await db_client
+          .select({
+            id: novelChapters.id,
+            novelTitle: novelChapters.novelTitle,
+            number: novelChapters.number,
+            title: novelChapters.title,
+            progress: novelChapters.progress,
+            bookMarked: novelChapters.bookMarked,
+            downloaded: novelChapters.downloaded,
+            content: novelChapters.content,
+            readAt: novelChapters.readAt,
+          })
+          .from(novelChapters)
+          .where(
+            and(
+              eq(novelChapters.novelTitle, lastRead.novelTitle),
+              gt(novelChapters.number, lastRead.number),
+              lt(novelChapters.progress, 100)
+            )
+          )
+          .orderBy(asc(novelChapters.number))
+          .limit(1)
+          .get();
+
+        if (nextUnread) base = nextUnread;
+      }
+
       const next = await db_client
         .select({
           number: novelChapters.number,
@@ -712,10 +742,7 @@ export const novelRepository = {
         })
         .from(novelChapters)
         .where(
-          and(
-            eq(novelChapters.novelTitle, lastRead.novelTitle),
-            gt(novelChapters.number, lastRead.number)
-          )
+          and(eq(novelChapters.novelTitle, base.novelTitle), gt(novelChapters.number, base.number))
         )
         .orderBy(asc(novelChapters.number))
         .limit(1)
@@ -729,25 +756,22 @@ export const novelRepository = {
         })
         .from(novelChapters)
         .where(
-          and(
-            eq(novelChapters.novelTitle, lastRead.novelTitle),
-            lt(novelChapters.number, lastRead.number)
-          )
+          and(eq(novelChapters.novelTitle, base.novelTitle), lt(novelChapters.number, base.number))
         )
         .orderBy(desc(novelChapters.number))
         .limit(1)
         .get();
 
       return {
-        id: Number(lastRead.id),
-        novelTitle: lastRead.novelTitle,
-        number: Number(lastRead.number),
-        title: String(lastRead.title),
-        progress: Number(lastRead.progress),
-        bookMarked: Boolean(lastRead.bookMarked),
-        downloaded: Boolean(lastRead.downloaded),
-        content: lastRead.content ? String(lastRead.content) : undefined,
-        readAt: String(lastRead.readAt),
+        id: Number(base.id),
+        novelTitle: base.novelTitle,
+        number: Number(base.number),
+        title: String(base.title),
+        progress: Number(base.progress),
+        bookMarked: Boolean(base.bookMarked),
+        downloaded: Boolean(base.downloaded),
+        content: base.content ? String(base.content) : undefined,
+        readAt: base.readAt ? String(base.readAt) : undefined,
         previousChapter: previous
           ? {
               number: Number(previous.number),
