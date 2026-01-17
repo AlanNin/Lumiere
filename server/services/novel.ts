@@ -537,7 +537,7 @@ function getNovelsExploreUrl(section: ExploreSection, pageNumber: number) {
 function getNovelSearchUrl(searchQuery: string) {
   return `${String(
     process.env.EXPO_PUBLIC_SCRAPE_SITE_URL
-  )}/ajax/searchLive?inputContent=${encodeURIComponent(searchQuery)}`;
+  )}/ajax/searchLive?keyword=${encodeURIComponent(searchQuery)}&type=both`;
 }
 
 function getNovelInfoUrl(novelTitleSlug: string) {
