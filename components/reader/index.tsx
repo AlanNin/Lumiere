@@ -275,6 +275,12 @@ export default function ReaderComponent({
       if (index >= paragraphs.length) {
         setIsTTSReading(false);
         setTtsIndex(null);
+
+        Speech.speak(`End of chapter ${chapter.number}`, {
+          language: 'en-US',
+          rate: speechSpeedRef.current,
+          voice: speechVoiceRef.current,
+        });
         return;
       }
 
@@ -421,6 +427,7 @@ export default function ReaderComponent({
 
   useEffect(() => {
     if (!userScrolledRef.current) return;
+    if (isTTSReading) return;
 
     if (
       paragraphPositions.current &&
@@ -443,12 +450,16 @@ export default function ReaderComponent({
         }
       });
 
+      if (scrollY <= 0 || isAtTop) {
+        closestIndex = 0;
+      }
+
       if (closestIndex !== lastIndexRef.current) {
         setTtsIndex(closestIndex);
         lastIndexRef.current = closestIndex;
       }
     }
-  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current]);
+  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current, isAtTop]);
 
   useEffect(() => {
     async function getVoices() {
