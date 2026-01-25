@@ -1,7 +1,7 @@
-import { db_client } from "../db/client";
-import { novelChapters, novels } from "../db/schema";
-import { desc, sql, eq, and } from "drizzle-orm";
-import type { ChapterHistory, HistoryBatch } from "@/types/history";
+import { db_client } from '../db/client';
+import { novelChapters, novels } from '../db/schema';
+import { desc, sql, eq, and } from 'drizzle-orm';
+import type { ChapterHistory, HistoryBatch } from '@/types/history';
 
 export const historyRepository = {
   async getHistory(): Promise<HistoryBatch[]> {
@@ -10,6 +10,7 @@ export const historyRepository = {
         id: novelChapters.id,
         novelTitle: novelChapters.novelTitle,
         novelImage: novels.imageUrl,
+        isNovelSaved: novels.isSaved,
         novelCustomImage: novels.customImageUri,
         chapterNumber: novelChapters.number,
         chapterTitle: novelChapters.title,
@@ -31,6 +32,7 @@ export const historyRepository = {
           id: r.id,
           novelTitle: r.novelTitle,
           novelImage: r.novelImage!,
+          isNovelSaved: Boolean(r.isNovelSaved),
           novelCustomImage: r.novelCustomImage,
           chapterNumber: r.chapterNumber,
           readAt: r.readAt!,
@@ -66,25 +68,18 @@ export const historyRepository = {
         .update(novelChapters)
         .set({ readAt: null })
         .where(
-          and(
-            eq(novelChapters.novelTitle, novelTitle),
-            eq(novelChapters.number, chapterNumber)
-          )
+          and(eq(novelChapters.novelTitle, novelTitle), eq(novelChapters.number, chapterNumber))
         )
         .run();
 
       return changes > 0;
     } catch (e) {
-      console.error("Failed to remove chapter from history:", e);
+      console.error('Failed to remove chapter from history:', e);
       throw e;
     }
   },
 
-  async removeNovelFromHistory({
-    novelTitle,
-  }: {
-    novelTitle: string;
-  }): Promise<boolean> {
+  async removeNovelFromHistory({ novelTitle }: { novelTitle: string }): Promise<boolean> {
     try {
       const { changes } = await db_client
         .update(novelChapters)
@@ -94,21 +89,18 @@ export const historyRepository = {
 
       return changes > 0;
     } catch (e) {
-      console.error("Failed to remove novel from history:", e);
+      console.error('Failed to remove novel from history:', e);
       throw e;
     }
   },
 
   async removeAllHistory(): Promise<boolean> {
     try {
-      const { changes } = await db_client
-        .update(novelChapters)
-        .set({ readAt: null })
-        .run();
+      const { changes } = await db_client.update(novelChapters).set({ readAt: null }).run();
 
       return changes > 0;
     } catch (e) {
-      console.error("Failed to remove all history:", e);
+      console.error('Failed to remove all history:', e);
       throw e;
     }
   },

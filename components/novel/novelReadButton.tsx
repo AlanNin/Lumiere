@@ -27,12 +27,14 @@ const CLOSE_TO_MAX_THRESHOLD = 70;
 export default function NovelReadButton({
   scrollY,
   novelTitle,
+  isNovelSaved,
   resumeFromNovelChapter,
   novelTotalChapters,
   maxScrollY,
 }: {
   scrollY: SharedValue<number>;
   novelTitle: string;
+  isNovelSaved: boolean;
   resumeFromNovelChapter?: Chapter;
   novelTotalChapters: number;
   maxScrollY?: number;
@@ -84,6 +86,7 @@ export default function NovelReadButton({
         chapterNumber: chapterNumber,
         totalChapters: novelTotalChapters,
         downloaded: isChapterDownloaded,
+        isNovelSaved: isNovelSaved ? 1 : 0,
       },
     });
   }, [router, novelTitle, resumeFromNovelChapter?.number, novelTotalChapters]);

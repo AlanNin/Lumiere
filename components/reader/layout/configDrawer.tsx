@@ -1,19 +1,11 @@
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import BottomDrawer from "../../bottomDrawer";
-import { TouchableOpacity, View } from "react-native";
-import { Text } from "../../defaults";
-import { SliderComponent } from "../../slider";
-import { colors } from "@/lib/constants";
-import {
-  ReactNode,
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { FlatList } from "react-native-gesture-handler";
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import BottomDrawer from '../../bottomDrawer';
+import { TouchableOpacity, View } from 'react-native';
+import { Text } from '../../defaults';
+import { SliderComponent } from '../../slider';
+import { colors } from '@/lib/constants';
+import { ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList } from 'react-native-gesture-handler';
 import {
   AlignCenter,
   AlignJustify,
@@ -23,12 +15,11 @@ import {
   LucideIcon,
   Minus,
   Plus,
-} from "lucide-react-native";
-import { ReaderGeneralConfig, ReaderStyleConfig } from "@/types/appConfig";
-import { TextAlgin, VoiceIdentifier } from "@/types/reader";
-import { cn } from "@/lib/cn";
-import BooleanSwitch from "@/components/switch";
-import { Picker } from "@react-native-picker/picker";
+} from 'lucide-react-native';
+import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
+import { TextAlgin, VoiceIdentifier } from '@/types/reader';
+import BooleanSwitch from '@/components/switch';
+import { Picker } from '@react-native-picker/picker';
 
 export default function ReaderStyleConfigDrawer({
   drawerRef,
@@ -48,12 +39,10 @@ export default function ReaderStyleConfigDrawer({
   setReaderStylesConfig: (styles: ReaderStyleConfig) => void;
   readerGeneralConfig: ReaderGeneralConfig;
   setReaderGeneralConfig: (config: ReaderGeneralConfig) => void;
-  pointerEvents: "auto" | "none";
+  pointerEvents: 'auto' | 'none';
   availableVoices: VoiceIdentifier[];
 }) {
-  const [readerStylesConfigState, setReaderStylesConfigState] = useState<
-    ReaderStyleConfig
-  >({
+  const [readerStylesConfigState, setReaderStylesConfigState] = useState<ReaderStyleConfig>({
     body: {
       backgroundColor: styles.body.backgroundColor,
       color: styles.body.color,
@@ -68,21 +57,15 @@ export default function ReaderStyleConfigDrawer({
     },
   });
 
-  const [readerGeneralConfigState, setReaderGeneralConfigState] = useState<
-    ReaderGeneralConfig
-  >({
+  const [readerGeneralConfigState, setReaderGeneralConfigState] = useState<ReaderGeneralConfig>({
     showProgressSeekBar: readerGeneralConfig.showProgressSeekBar,
     speechSpeed: readerGeneralConfig.speechSpeed,
     voiceIdentifier: readerGeneralConfig.voiceIdentifier,
   });
 
-  const initialReaderStylesConfigStateRef = useRef<ReaderStyleConfig>(
-    readerStylesConfigState
-  );
+  const initialReaderStylesConfigStateRef = useRef<ReaderStyleConfig>(readerStylesConfigState);
 
-  const initialReaderGeneralConfigStateRef = useRef<ReaderGeneralConfig>(
-    readerGeneralConfigState
-  );
+  const initialReaderGeneralConfigStateRef = useRef<ReaderGeneralConfig>(readerGeneralConfigState);
 
   useEffect(() => {
     setReaderStylesConfig(readerStylesConfigState);
@@ -103,12 +86,8 @@ export default function ReaderStyleConfigDrawer({
       onChange={(index: number) => {
         toggleHoldHide(index === 0);
       }}
-      onClose={handleReset}
-    >
-      <View
-        className="flex flex-col gap-y-8 pb-4"
-        pointerEvents={pointerEvents}
-      >
+      onClose={handleReset}>
+      <View className="flex flex-col gap-y-8 pb-4" pointerEvents={pointerEvents}>
         <ConfigItem label="Heading Size">
           <SliderComponent
             minValue={20}
@@ -231,10 +210,9 @@ export default function ReaderStyleConfigDrawer({
             }}
             style={{
               width: 200,
-              backgroundColor: colors.muted_foreground + "25",
+              backgroundColor: colors.muted_foreground + '25',
             }}
-            enabled={availableVoices.length > 1}
-          >
+            enabled={availableVoices.length > 1}>
             {availableVoices.map((voice, idx) => (
               <Picker.Item
                 key={voice.identifier}
@@ -252,13 +230,7 @@ export default function ReaderStyleConfigDrawer({
   );
 }
 
-function ConfigItem({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
+function ConfigItem({ children, label }: { children: ReactNode; label: string }) {
   return (
     <View className="flex flex-row items-center">
       <Text className="w-32">{label}</Text>
@@ -272,39 +244,23 @@ function ColorItems({
   onChange,
 }: {
   value: { backgroundColor: string; color: string };
-  onChange: ({
-    backgroundColor,
-    color,
-  }: {
-    backgroundColor: string;
-    color: string;
-  }) => void;
+  onChange: ({ backgroundColor, color }: { backgroundColor: string; color: string }) => void;
 }) {
   const readerColors = colors.reader;
   type ThemeKey = keyof typeof readerColors;
   const entries = useMemo(
-    () =>
-      Object.entries(readerColors) as [
-        ThemeKey,
-        { background: string; foreground: string }
-      ][],
+    () => Object.entries(readerColors) as [ThemeKey, { background: string; foreground: string }][],
     [readerColors]
   );
 
   const renderItem = useCallback(
-    ({
-      item,
-    }: {
-      item: [ThemeKey, { background: string; foreground: string }];
-      index: number;
-    }) => {
+    ({ item }: { item: [ThemeKey, { background: string; foreground: string }]; index: number }) => {
       const [{ background, foreground }] = [item[1]];
-      const isSelected =
-        value.backgroundColor === background && value.color === foreground;
+      const isSelected = value.backgroundColor === background && value.color === foreground;
 
       return (
         <TouchableOpacity
-          className="flex justify-center items-center rounded-full size-9"
+          className="flex size-9 items-center justify-center rounded-full"
           style={{
             backgroundColor: background,
           }}
@@ -315,8 +271,7 @@ function ColorItems({
               backgroundColor: background,
               color: foreground,
             });
-          }}
-        >
+          }}>
           {isSelected ? (
             <Check size={16} color={foreground} />
           ) : (
@@ -357,44 +312,35 @@ function TextAlignItems({
     Icon: LucideIcon;
   }[] = [
     {
-      key: "left",
+      key: 'left',
       Icon: AlignLeft,
     },
     {
-      key: "right",
+      key: 'right',
       Icon: AlignRight,
     },
     {
-      key: "center",
+      key: 'center',
       Icon: AlignCenter,
     },
     {
-      key: "justify",
+      key: 'justify',
       Icon: AlignJustify,
     },
   ];
 
   const renderItem = useCallback(
-    ({
-      item,
-    }: {
-      item: { key: TextAlgin; Icon: LucideIcon };
-      index: number;
-    }) => {
+    ({ item }: { item: { key: TextAlgin; Icon: LucideIcon }; index: number }) => {
       const isSelected = value === item.key;
       return (
         <TouchableOpacity
-          className="flex justify-center items-center rounded-full size-9"
+          className="flex size-9 items-center justify-center rounded-full"
           disabled={isSelected}
           onPress={() => {
             if (isSelected) return;
             onChange(item.key);
-          }}
-        >
-          <item.Icon
-            size={20}
-            color={isSelected ? colors.primary : colors.foreground}
-          />
+          }}>
+          <item.Icon size={20} color={isSelected ? colors.primary : colors.foreground} />
         </TouchableOpacity>
       );
     },

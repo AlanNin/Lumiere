@@ -1,12 +1,8 @@
-import { libraryService } from "../services/library";
-import { LibraryCategory } from "@/types/library";
+import { libraryService } from '../services/library';
+import { LibraryCategory } from '@/types/library';
 
 export const libraryController = {
-  async getLibrary({
-    downloadedOnly,
-  }: {
-    downloadedOnly: boolean;
-  }): Promise<LibraryCategory[]> {
+  async getLibrary({ downloadedOnly }: { downloadedOnly: boolean }): Promise<LibraryCategory[]> {
     try {
       return await libraryService.getLibrary({
         downloadedOnly,
@@ -15,7 +11,7 @@ export const libraryController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -26,7 +22,7 @@ export const libraryController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 };

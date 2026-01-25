@@ -1,30 +1,38 @@
-import { TouchableOpacity, View } from "react-native";
-import BottomDrawer from "../bottomDrawer";
-import { Text } from "../defaults";
-import { DownloadChapter } from "@/types/download";
-import { RefObject, useCallback } from "react";
-import { BottomSheetModal } from "@gorhom/bottom-sheet";
-import { useMutation } from "@tanstack/react-query";
-import { novelController } from "@/server/controllers/novel";
+import { TouchableOpacity, View } from 'react-native';
+import BottomDrawer from '../bottomDrawer';
+import { Text } from '../defaults';
+import { DownloadChapter } from '@/types/download';
+import { RefObject, useCallback } from 'react';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useMutation } from '@tanstack/react-query';
+import { novelController } from '@/server/controllers/novel';
+import { invalidateQueries } from '@/providers/reactQuery';
 
 export default function NovelRemoveDownloadDrawer({
   bottomDrawerRef,
   chaptersToDelete,
   setChaptersToDelete,
-  refetchNovelInfo,
 }: {
   bottomDrawerRef: RefObject<BottomSheetModal | null>;
   chaptersToDelete: DownloadChapter[];
   setChaptersToDelete: (chapters: DownloadChapter[]) => void;
-  refetchNovelInfo: () => void;
 }) {
   const { mutate: removeDownloadChapters } = useMutation({
     mutationFn: (chapters: DownloadChapter[]) =>
       novelController.removeDownloadedNovelChapters({
         chapters,
       }),
-    onSuccess: () => {
-      refetchNovelInfo();
+    onSuccess: (_data, variables) => {
+      for (const chapter of variables) {
+        invalidateQueries(
+          ['novel-info', chapter.novelTitle],
+          ['novel-chapter', chapter.novelTitle, chapter.chapterNumber]
+        );
+
+        if (chapter.isNovelSaved) {
+          invalidateQueries(['library']);
+        }
+      }
     },
   });
 
@@ -41,26 +49,24 @@ export default function NovelRemoveDownloadDrawer({
 
   return (
     <BottomDrawer ref={bottomDrawerRef}>
-      <View className="flex flex-col gap-y-2 items-center justify-center text-center pb-4 flex-1">
-        <Text className="text-lg font-medium text-center">
-          Remove {chaptersToDelete.length > 1 ? "Chapters" : "Chapter"}
+      <View className="flex flex-1 flex-col items-center justify-center gap-y-2 pb-4 text-center">
+        <Text className="text-center text-lg font-medium">
+          Remove {chaptersToDelete.length > 1 ? 'Chapters' : 'Chapter'}
         </Text>
-        <Text className="text-muted_foreground/85 text-center mx-2 mb-4">
-          You won't be able to read{" "}
-          {chaptersToDelete.length > 1 ? "these chapters" : "this chapter"}{" "}
-          without internet connection.
+        <Text className="mx-2 mb-4 text-center text-muted_foreground/85">
+          You won't be able to read{' '}
+          {chaptersToDelete.length > 1 ? 'these chapters' : 'this chapter'} without internet
+          connection.
         </Text>
-        <View className="flex flex-col items-center gap-y-4 flex-1 w-full px-16">
+        <View className="flex w-full flex-1 flex-col items-center gap-y-4 px-16">
           <TouchableOpacity
-            className="bg-primary text-primary_foreground px-6 py-3 rounded-lg w-full flex items-center justify-center"
-            onPress={handleDeleteChapters}
-          >
+            className="flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-primary_foreground"
+            onPress={handleDeleteChapters}>
             <Text>Remove</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="px-4 py-1 rounded-lg w-full flex items-center justify-center"
-            onPress={handleCancelDeleteChapters}
-          >
+            className="flex w-full items-center justify-center rounded-lg px-4 py-1"
+            onPress={handleCancelDeleteChapters}>
             <Text>Cancel</Text>
           </TouchableOpacity>
         </View>

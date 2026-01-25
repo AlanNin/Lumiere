@@ -1,8 +1,8 @@
-import { cn } from "@/lib/cn";
-import { colors } from "@/lib/constants";
-import { DownloadChapter } from "@/types/download";
-import { ArrowDown, Check } from "lucide-react-native";
-import { TouchableOpacity, View, ActivityIndicator } from "react-native";
+import { cn } from '@/lib/cn';
+import { colors } from '@/lib/constants';
+import { DownloadChapter } from '@/types/download';
+import { ArrowDown, Check } from 'lucide-react-native';
+import { TouchableOpacity, View, ActivityIndicator } from 'react-native';
 
 export default function NovelDownloadChapter({
   chapter,
@@ -34,8 +34,7 @@ export default function NovelDownloadChapter({
       }
       activeOpacity={0.7}
       disabled={isDownloading}
-      className="py-4"
-    >
+      className="py-4">
       <View
         style={{
           width: 22,
@@ -43,12 +42,11 @@ export default function NovelDownloadChapter({
           borderWidth: isDownloaded || isDownloading ? 0 : 1,
         }}
         className={cn(
-          "flex items-center justify-center border rounded-full",
-          isDownloaded && !isDownloading && "bg-primary",
-          !isDownloaded && !isDownloading && "border-grayscale",
-          chapter.readingProgress === 100 && "opacity-75"
-        )}
-      >
+          'flex items-center justify-center rounded-full border',
+          isDownloaded && !isDownloading && 'bg-primary',
+          !isDownloaded && !isDownloading && 'border-grayscale',
+          chapter.readingProgress === 100 && 'opacity-75'
+        )}>
         {isDownloading ? (
           <ActivityIndicator size="small" color={colors.grayscale} />
         ) : isDownloaded ? (

@@ -16,6 +16,7 @@ export default function ReaderBottomBar({
   layoutVisible,
   postponeHide,
   chapter,
+  isNovelSaved,
   insets,
   isAtBottom,
   isAtTop,
@@ -26,6 +27,7 @@ export default function ReaderBottomBar({
   layoutVisible: boolean;
   postponeHide: () => void;
   chapter: Chapter;
+  isNovelSaved: boolean;
   insets: { top: number; bottom: number };
   isAtBottom: boolean;
   isAtTop: boolean;
@@ -59,6 +61,7 @@ export default function ReaderBottomBar({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.previousChapter.number,
         downloaded: chapter.previousChapter.downloaded ? 1 : 0,
+        isNovelSaved: isNovelSaved ? 1 : 0,
       },
     });
   }
@@ -77,6 +80,7 @@ export default function ReaderBottomBar({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.nextChapter.number,
         downloaded: chapter.nextChapter.downloaded ? 1 : 0,
+        isNovelSaved: isNovelSaved ? 1 : 0,
       },
     });
   }

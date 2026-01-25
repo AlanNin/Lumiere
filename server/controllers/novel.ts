@@ -357,7 +357,7 @@ export const novelController = {
     }
   },
 
-  async getLastRead(): Promise<Chapter> {
+  async getLastRead(): Promise<Chapter & { isNovelSaved: boolean }> {
     try {
       return await novelService.getLastRead();
     } catch (error) {

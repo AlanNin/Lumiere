@@ -27,9 +27,11 @@ import { useDebouncedCallback } from '@/lib/debounce';
 export default function ReaderComponent({
   chapter,
   insets,
+  isNovelSaved,
 }: {
   chapter: Chapter;
   insets: { top: number; bottom: number };
+  isNovelSaved: boolean;
 }) {
   const [layoutVisible, setLayoutVisible] = useState(false);
   const touchStartRef = useRef<number>(0);
@@ -88,9 +90,12 @@ export default function ReaderComponent({
       invalidateQueries(
         ['novel-info', chapter.novelTitle],
         ['novel-chapter', chapter.novelTitle, chapter.number],
-        ['library'],
         ['lastRead']
       );
+
+      if (isNovelSaved) {
+        invalidateQueries(['library']);
+      }
     },
   });
 
@@ -475,6 +480,7 @@ export default function ReaderComponent({
       layoutVisible={layoutVisible || holdHide}
       postponeHide={postponeHide}
       chapter={chapter}
+      isNovelSaved={isNovelSaved}
       scrollToTop={scrollToTop}
       scrollToBottom={scrollToBottom}
       insets={insets}
@@ -514,6 +520,7 @@ export default function ReaderComponent({
         {renderContent}
         <ReaderFooter
           chapter={chapter}
+          isNovelSaved={isNovelSaved}
           styles={styles}
           insets={insets}
           handleSetChapterRead={() => {

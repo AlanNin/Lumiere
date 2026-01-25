@@ -502,7 +502,7 @@ export const novelService = {
     }
   },
 
-  async getLastRead(): Promise<Chapter> {
+  async getLastRead(): Promise<Chapter & { isNovelSaved: boolean }> {
     try {
       const lastRead = await novelRepository.getLastRead();
 

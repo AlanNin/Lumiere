@@ -682,7 +682,7 @@ export const novelRepository = {
     }
   },
 
-  async getLastRead(): Promise<Chapter | null> {
+  async getLastRead(): Promise<(Chapter & { isNovelSaved: boolean }) | null> {
     try {
       const lastRead = await db_client
         .select({
@@ -762,6 +762,12 @@ export const novelRepository = {
         .limit(1)
         .get();
 
+      const novel = await db_client
+        .select({ isSaved: novels.isSaved })
+        .from(novels)
+        .where(eq(novels.title, base.novelTitle))
+        .get();
+
       return {
         id: Number(base.id),
         novelTitle: base.novelTitle,
@@ -786,6 +792,7 @@ export const novelRepository = {
               downloaded: Boolean(next.downloaded),
             }
           : undefined,
+        isNovelSaved: Boolean(novel?.isSaved),
       };
     } catch (error) {
       console.error('Failed to get last read novel:', error);

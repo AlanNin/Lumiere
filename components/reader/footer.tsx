@@ -7,11 +7,13 @@ import { useIsOnline } from '@/providers/network';
 
 export default function ReaderFooter({
   chapter,
+  isNovelSaved,
   styles,
   insets,
   handleSetChapterRead,
 }: {
   chapter: Chapter;
+  isNovelSaved: boolean;
   styles: Style;
   insets: { top: number; bottom: number };
   handleSetChapterRead: () => void;
@@ -35,6 +37,7 @@ export default function ReaderFooter({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.nextChapter.number,
         downloaded: chapter.nextChapter.downloaded ? 1 : 0,
+        isNovelSaved: isNovelSaved ? 1 : 0,
       },
     });
   }

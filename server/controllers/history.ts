@@ -1,5 +1,5 @@
-import { HistoryBatch } from "@/types/history";
-import { historyService } from "../services/history";
+import { HistoryBatch } from '@/types/history';
+import { historyService } from '../services/history';
 
 export const historyController = {
   async getHistory(): Promise<HistoryBatch[]> {
@@ -9,7 +9,7 @@ export const historyController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -29,22 +29,18 @@ export const historyController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
-  async removeNovelFromHistory({
-    novelTitle,
-  }: {
-    novelTitle: string;
-  }): Promise<boolean> {
+  async removeNovelFromHistory({ novelTitle }: { novelTitle: string }): Promise<boolean> {
     try {
       return await historyService.removeNovelFromHistory({ novelTitle });
     } catch (error) {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 
@@ -55,7 +51,7 @@ export const historyController = {
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 };

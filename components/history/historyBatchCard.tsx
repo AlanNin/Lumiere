@@ -1,8 +1,8 @@
-import { View } from "react-native";
-import { Text } from "../defaults";
-import { HistoryBatch } from "@/types/history";
-import { parse, differenceInCalendarDays } from "date-fns";
-import HistoryCard from "./historyCard";
+import { View } from 'react-native';
+import { Text } from '../defaults';
+import { HistoryBatch } from '@/types/history';
+import { parse, differenceInCalendarDays } from 'date-fns';
+import HistoryCard from './historyCard';
 
 export default function HistoryBatchCard({
   history,
@@ -20,7 +20,7 @@ export default function HistoryBatchCard({
   const groupLabel = getGroupLabel(history.readAt);
 
   return (
-    <View className="flex flex-col gap-y-4 mb-4">
+    <View className="mb-4 flex flex-col gap-y-4">
       <Text className="font-medium text-muted_foreground/80">{groupLabel}</Text>
       <View className="flex flex-col gap-y-5">
         {history.chaptersHistory.map((ch) => (
@@ -36,14 +36,14 @@ export default function HistoryBatchCard({
 }
 
 function getGroupLabel(date: string) {
-  const parsedDate = parse(date, "yyyy-MM-dd", new Date());
+  const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
 
   const daysDiff = differenceInCalendarDays(new Date(), parsedDate);
 
   if (daysDiff === 0) {
-    return "Today";
+    return 'Today';
   } else if (daysDiff === 1) {
-    return "Yesterday";
+    return 'Yesterday';
   } else {
     return `${daysDiff} days ago`;
   }

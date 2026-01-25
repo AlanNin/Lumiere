@@ -84,6 +84,7 @@ export default function Layout() {
         novelTitle: lastRead?.novelTitle,
         chapterNumber: lastRead?.number,
         downloaded: lastRead.downloaded ? 1 : 0,
+        isNovelSaved: lastRead.isNovelSaved ? 1 : 0,
       },
     });
   }

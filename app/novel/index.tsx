@@ -201,6 +201,7 @@ export default function NovelScreen() {
           novelTitle: novelInfo?.title ?? '',
           chapterNumber,
           downloaded: downloaded ? 1 : 0,
+          isNovelSaved: novelInfo?.isSaved ? 1 : 0,
         },
       });
     },
@@ -293,6 +294,8 @@ export default function NovelScreen() {
 
       const isHighlighted = highlightChapter === item.number;
 
+      const isNovelSaved = novelInfo?.isSaved ?? false;
+
       return (
         <NovelChapter
           chapter={item}
@@ -302,6 +305,7 @@ export default function NovelScreen() {
           selectedChapters={selectedChapters}
           onSelectChapter={handleSelectChapter}
           isHighlighted={isHighlighted}
+          isNovelSaved={isNovelSaved}
         />
       );
     },
@@ -313,7 +317,7 @@ export default function NovelScreen() {
       ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
-    enqueueRefresh([String(title)]);
+    enqueueRefresh([{ title: String(title), isSaved: novelInfo?.isSaved ?? false }]);
   }
 
   const keyExtractor = useCallback((item: Chapter) => `${item.number}-${item.title}`, []);
@@ -478,6 +482,7 @@ export default function NovelScreen() {
             <NovelReadButton
               scrollY={scrollY}
               novelTitle={novelInfo.title}
+              isNovelSaved={novelInfo?.isSaved ?? false}
               novelTotalChapters={novelChapters.length}
               resumeFromNovelChapter={resumeChapter ? resumeChapter : undefined}
               maxScrollY={maxScrollY}
@@ -486,6 +491,7 @@ export default function NovelScreen() {
 
         <NovelActionsBar
           novelTitle={novelInfo.title}
+          isNovelSaved={novelInfo?.isSaved ?? false}
           selectedChapters={selectedChapters}
           setSelectedChapters={setSelectedChapters}
           refetchNovelInfo={refetchNovelInfo}
@@ -498,7 +504,6 @@ export default function NovelScreen() {
           bottomDrawerRef={bottomDrawerRemoveDownloadRef}
           chaptersToDelete={chaptersToDelete}
           setChaptersToDelete={setChaptersToDelete}
-          refetchNovelInfo={refetchNovelInfo}
         />
 
         <NovelChaptersFilterDrawer
@@ -515,6 +520,7 @@ export default function NovelScreen() {
         <NovelDownloadChaptersDrawer
           bottomDrawerRef={bottomDraweChaptersDownloadRef}
           novelTitle={novelInfo.title}
+          isNovelSaved={novelInfo?.isSaved ?? false}
           chapters={novelInfo?.chapters ?? []}
           currentChapter={resumeChapter ? Math.max(resumeChapter.number - 1, 1) : 1}
           maxChapters={novelChapters.length}

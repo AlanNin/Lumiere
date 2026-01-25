@@ -110,10 +110,10 @@ export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNum
     // 19. Fix paragraphs that start with an opening curly double quote (&#x201C;) but lack a matching closing quote.
     .replace(/<p>([\s\S]*?)<\/p>/gi, (match) => {
       if (/^<p>\s*&#x201C;/.test(match)) {
-        const hasClosing = /&#x201C;(\s*<\/p>)$/.test(match) || /&#x201D;/.test(match);
+        const hasClosing = /&#x201D;/.test(match);
         if (!hasClosing) {
-          let updated = match.replace(/\s*<\/p>$/, '&#x201C;</p>');
-          updated = updated.replace(/,&#x201C;/g, '.&#x201C;');
+          let updated = match.replace(/\s*<\/p>$/, '&#x201D;</p>');
+          updated = updated.replace(/,&#x201D;/g, '.&#x201D;');
           return updated;
         }
       }
@@ -167,38 +167,115 @@ export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNum
 
   // 24. Improvements applied in adjustSpacingAndQuotes
   function adjustSpacingAndQuotes(html: string): string {
+    const QUOTE_TOKEN_RE = /(&quot;|&#x201C;|&#x201D;|["“”])/g;
+
+    function closingFor(open: string): string {
+      if (open === '&#x201C;' || open === '“') return '&#x201D;';
+      // &quot; and straight " both close with the same token in your HTML
+      return open;
+    }
+
+    function fixQuotesStatefully(text: string): string {
+      // Split into [text, quote, text, quote, ...]
+      const parts = text.split(QUOTE_TOKEN_RE);
+
+      let inQuote = false;
+      const stack: string[] = [];
+      const out: string[] = [];
+
+      for (let i = 0; i < parts.length; i++) {
+        const tok = parts[i];
+        if (!tok) continue;
+
+        const isQuote = QUOTE_TOKEN_RE.test(tok);
+        QUOTE_TOKEN_RE.lastIndex = 0; // reset because of /g
+
+        if (!isQuote) {
+          out.push(tok);
+          continue;
+        }
+
+        // Decide opening vs closing based on state
+        if (!inQuote) {
+          // Opening quote
+
+          // 1) If quote is glued to previous non-space char, add a space before it:
+          //    advanced."Take  -> advanced. "Take
+          if (out.length > 0) {
+            const prev = out[out.length - 1];
+            if (/[^\s]$/.test(prev) && !/[([{\u2014-]\s*$/.test(prev)) {
+              out[out.length - 1] = prev + ' ';
+            }
+          }
+
+          // 2) If the next chunk starts with spaces, trim them:
+          //    . " Take -> . "Take
+          if (i + 1 < parts.length && typeof parts[i + 1] === 'string') {
+            parts[i + 1] = parts[i + 1].replace(/^\s+/, '');
+          }
+
+          out.push(tok);
+          inQuote = true;
+          stack.push(tok);
+        } else {
+          // Closing quote
+          out.push(tok);
+          inQuote = false;
+          stack.pop();
+        }
+      }
+
+      // If we ended "inside" a quote, decide whether to remove a stray opener
+      // or add a missing closer.
+      if (inQuote && stack.length) {
+        const openTok = stack[stack.length - 1];
+
+        // If the last *non-space* thing is a quote token, it's almost certainly stray: remove it.
+        // e.g. ... bowing."
+        for (let j = out.length - 1; j >= 0; j--) {
+          if (out[j].trim() === '') continue;
+
+          if (QUOTE_TOKEN_RE.test(out[j])) {
+            // remove the stray quote token
+            out.splice(j, 1);
+          } else {
+            // otherwise, append the missing closing quote
+            out.push(closingFor(openTok));
+          }
+          QUOTE_TOKEN_RE.lastIndex = 0;
+          break;
+        }
+      }
+
+      return out.join('');
+    }
+
     return html
       .split(/(<[^>]+>)/g) // Preserve tags intact.
       .map((segment) => {
-        // If this is a tag, leave it unchanged.
         if (/^<[^>]+>$/.test(segment)) return segment;
 
         let t = segment;
 
-        // 1. Correct closing curly quote used as opening (e.g., &#x201D; misused) and replace with opening curly quote.
+        // Your existing fixes:
         t = t.replace(/([^\s])&#x201D;(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 &#x201C;');
         t = t.replace(/(^|\s)&#x201D;(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1&#x201C;');
 
-        // 2. Ensure there is a space before an opening curly quote if missing.
         t = t.replace(/([^ \t\r\n])(&#x201C;)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
 
-        // 3. Move comma from before closing curly quote to after it.
         t = t.replace(/,(&#x201D;)/g, '$1,');
-
-        // 4. Move comma from before straight or curly right quote to after it.
         t = t.replace(/,([\"”])/g, '$1,');
-
-        // 5. Move comma from before &quot; to after it.
         t = t.replace(/,(&quot;)/gi, '$1,');
 
-        // 6. Ensure there is a space before straight opening quotes if missing.
         t = t.replace(/([^ \t\r\n])([\"“])(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
         t = t.replace(/([^ \t\r\n])(&quot;)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/gi, '$1 $2');
 
-        // 7. Normalize spacing around equals sign.
         t = t.replace(/(\S)=(\S)/g, '$1 = $2');
         t = t.replace(/(\S)=\s/g, '$1 = ');
         t = t.replace(/\s=(\S)/g, ' = $1');
+
+        // ✅ New: stateful quote correction (fixes both of your examples)
+        t = fixQuotesStatefully(t);
 
         return t;
       })

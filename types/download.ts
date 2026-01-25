@@ -4,4 +4,5 @@ export type DownloadChapter = {
   chapterTitle: string;
   chapterContent?: string;
   readingProgress?: number;
+  isNovelSaved?: boolean;
 };

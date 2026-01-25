@@ -1,20 +1,11 @@
-import { db_client } from "../db/client";
-import {
-  categories,
-  novelCategories,
-  novels,
-  novelChapters,
-} from "../db/schema";
-import { eq, and, inArray, sql, lt } from "drizzle-orm";
-import { LibraryCategory } from "@/types/library";
-import { NovelInfo } from "@/types/novel";
+import { db_client } from '../db/client';
+import { categories, novelCategories, novels, novelChapters } from '../db/schema';
+import { eq, and, inArray, sql, lt } from 'drizzle-orm';
+import { LibraryCategory } from '@/types/library';
+import { NovelInfo } from '@/types/novel';
 
 export const libraryRepository = {
-  async getLibrary({
-    downloadedOnly,
-  }: {
-    downloadedOnly: boolean;
-  }): Promise<LibraryCategory[]> {
+  async getLibrary({ downloadedOnly }: { downloadedOnly: boolean }): Promise<LibraryCategory[]> {
     let savedNovels: {
       title: string;
       imageUrl: string;
@@ -91,14 +82,11 @@ export const libraryRepository = {
       ? await db_client
           .select({
             novelTitle: novelChapters.novelTitle,
-            unreadChapters: sql`COUNT(*)`.as("unreadChapters"),
+            unreadChapters: sql`COUNT(*)`.as('unreadChapters'),
           })
           .from(novelChapters)
           .where(
-            and(
-              inArray(novelChapters.novelTitle, novelTitles),
-              lt(novelChapters.progress, 100)
-            )
+            and(inArray(novelChapters.novelTitle, novelTitles), lt(novelChapters.progress, 100))
           )
           .groupBy(novelChapters.novelTitle)
           .all()
@@ -114,14 +102,11 @@ export const libraryRepository = {
       ? await db_client
           .select({
             novelTitle: novelChapters.novelTitle,
-            downloadedChapters: sql`COUNT(*)`.as("downloadedChapters"),
+            downloadedChapters: sql`COUNT(*)`.as('downloadedChapters'),
           })
           .from(novelChapters)
           .where(
-            and(
-              inArray(novelChapters.novelTitle, novelTitles),
-              eq(novelChapters.downloaded, 1)
-            )
+            and(inArray(novelChapters.novelTitle, novelTitles), eq(novelChapters.downloaded, 1))
           )
           .groupBy(novelChapters.novelTitle)
           .all()
@@ -174,9 +159,7 @@ export const libraryRepository = {
         downloadedChapters: downloadedMap.get(n.title) ?? 0,
       };
 
-      const rels = novelCategoryRelations.filter(
-        (r) => r.novelTitle === n.title
-      );
+      const rels = novelCategoryRelations.filter((r) => r.novelTitle === n.title);
       if (rels.length) {
         rels.forEach((r) => {
           const arr = categoryMap.get(r.categoryId);
@@ -207,7 +190,7 @@ export const libraryRepository = {
     if (novelsWithoutCategory.length > 0) {
       result.push({
         id: 0,
-        label: "Default",
+        label: 'Default',
         sortOrder: 0,
         novels: novelsWithoutCategory,
       });
@@ -231,11 +214,11 @@ export const libraryRepository = {
 
       return true;
     } catch (error) {
-      console.error("Failed to clear database:", error);
+      console.error('Failed to clear database:', error);
       if (error instanceof Error) {
         throw error.message;
       }
-      throw new Error("An unknown error occurred.");
+      throw new Error('An unknown error occurred.');
     }
   },
 };

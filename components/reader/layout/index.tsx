@@ -14,6 +14,7 @@ export default function ReaderLayout({
   layoutVisible,
   postponeHide,
   chapter,
+  isNovelSaved,
   scrollToTop,
   scrollToBottom,
   insets,
@@ -34,6 +35,7 @@ export default function ReaderLayout({
   layoutVisible: boolean;
   postponeHide: () => void;
   chapter: Chapter;
+  isNovelSaved: boolean;
   scrollToTop: () => void;
   scrollToBottom: () => void;
   insets: { top: number; bottom: number };
@@ -87,6 +89,7 @@ export default function ReaderLayout({
         layoutVisible={layoutVisible}
         postponeHide={postponeHide}
         chapter={chapter}
+        isNovelSaved={isNovelSaved}
         insets={insets}
         isAtBottom={isAtBottom}
         isAtTop={isAtTop}

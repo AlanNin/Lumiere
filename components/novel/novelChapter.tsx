@@ -17,6 +17,7 @@ export default memo(
     onSelectChapter,
     onChapterPress,
     onDownloadPress,
+    isNovelSaved,
   }: {
     chapter: Chapter;
     isDownloading: boolean;
@@ -39,6 +40,7 @@ export default memo(
       isDownloaded: boolean | undefined;
       isDownloading: boolean;
     }) => void;
+    isNovelSaved: boolean;
   }) {
     const chapterProgress = chapter.progress ?? 0;
     const isRead = chapter.progress === 100;
@@ -51,6 +53,7 @@ export default memo(
         chapterNumber: chapter.number,
         chapterTitle: chapter.title,
         readingProgress: chapter.progress,
+        isNovelSaved: isNovelSaved,
       }),
       [chapter.novelTitle, chapter.number, chapter.progress]
     );

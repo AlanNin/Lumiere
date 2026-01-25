@@ -7,22 +7,22 @@ import {
   createContext,
   ReactNode,
   useContext,
-} from "react";
-import * as BackgroundTask from "expo-background-task";
-import * as TaskManager from "expo-task-manager";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { novelController } from "@/server/controllers/novel";
-import { DownloadChapter } from "@/types/download";
-import { invalidateQueries } from "@/providers/reactQuery";
-import * as Notifications from "expo-notifications";
-import { useIsOnlineDirect } from "@/hooks/network";
-import { ToastAndroid } from "react-native";
+} from 'react';
+import * as BackgroundTask from 'expo-background-task';
+import * as TaskManager from 'expo-task-manager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { novelController } from '@/server/controllers/novel';
+import { DownloadChapter } from '@/types/download';
+import { invalidateQueries } from '@/providers/reactQuery';
+import * as Notifications from 'expo-notifications';
+import { useIsOnlineDirect } from '@/hooks/network';
+import { ToastAndroid } from 'react-native';
 
-const TASK_NAME = "DOWNLOAD_QUEUE_TASK";
-const STORAGE_KEY = "DOWNLOAD_QUEUE";
-const DOWNLOADS_PAUSED_KEY = "DOWNLOADS_PAUSED";
-const NOTIFICATION_ID = "DOWNLOAD_PROGRESS";
-const NOTIFICATION_CATEGORY = "DOWNLOAD_STATUS";
+const TASK_NAME = 'DOWNLOAD_QUEUE_TASK';
+const STORAGE_KEY = 'DOWNLOAD_QUEUE';
+const DOWNLOADS_PAUSED_KEY = 'DOWNLOADS_PAUSED';
+const NOTIFICATION_ID = 'DOWNLOAD_PROGRESS';
+const NOTIFICATION_CATEGORY = 'DOWNLOAD_STATUS';
 const POLL_INTERVAL_MS = 3000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
@@ -44,7 +44,7 @@ export interface QueueDownloadItem extends DownloadChapter {
   timestamp?: number;
   id?: string; // Unique ID to identify elements
   priority?: number; // 1 = high, 2 = medium, 3 = low
-  status?: "pending" | "downloading" | "paused" | "failed";
+  status?: 'pending' | 'downloading' | 'paused' | 'failed';
 }
 
 export interface GroupedQueueChapters {
@@ -60,8 +60,7 @@ const getChapterHash = (chapter: DownloadChapter): string =>
   `${chapter.novelTitle}-${chapter.chapterNumber}`;
 
 // Helper function to generate unique ID
-const generateId = (): string =>
-  `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const generateId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 // Helper function to sort by priority
 const sortByPriority = (items: QueueDownloadItem[]): QueueDownloadItem[] =>
@@ -76,15 +75,17 @@ const sortByPriority = (items: QueueDownloadItem[]): QueueDownloadItem[] =>
 const invalidateNovelQueries = ({
   novelTitle,
   chapterNumber,
+  isNovelSaved,
 }: {
   novelTitle: string;
   chapterNumber: number;
+  isNovelSaved?: boolean;
 }) => {
-  invalidateQueries(
-    ["novel-info", novelTitle],
-    ["novel-chapter", novelTitle, chapterNumber],
-    "library"
-  );
+  invalidateQueries(['novel-info', novelTitle], ['novel-chapter', novelTitle, chapterNumber]);
+
+  if (isNovelSaved) {
+    invalidateQueries(['library']);
+  }
 };
 
 // Helper function to ensure notification category
@@ -92,20 +93,20 @@ async function ensureNotificationCategory() {
   try {
     await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORY, [
       {
-        identifier: "PAUSE",
-        buttonTitle: "Pause",
+        identifier: 'PAUSE',
+        buttonTitle: 'Pause',
         options: { opensAppToForeground: true },
       },
     ]);
   } catch (e) {
-    console.warn("Could not set notification category:", e);
+    console.warn('Could not set notification category:', e);
   }
 }
 
 // Helper function to check if notification permission is already granted (does not prompt)
 const hasNotificationPermission = async (): Promise<boolean> => {
   const { status } = await Notifications.getPermissionsAsync();
-  return status === "granted";
+  return status === 'granted';
 };
 
 // Helper function to update or create notification
@@ -124,8 +125,7 @@ const updateDownloadNotification = async (
       return;
     }
 
-    const progress =
-      totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
     const remaining = totalItems - completedItems;
 
     const title = `Downloading - ${progress}%`;
@@ -139,7 +139,7 @@ const updateDownloadNotification = async (
         body,
         categoryIdentifier: NOTIFICATION_CATEGORY,
         data: {
-          type: "download-status",
+          type: 'download-status',
           novelTitle: currentItem.novelTitle,
           chapterNumber: currentItem.chapterNumber,
           progress,
@@ -150,14 +150,13 @@ const updateDownloadNotification = async (
       trigger: null,
     });
   } catch (e) {
-    console.warn("Error updating download notification:", e);
+    console.warn('Error updating download notification:', e);
   }
 };
 
 TaskManager.defineTask(TASK_NAME, async () => {
   try {
-    const globallyPaused =
-      (await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY)) === "true";
+    const globallyPaused = (await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY)) === 'true';
     if (globallyPaused) {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
@@ -173,7 +172,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
 
     // Filter non-paused elements and sort by priority
     const activeQueueDownload = sortByPriority(
-      queueDownload.filter((item) => item.status !== "paused")
+      queueDownload.filter((item) => item.status !== 'paused')
     );
 
     if (activeQueueDownload.length === 0) {
@@ -181,9 +180,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
     }
 
     const [currentChapter, ...rest] = activeQueueDownload;
-    const remainingQueueDownload = queueDownload.filter(
-      (item) => item.id !== currentChapter.id
-    );
+    const remainingQueueDownload = queueDownload.filter((item) => item.id !== currentChapter.id);
 
     // Calculate progress stats
     const totalOriginalItems = queueDownload.length + 1; // +1 for the one we're about to process
@@ -192,49 +189,36 @@ TaskManager.defineTask(TASK_NAME, async () => {
     // Update status to 'downloading' and update notification
     const updatedCurrentChapter = {
       ...currentChapter,
-      status: "downloading" as const,
+      status: 'downloading' as const,
     };
-    const queueDownloadWithUpdatedStatus = [
-      updatedCurrentChapter,
-      ...remainingQueueDownload,
-    ];
-    await AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(queueDownloadWithUpdatedStatus)
-    );
+    const queueDownloadWithUpdatedStatus = [updatedCurrentChapter, ...remainingQueueDownload];
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(queueDownloadWithUpdatedStatus));
 
     // Update notification with current download info
-    await updateDownloadNotification(
-      updatedCurrentChapter,
-      totalOriginalItems,
-      completedItems
-    );
+    await updateDownloadNotification(updatedCurrentChapter, totalOriginalItems, completedItems);
 
     try {
       await novelController.downloadNovelChapter(currentChapter);
 
       // Successful download, remove from queueDownload
-      await AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(remainingQueueDownload)
-      );
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(remainingQueueDownload));
 
       // Update notification with new progress
       const newCompletedItems = completedItems + 1;
       await updateDownloadNotification(
-        remainingQueueDownload.find((item) => item.status !== "paused") || null,
+        remainingQueueDownload.find((item) => item.status !== 'paused') || null,
         totalOriginalItems,
         newCompletedItems
       );
 
       // Continue with next if there are more active elements
       const nextActiveQueueDownload = sortByPriority(
-        remainingQueueDownload.filter((item) => item.status !== "paused")
+        remainingQueueDownload.filter((item) => item.status !== 'paused')
       );
       if (nextActiveQueueDownload.length > 0) {
         setTimeout(() => {
           void BackgroundTask.registerTaskAsync(TASK_NAME).catch((e) =>
-            console.warn("Failed to re-register background task:", e)
+            console.warn('Failed to re-register background task:', e)
           );
         }, 1000);
       } else {
@@ -251,57 +235,45 @@ TaskManager.defineTask(TASK_NAME, async () => {
         const updatedChapter: QueueDownloadItem = {
           ...currentChapter,
           retryCount,
-          lastError: error instanceof Error ? error.message : "Unknown error",
+          lastError: error instanceof Error ? error.message : 'Unknown error',
           timestamp: Date.now(),
-          status: "pending" as const,
+          status: 'pending' as const,
         };
 
         // Update the chapter in the queueDownload
         const updatedQueueDownload = remainingQueueDownload.map((item) =>
           item.id === currentChapter.id ? updatedChapter : item
         );
-        if (
-          !updatedQueueDownload.some((item) => item.id === currentChapter.id)
-        ) {
+        if (!updatedQueueDownload.some((item) => item.id === currentChapter.id)) {
           updatedQueueDownload.push(updatedChapter);
         }
 
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(updatedQueueDownload)
-        );
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedQueueDownload));
 
         // Wait before next attempt
         await delay(RETRY_DELAY_MS * retryCount);
 
         const nextActiveQueueDownload = sortByPriority(
-          updatedQueueDownload.filter((item) => item.status !== "paused")
+          updatedQueueDownload.filter((item) => item.status !== 'paused')
         );
         if (nextActiveQueueDownload.length > 0) {
           await BackgroundTask.registerTaskAsync(TASK_NAME);
         }
       } else {
         // Maximum retries reached, mark as failed
-        const failedChapter = { ...currentChapter, status: "failed" as const };
+        const failedChapter = { ...currentChapter, status: 'failed' as const };
         const updatedQueueDownload = remainingQueueDownload.map((item) =>
           item.id === currentChapter.id ? failedChapter : item
         );
-        if (
-          !updatedQueueDownload.some((item) => item.id === currentChapter.id)
-        ) {
+        if (!updatedQueueDownload.some((item) => item.id === currentChapter.id)) {
           updatedQueueDownload.push(failedChapter);
         }
 
-        console.error(
-          `Max retries reached for chapter: ${getChapterHash(currentChapter)}`
-        );
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(updatedQueueDownload)
-        );
+        console.error(`Max retries reached for chapter: ${getChapterHash(currentChapter)}`);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedQueueDownload));
 
         const nextActiveQueueDownload = sortByPriority(
-          updatedQueueDownload.filter((item) => item.status !== "paused")
+          updatedQueueDownload.filter((item) => item.status !== 'paused')
         );
         if (nextActiveQueueDownload.length > 0) {
           await BackgroundTask.registerTaskAsync(TASK_NAME);
@@ -311,7 +283,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
   } catch (error) {
-    console.error("Background task error:", error);
+    console.error('Background task error:', error);
     return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
@@ -342,15 +314,9 @@ export function useQueueDownloadStore() {
 
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         const queue: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
-        const active = sortByPriority(
-          queue.filter((i) => i.status !== "paused")
-        );
+        const active = sortByPriority(queue.filter((i) => i.status !== 'paused'));
 
-        if (
-          active.length > 0 &&
-          !processingRef.current &&
-          !areDownloadsPaused
-        ) {
+        if (active.length > 0 && !processingRef.current && !areDownloadsPaused) {
           setTimeout(() => void processQueueDownload(), 100);
         }
       }
@@ -373,7 +339,7 @@ export function useQueueDownloadStore() {
       }
       return stored;
     } catch (error) {
-      console.error("Error loading queueDownload:", error);
+      console.error('Error loading queueDownload:', error);
       return [];
     }
   }, []);
@@ -382,7 +348,7 @@ export function useQueueDownloadStore() {
   const processQueueDownload = useCallback(async () => {
     // CHECK GLOBAL PAUSE STATE FIRST
     const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-    const globallyPaused = pausedValue === "true";
+    const globallyPaused = pausedValue === 'true';
 
     if (!isOnline) {
       setIsWaitingForConnection(true);
@@ -393,9 +359,7 @@ export function useQueueDownloadStore() {
       // Update notification to show paused state
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const queue: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
-      const currentDownloading = queue.find(
-        (item) => item.status === "downloading"
-      );
+      const currentDownloading = queue.find((item) => item.status === 'downloading');
       if (currentDownloading) {
         await updateDownloadNotification(null, 0, 0, true);
       }
@@ -412,7 +376,7 @@ export function useQueueDownloadStore() {
 
       // 2) Filter out paused items and sort by priority + timestamp
       const activeQueueDownload = sortByPriority(
-        fullQueueDownload.filter((item) => item.status !== "paused")
+        fullQueueDownload.filter((item) => item.status !== 'paused')
       );
       if (activeQueueDownload.length === 0) {
         // Clear notification when no active downloads
@@ -430,10 +394,8 @@ export function useQueueDownloadStore() {
       const completedItems = totalItemsRef.current - fullQueueDownload.length;
 
       // CHECK PAUSE STATE AGAIN BEFORE DOWNLOADING
-      const pausedValueBeforeDownload = await AsyncStorage.getItem(
-        DOWNLOADS_PAUSED_KEY
-      );
-      const stillGloballyPaused = pausedValueBeforeDownload === "true";
+      const pausedValueBeforeDownload = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+      const stillGloballyPaused = pausedValueBeforeDownload === 'true';
 
       if (stillGloballyPaused) {
         processingRef.current = false;
@@ -445,51 +407,42 @@ export function useQueueDownloadStore() {
       // 4) Mark it as "downloading" both in storage and in local state
       const updatedCurrent: QueueDownloadItem = {
         ...current,
-        status: "downloading",
+        status: 'downloading',
       };
       const queueDownloadWithStatus = [
         updatedCurrent,
         ...fullQueueDownload.filter((i) => i.id !== current.id),
       ];
-      await AsyncStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(queueDownloadWithStatus)
-      );
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(queueDownloadWithStatus));
       if (mountedRef.current) setQueueDownload(queueDownloadWithStatus);
 
       // Update notification with current download
-      await updateDownloadNotification(
-        updatedCurrent,
-        totalItemsRef.current,
-        completedItems
-      );
+      await updateDownloadNotification(updatedCurrent, totalItemsRef.current, completedItems);
 
       try {
         // 5) Perform the actual download
         await novelController.downloadNovelChapter(current);
 
         // 6) Invalidate related React-Query caches on success
+
         invalidateNovelQueries({
           novelTitle: current.novelTitle,
           chapterNumber: current.chapterNumber,
+          isNovelSaved: current.isNovelSaved,
         });
 
         // 7) Re-read the queueDownload to pick up any items added during download
         const rawAfter = await AsyncStorage.getItem(STORAGE_KEY);
-        const latestQueueDownload: QueueDownloadItem[] = rawAfter
-          ? JSON.parse(rawAfter)
-          : [];
+        const latestQueueDownload: QueueDownloadItem[] = rawAfter ? JSON.parse(rawAfter) : [];
 
         // 8) Remove the completed item and persist
-        const remaining = latestQueueDownload.filter(
-          (i) => i.id !== current.id
-        );
+        const remaining = latestQueueDownload.filter((i) => i.id !== current.id);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(remaining));
         if (mountedRef.current) setQueueDownload(remaining);
 
         // Update notification with progress
         const newCompletedItems = completedItems + 1;
-        const nextItem = remaining.find((item) => item.status !== "paused");
+        const nextItem = remaining.find((item) => item.status !== 'paused');
         await updateDownloadNotification(
           nextItem || null,
           totalItemsRef.current,
@@ -499,73 +452,53 @@ export function useQueueDownloadStore() {
         // 9) Handle retry logic
         const retryCount = (current.retryCount || 0) + 1;
         const afterRaw = await AsyncStorage.getItem(STORAGE_KEY);
-        const queueDownloadNow: QueueDownloadItem[] = afterRaw
-          ? JSON.parse(afterRaw)
-          : [];
+        const queueDownloadNow: QueueDownloadItem[] = afterRaw ? JSON.parse(afterRaw) : [];
 
         if (retryCount <= MAX_RETRIES) {
           // 9a) Re-enqueueDownload with increased retryCount
           const retried: QueueDownloadItem = {
             ...current,
             retryCount,
-            lastError:
-              downloadError instanceof Error
-                ? downloadError.message
-                : "Unknown error",
-            status: "pending",
+            lastError: downloadError instanceof Error ? downloadError.message : 'Unknown error',
+            status: 'pending',
             timestamp: Date.now(),
           };
-          const withoutCurrent = queueDownloadNow.filter(
-            (i) => i.id !== current.id
-          );
-          const updatedQueueDownload = sortByPriority([
-            ...withoutCurrent,
-            retried,
-          ]);
+          const withoutCurrent = queueDownloadNow.filter((i) => i.id !== current.id);
+          const updatedQueueDownload = sortByPriority([...withoutCurrent, retried]);
 
-          await AsyncStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(updatedQueueDownload)
-          );
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedQueueDownload));
           if (mountedRef.current) setQueueDownload(updatedQueueDownload);
 
           // delay before next retry
           await delay(RETRY_DELAY_MS * retryCount);
         } else {
           // 9b) Mark as failed after exhausting retries
-          const failed: QueueDownloadItem = { ...current, status: "failed" };
-          const withoutCurrent = queueDownloadNow.filter(
-            (i) => i.id !== current.id
-          );
+          const failed: QueueDownloadItem = { ...current, status: 'failed' };
+          const withoutCurrent = queueDownloadNow.filter((i) => i.id !== current.id);
           const updatedQueueDownload = [...withoutCurrent, failed];
 
           console.error(`Max retries for ${getChapterHash(current)}`);
-          await AsyncStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(updatedQueueDownload)
-          );
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedQueueDownload));
           if (mountedRef.current) setQueueDownload(updatedQueueDownload);
 
           // Invalidate cache for the failed chapter
           invalidateQueries(
-            ["novel-info", current.novelTitle],
-            ["novel-chapter", current.novelTitle, current.chapterNumber],
-            "library"
+            ['novel-info', current.novelTitle],
+            ['novel-chapter', current.novelTitle, current.chapterNumber],
+            'library'
           );
         }
       }
 
       // 10) Continue processing remaining items - but check pause state first
       const pausedValueAfter = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-      const pausedAgain = pausedValueAfter === "true";
+      const pausedAgain = pausedValueAfter === 'true';
 
       if (!pausedAgain) {
         const nextRaw = await AsyncStorage.getItem(STORAGE_KEY);
-        const nextQueueDownload: QueueDownloadItem[] = nextRaw
-          ? JSON.parse(nextRaw)
-          : [];
+        const nextQueueDownload: QueueDownloadItem[] = nextRaw ? JSON.parse(nextRaw) : [];
         const nextActive = sortByPriority(
-          nextQueueDownload.filter((item) => item.status !== "paused")
+          nextQueueDownload.filter((item) => item.status !== 'paused')
         );
         if (nextActive.length > 0) {
           setTimeout(() => void processQueueDownload(), 100);
@@ -575,7 +508,7 @@ export function useQueueDownloadStore() {
         }
       }
     } catch (err) {
-      console.error("Error in processQueueDownload:", err);
+      console.error('Error in processQueueDownload:', err);
     } finally {
       // Reset processing flag
       processingRef.current = false;
@@ -593,7 +526,7 @@ export function useQueueDownloadStore() {
 
       // LOAD PAUSE STATE ON INIT
       const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-      const pausedFlag = pausedValue === "true";
+      const pausedFlag = pausedValue === 'true';
 
       setAreDownloadsPaused(pausedFlag);
 
@@ -645,57 +578,54 @@ export function useQueueDownloadStore() {
   }, [loadQueueDownload, areDownloadsPaused]);
 
   // Function to add chapters to queueDownload
-  const enqueueDownload = useCallback(
-    async (chapters: DownloadChapter[], priority: number = 2) => {
-      if (chapters.some((ch) => !ch.novelTitle || !ch.chapterNumber)) {
-        ToastAndroid.show("Download failed", ToastAndroid.SHORT);
-        return;
+  const enqueueDownload = useCallback(async (chapters: DownloadChapter[], priority: number = 2) => {
+    if (chapters.some((ch) => !ch.novelTitle || !ch.chapterNumber)) {
+      ToastAndroid.show('Download failed', ToastAndroid.SHORT);
+      return;
+    }
+
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
+
+      // Create Set for O(1) lookup
+      const existingHashes = new Set(stored.map(getChapterHash));
+
+      // Filter new chapters
+      const newOnes = chapters
+        .filter((ch) => !existingHashes.has(getChapterHash(ch)))
+        .map((ch) => ({
+          ...ch,
+          id: generateId(),
+          retryCount: 0,
+          timestamp: Date.now(),
+          priority,
+          status: 'pending' as const,
+        }));
+
+      if (newOnes.length === 0) return;
+
+      const updated = sortByPriority([...stored, ...newOnes]);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+      // Update total count for progress calculation
+      totalItemsRef.current = Math.max(totalItemsRef.current, updated.length);
+
+      if (mountedRef.current) {
+        setQueueDownload(updated);
       }
 
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
+      // Only register background task if not paused
+      const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
+      const isPaused = pausedValue === 'true';
 
-        // Create Set for O(1) lookup
-        const existingHashes = new Set(stored.map(getChapterHash));
-
-        // Filter new chapters
-        const newOnes = chapters
-          .filter((ch) => !existingHashes.has(getChapterHash(ch)))
-          .map((ch) => ({
-            ...ch,
-            id: generateId(),
-            retryCount: 0,
-            timestamp: Date.now(),
-            priority,
-            status: "pending" as const,
-          }));
-
-        if (newOnes.length === 0) return;
-
-        const updated = sortByPriority([...stored, ...newOnes]);
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-        // Update total count for progress calculation
-        totalItemsRef.current = Math.max(totalItemsRef.current, updated.length);
-
-        if (mountedRef.current) {
-          setQueueDownload(updated);
-        }
-
-        // Only register background task if not paused
-        const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-        const isPaused = pausedValue === "true";
-
-        if (!isPaused) {
-          await BackgroundTask.registerTaskAsync(TASK_NAME);
-        }
-      } catch (error) {
-        console.error("Error enqueueDownloading chapters:", error);
+      if (!isPaused) {
+        await BackgroundTask.registerTaskAsync(TASK_NAME);
       }
-    },
-    []
-  );
+    } catch (error) {
+      console.error('Error enqueueDownloading chapters:', error);
+    }
+  }, []);
 
   // Function to cancel a specific download
   const cancelDownload = useCallback(
@@ -713,17 +643,17 @@ export function useQueueDownloadStore() {
 
         // If we cancel the one being downloaded, force processing of the next one
         const canceledItem = stored.find((item) => item.id === id);
-        if (canceledItem?.status === "downloading") {
+        if (canceledItem?.status === 'downloading') {
           processingRef.current = false;
           setIsProcessing(false);
 
           // Only process next if not paused
           const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-          const isPaused = pausedValue === "true";
+          const isPaused = pausedValue === 'true';
 
           if (!isPaused) {
             const nextActiveQueueDownload = sortByPriority(
-              updated.filter((item) => item.status !== "paused")
+              updated.filter((item) => item.status !== 'paused')
             );
             if (nextActiveQueueDownload.length > 0) {
               setTimeout(() => processQueueDownload(), 500);
@@ -734,7 +664,7 @@ export function useQueueDownloadStore() {
           }
         }
       } catch (error) {
-        console.error("Error canceling download:", error);
+        console.error('Error canceling download:', error);
       }
     },
     [processQueueDownload]
@@ -759,17 +689,17 @@ export function useQueueDownloadStore() {
         }
 
         // If any of the cancelled items was downloading, reset and process next
-        const hadDownloading = toCancel.some((i) => i.status === "downloading");
+        const hadDownloading = toCancel.some((i) => i.status === 'downloading');
         if (hadDownloading) {
           processingRef.current = false;
           setIsProcessing(false);
 
           const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-          const isPaused = pausedValue === "true";
+          const isPaused = pausedValue === 'true';
 
           if (!isPaused) {
             const nextActiveQueueDownload = sortByPriority(
-              updated.filter((item) => item.status !== "paused")
+              updated.filter((item) => item.status !== 'paused')
             );
             if (nextActiveQueueDownload.length > 0) {
               setTimeout(() => processQueueDownload(), 500);
@@ -779,7 +709,7 @@ export function useQueueDownloadStore() {
           }
         }
       } catch (error) {
-        console.error("Error canceling novel downloads:", error);
+        console.error('Error canceling novel downloads:', error);
       }
     },
     [processQueueDownload, sortByPriority]
@@ -810,16 +740,13 @@ export function useQueueDownloadStore() {
           await TaskManager.unregisterTaskAsync(TASK_NAME);
         }
       } catch (taskErr) {
-        if (
-          taskErr instanceof Error &&
-          /not found for app ID/.test(taskErr.message)
-        ) {
+        if (taskErr instanceof Error && /not found for app ID/.test(taskErr.message)) {
         } else {
-          console.warn("Error unregistering background task:", taskErr);
+          console.warn('Error unregistering background task:', taskErr);
         }
       }
     } catch (error) {
-      console.error("Error canceling all downloads:", error);
+      console.error('Error canceling all downloads:', error);
     }
   }, [setQueueDownload, setIsProcessing]);
 
@@ -832,10 +759,7 @@ export function useQueueDownloadStore() {
 
         const updated = stored.map((item) => {
           if (item.id === id) {
-            const newStatus =
-              item.status === "paused"
-                ? ("pending" as const)
-                : ("paused" as const);
+            const newStatus = item.status === 'paused' ? ('pending' as const) : ('paused' as const);
             return { ...item, status: newStatus };
           }
           return item;
@@ -850,17 +774,13 @@ export function useQueueDownloadStore() {
         // Check global pause state before processing
         const resumedItem = updated.find((item) => item.id === id);
         const pausedValue = await AsyncStorage.getItem(DOWNLOADS_PAUSED_KEY);
-        const globallyPaused = pausedValue === "true";
+        const globallyPaused = pausedValue === 'true';
 
-        if (
-          resumedItem?.status === "pending" &&
-          !processingRef.current &&
-          !globallyPaused
-        ) {
+        if (resumedItem?.status === 'pending' && !processingRef.current && !globallyPaused) {
           setTimeout(() => processQueueDownload(), 100);
         }
       } catch (error) {
-        console.error("Error toggling pause:", error);
+        console.error('Error toggling pause:', error);
       }
     },
     [processQueueDownload]
@@ -869,11 +789,11 @@ export function useQueueDownloadStore() {
   const changePriority = useCallback(
     async (id: string, newPriority: number) => {
       if (!id) {
-        console.warn("changePriority called with empty id");
+        console.warn('changePriority called with empty id');
         return;
       }
       if (newPriority < 0) {
-        console.warn("Invalid newPriority", newPriority);
+        console.warn('Invalid newPriority', newPriority);
         return;
       }
 
@@ -881,11 +801,9 @@ export function useQueueDownloadStore() {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
 
-        const targetIdx = stored.findIndex(
-          (item) => String(item.id) === String(id)
-        );
+        const targetIdx = stored.findIndex((item) => String(item.id) === String(id));
         if (targetIdx === -1) {
-          console.warn("Item to change priority not found", {
+          console.warn('Item to change priority not found', {
             id,
             existing: stored.map((i) => i.id),
           });
@@ -913,16 +831,13 @@ export function useQueueDownloadStore() {
         const merged = [...updatedOthers, updatedTarget];
         const sortedQueueDownload = sortByPriority(merged);
 
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(sortedQueueDownload)
-        );
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(sortedQueueDownload));
 
         if (mountedRef.current) {
           setQueueDownload(sortedQueueDownload);
         }
       } catch (error) {
-        console.error("Error changing priority:", error);
+        console.error('Error changing priority:', error);
       }
     },
     [sortByPriority]
@@ -938,10 +853,7 @@ export function useQueueDownloadStore() {
       if (index <= 0) return; // Already at top or doesn't exist
 
       const updated = [...stored];
-      [updated[index - 1], updated[index]] = [
-        updated[index],
-        updated[index - 1],
-      ];
+      [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
 
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
@@ -949,7 +861,7 @@ export function useQueueDownloadStore() {
         setQueueDownload(updated);
       }
     } catch (error) {
-      console.error("Error moving item up:", error);
+      console.error('Error moving item up:', error);
     }
   }, []);
 
@@ -963,10 +875,7 @@ export function useQueueDownloadStore() {
       if (index === -1 || index >= stored.length - 1) return; // Doesn't exist or already at bottom
 
       const updated = [...stored];
-      [updated[index], updated[index + 1]] = [
-        updated[index + 1],
-        updated[index],
-      ];
+      [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
 
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
@@ -974,7 +883,7 @@ export function useQueueDownloadStore() {
         setQueueDownload(updated);
       }
     } catch (error) {
-      console.error("Error moving item down:", error);
+      console.error('Error moving item down:', error);
     }
   }, []);
 
@@ -996,7 +905,7 @@ export function useQueueDownloadStore() {
         setQueueDownload(updated);
       }
     } catch (error) {
-      console.error("Error moving to top:", error);
+      console.error('Error moving to top:', error);
     }
   }, []);
 
@@ -1018,7 +927,7 @@ export function useQueueDownloadStore() {
         setQueueDownload(updated);
       }
     } catch (error) {
-      console.error("Error moving to bottom:", error);
+      console.error('Error moving to bottom:', error);
     }
   }, []);
 
@@ -1066,7 +975,7 @@ export function useQueueDownloadStore() {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const stored: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
 
-      const filtered = stored.filter((item) => item.status !== "failed");
+      const filtered = stored.filter((item) => item.status !== 'failed');
 
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 
@@ -1074,22 +983,17 @@ export function useQueueDownloadStore() {
         setQueueDownload(filtered);
       }
     } catch (error) {
-      console.error("Error clearing failed chapters:", error);
+      console.error('Error clearing failed chapters:', error);
     }
   }, []);
 
   // Function to get statistics
   const getStats = useCallback(() => {
     const total = queueDownload.length;
-    const downloading = queueDownload.filter(
-      (item) => item.status === "downloading"
-    ).length;
-    const pending = queueDownload.filter((item) => item.status === "pending")
-      .length;
-    const paused = queueDownload.filter((item) => item.status === "paused")
-      .length;
-    const failed = queueDownload.filter((item) => item.status === "failed")
-      .length;
+    const downloading = queueDownload.filter((item) => item.status === 'downloading').length;
+    const pending = queueDownload.filter((item) => item.status === 'pending').length;
+    const paused = queueDownload.filter((item) => item.status === 'paused').length;
+    const failed = queueDownload.filter((item) => item.status === 'failed').length;
 
     const byPriority = {
       high: queueDownload.filter((item) => item.priority === 1).length,
@@ -1099,9 +1003,7 @@ export function useQueueDownloadStore() {
 
     const completed = totalItemsRef.current - total;
     const progress =
-      totalItemsRef.current > 0
-        ? Math.round((completed / totalItemsRef.current) * 100)
-        : 0;
+      totalItemsRef.current > 0 ? Math.round((completed / totalItemsRef.current) * 100) : 0;
 
     return {
       total,
@@ -1120,7 +1022,7 @@ export function useQueueDownloadStore() {
   const pauseAllDownloads = useCallback(async () => {
     try {
       // Set the pause flag in storage
-      await AsyncStorage.setItem(DOWNLOADS_PAUSED_KEY, "true");
+      await AsyncStorage.setItem(DOWNLOADS_PAUSED_KEY, 'true');
       setAreDownloadsPaused(true);
 
       // STOP CURRENT PROCESSING IMMEDIATELY
@@ -1143,7 +1045,7 @@ export function useQueueDownloadStore() {
         intervalRef.current = null;
       }
     } catch (e) {
-      console.error("❌ Error pausing all downloads:", e);
+      console.error('❌ Error pausing all downloads:', e);
     }
   }, []);
 
@@ -1156,7 +1058,7 @@ export function useQueueDownloadStore() {
       // RE-REGISTER BACKGROUND TASK
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const queue: QueueDownloadItem[] = raw ? JSON.parse(raw) : [];
-      const active = sortByPriority(queue.filter((i) => i.status !== "paused"));
+      const active = sortByPriority(queue.filter((i) => i.status !== 'paused'));
 
       if (active.length > 0) {
         await BackgroundTask.registerTaskAsync(TASK_NAME);
@@ -1178,7 +1080,7 @@ export function useQueueDownloadStore() {
         }
       }
     } catch (e) {
-      console.error("❌ Error resuming all downloads:", e);
+      console.error('❌ Error resuming all downloads:', e);
     }
   }, [processQueueDownload, loadQueueDownload]);
 
@@ -1216,7 +1118,7 @@ export function useQueueDownloadStore() {
 
       if (!notificationCategoryReadyRef.current) {
         await ensureNotificationCategory().catch((e) =>
-          console.warn("Failed to ensure notification category:", e)
+          console.warn('Failed to ensure notification category:', e)
         );
         notificationCategoryReadyRef.current = true;
       }
@@ -1226,18 +1128,16 @@ export function useQueueDownloadStore() {
 
   // Listen for notification action (Pause) and toggle all downloads paused
   useEffect(() => {
-    const responseListener = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        try {
-          const actionId = response.actionIdentifier;
-          if (actionId === "PAUSE") {
-            toggleAllDownloadsPaused();
-          }
-        } catch (e) {
-          console.error("Error handling notification response:", e);
+    const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+      try {
+        const actionId = response.actionIdentifier;
+        if (actionId === 'PAUSE') {
+          toggleAllDownloadsPaused();
         }
+      } catch (e) {
+        console.error('Error handling notification response:', e);
       }
-    );
+    });
 
     return () => {
       responseListener.remove();
@@ -1252,9 +1152,7 @@ export function useQueueDownloadStore() {
         return;
       }
 
-      const currentDownloading = queueDownload.find(
-        (item) => item.status === "downloading"
-      );
+      const currentDownloading = queueDownload.find((item) => item.status === 'downloading');
 
       if (!currentDownloading) {
         if (queueDownload.length === 0) {
@@ -1264,11 +1162,7 @@ export function useQueueDownloadStore() {
       }
 
       const completed = totalItemsRef.current - queueDownload.length;
-      await updateDownloadNotification(
-        currentDownloading,
-        totalItemsRef.current,
-        completed
-      );
+      await updateDownloadNotification(currentDownloading, totalItemsRef.current, completed);
     };
 
     void updateNotificationState();
@@ -1305,11 +1199,7 @@ type QueueStoreType = ReturnType<typeof useQueueDownloadStore>;
 
 const ChapterDownloadQueueContext = createContext<QueueStoreType | null>(null);
 
-export function ChapterDownloadQueueProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function ChapterDownloadQueueProvider({ children }: { children: ReactNode }) {
   const store = useQueueDownloadStore();
   return (
     <ChapterDownloadQueueContext.Provider value={store}>
@@ -1321,9 +1211,7 @@ export function ChapterDownloadQueueProvider({
 export function useChapterDownloadQueue() {
   const ctx = useContext(ChapterDownloadQueueContext);
   if (!ctx) {
-    throw new Error(
-      "useChapterDownloadQueue must be used within a ChapterDownloadQueueProvider"
-    );
+    throw new Error('useChapterDownloadQueue must be used within a ChapterDownloadQueueProvider');
   }
   return ctx;
 }

@@ -1,17 +1,18 @@
-import { View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { novelController } from "@/server/controllers/novel";
-import ReaderComponent, { getReaderStyles } from "@/components/reader";
-import Loading from "@/components/statics/loading";
-import Error from "@/components/statics/error";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect, useRef, useState } from "react";
+import { View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { novelController } from '@/server/controllers/novel';
+import ReaderComponent, { getReaderStyles } from '@/components/reader';
+import Loading from '@/components/statics/loading';
+import Error from '@/components/statics/error';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useRef, useState } from 'react';
 
 export default function NovelReaderScreen() {
   const router = useRouter();
-  const { novelTitle, chapterNumber, downloaded } = useLocalSearchParams();
-  const isDownloaded = downloaded ? downloaded === "1" : false;
+  const { novelTitle, chapterNumber, downloaded, isNovelSaved: isSaved } = useLocalSearchParams();
+  const isDownloaded = downloaded ? downloaded === '1' : false;
+  const isNovelSaved = isSaved ? isSaved === '1' : false;
 
   const { top, bottom } = useSafeAreaInsets();
   const [staticInsets, setStaticInsets] = useState(() => ({
@@ -37,8 +38,12 @@ export default function NovelReaderScreen() {
 
   const { styles: readerStyles } = getReaderStyles({ insets: staticInsets });
 
-  const { data: novelChapter, isFetching, isError } = useQuery({
-    queryKey: ["novel-chapter", novelTitle, chapterNumber],
+  const {
+    data: novelChapter,
+    isFetching,
+    isError,
+  } = useQuery({
+    queryKey: ['novel-chapter', novelTitle, chapterNumber],
     queryFn: () =>
       novelController.getNovelChapter({
         novelTitle: String(novelTitle),
@@ -77,7 +82,7 @@ export default function NovelReaderScreen() {
         title="Here lies an unwritten chapter..."
         pressable={{
           onPress: () => router.back(),
-          title: "Go back to " + novelTitle,
+          title: 'Go back to ' + novelTitle,
         }}
         backgroundStyle={{ backgroundColor: readerStyles.body.backgroundColor }}
         textStyle={{ color: readerStyles.body.color, opacity: 0.8 }}
@@ -91,9 +96,8 @@ export default function NovelReaderScreen() {
       className="flex-1"
       style={{
         backgroundColor: readerStyles.body.backgroundColor,
-      }}
-    >
-      <ReaderComponent chapter={novelChapter} insets={staticInsets} />
+      }}>
+      <ReaderComponent chapter={novelChapter} insets={staticInsets} isNovelSaved={isNovelSaved} />
     </View>
   );
 }

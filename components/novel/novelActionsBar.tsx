@@ -1,14 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  TouchableOpacity,
-  View,
-  StyleProp,
-  ViewStyle,
-  BackHandler,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMutation } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, TouchableOpacity, View, StyleProp, ViewStyle, BackHandler } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMutation } from '@tanstack/react-query';
 import {
   ArrowDown,
   ArrowUp,
@@ -17,19 +10,20 @@ import {
   CheckCheck,
   EyeClosed,
   Trash2,
-} from "lucide-react-native";
-import { colors } from "@/lib/constants";
-import { novelController } from "@/server/controllers/novel";
-import { DownloadChapter } from "@/types/download";
-import { Chapter } from "@/types/novel";
-import { useFocusEffect } from "expo-router";
-import { useConfig } from "@/providers/appConfig";
-import { invalidateQueries } from "@/providers/reactQuery";
+} from 'lucide-react-native';
+import { colors } from '@/lib/constants';
+import { novelController } from '@/server/controllers/novel';
+import { DownloadChapter } from '@/types/download';
+import { Chapter } from '@/types/novel';
+import { useFocusEffect } from 'expo-router';
+import { useConfig } from '@/providers/appConfig';
+import { invalidateQueries } from '@/providers/reactQuery';
 
 const ANIM_DURATION = 150;
 
 type Props = {
   novelTitle: string;
+  isNovelSaved: boolean;
   selectedChapters: Chapter[];
   setSelectedChapters: (chapters: Chapter[]) => void;
   refetchNovelInfo: () => void;
@@ -40,6 +34,7 @@ type Props = {
 
 export default function NovelActionsBar({
   novelTitle,
+  isNovelSaved,
   selectedChapters,
   setSelectedChapters,
   refetchNovelInfo,
@@ -50,10 +45,7 @@ export default function NovelActionsBar({
   // ─── Hooks & Refs ─────────────────────────────────────────────────────────
   const insets = useSafeAreaInsets();
   const visible = selectedChapters.length > 0;
-  const [removeDownloadOnRead] = useConfig<boolean>(
-    "removeDownloadOnRead",
-    false
-  );
+  const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
 
   // Animation values
   const translateY = useRef(new Animated.Value(100)).current;
@@ -78,11 +70,7 @@ export default function NovelActionsBar({
 
   // Mutations (all hooks)
   const { mutate: markBook } = useMutation({
-    mutationKey: [
-      "bookmark",
-      novelTitle,
-      selectedChapters.map((c) => c.number),
-    ],
+    mutationKey: ['bookmark', novelTitle, selectedChapters.map((c) => c.number)],
     mutationFn: () =>
       novelController.markChaptersAsBookmarked({
         novelTitle,
@@ -92,11 +80,7 @@ export default function NovelActionsBar({
   });
 
   const { mutate: unmarkBook } = useMutation({
-    mutationKey: [
-      "unbookmark",
-      novelTitle,
-      selectedChapters.map((c) => c.number),
-    ],
+    mutationKey: ['unbookmark', novelTitle, selectedChapters.map((c) => c.number)],
     mutationFn: () =>
       novelController.unMarkChaptersAsBookmarked({
         novelTitle,
@@ -106,11 +90,7 @@ export default function NovelActionsBar({
   });
 
   const { mutate: markRead } = useMutation({
-    mutationKey: [
-      "markRead",
-      novelTitle,
-      selectedChapters.map((c) => c.number),
-    ],
+    mutationKey: ['markRead', novelTitle, selectedChapters.map((c) => c.number)],
     mutationFn: () =>
       novelController.markChaptersAsRead({
         novelTitle,
@@ -119,16 +99,12 @@ export default function NovelActionsBar({
       }),
     onSuccess: () => {
       onSuccess();
-      invalidateQueries("library");
+      invalidateQueries('library');
     },
   });
 
   const { mutate: unmarkRead } = useMutation({
-    mutationKey: [
-      "unmarkRead",
-      novelTitle,
-      selectedChapters.map((c) => c.number),
-    ],
+    mutationKey: ['unmarkRead', novelTitle, selectedChapters.map((c) => c.number)],
     mutationFn: () =>
       novelController.unMarkChaptersAsRead({
         novelTitle,
@@ -136,12 +112,12 @@ export default function NovelActionsBar({
       }),
     onSuccess: () => {
       onSuccess();
-      invalidateQueries("library");
+      invalidateQueries('library');
     },
   });
 
   const { mutate: queueDownload } = useMutation({
-    mutationKey: ["queueDownload", selectedChapters.map((c) => c.number)],
+    mutationKey: ['queueDownload', selectedChapters.map((c) => c.number)],
     mutationFn: (chapters: DownloadChapter[]) => {
       enqueueDownload(chapters);
       return Promise.resolve();
@@ -150,7 +126,7 @@ export default function NovelActionsBar({
   });
 
   const { mutate: removeDownload } = useMutation({
-    mutationKey: ["removeDownload", selectedChapters.map((c) => c.number)],
+    mutationKey: ['removeDownload', selectedChapters.map((c) => c.number)],
     mutationFn: (chapters: DownloadChapter[]) => {
       onOpenDeleteChaptersDrawer(chapters);
       return Promise.resolve(chapters);
@@ -159,7 +135,7 @@ export default function NovelActionsBar({
   });
 
   const { mutate: markBeforeRead } = useMutation({
-    mutationKey: ["markBeforeRead", novelTitle, singularSelectedChapterNumber],
+    mutationKey: ['markBeforeRead', novelTitle, singularSelectedChapterNumber],
     mutationFn: () => {
       if (singularSelectedChapterNumber === null) {
         return Promise.resolve(false);
@@ -189,10 +165,7 @@ export default function NovelActionsBar({
         return false;
       };
 
-      const subscription = BackHandler.addEventListener(
-        "hardwareBackPress",
-        onBackPress
-      );
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
       return () => {
         subscription.remove();
@@ -235,14 +208,14 @@ export default function NovelActionsBar({
   }, [visible, translateY, opacity]);
 
   // Handlers (non-hooks)
-  const handleBookmark = () =>
-    shouldMarkAsBookmarked ? markBook() : unmarkBook();
+  const handleBookmark = () => (shouldMarkAsBookmarked ? markBook() : unmarkBook());
   const handleDownload = () => {
     const chapters: DownloadChapter[] = selectedChapters.map((c) => ({
       novelTitle: c.novelTitle,
       chapterNumber: c.number,
       chapterTitle: c.title,
       readingProgress: c.progress ?? 0,
+      isNovelSaved: isNovelSaved,
     }));
     shouldDownload ? queueDownload(chapters) : removeDownload(chapters);
   };
@@ -260,8 +233,7 @@ export default function NovelActionsBar({
   return (
     <Animated.View
       style={[animatedStyle]}
-      className="absolute inset-x-0 bottom-0 flex flex-row gap-x-4 items-center justify-between px-8 py-6 bg-layout_background"
-    >
+      className="absolute inset-x-0 bottom-0 flex flex-row items-center justify-between gap-x-4 bg-layout_background px-8 py-6">
       {/* Bookmark button */}
       <TouchableOpacity className="p-2" onPress={handleBookmark}>
         {shouldMarkAsBookmarked ? (
@@ -286,24 +258,21 @@ export default function NovelActionsBar({
 
       {/* Single-chapter extra action */}
       {selectedChapters.length === 1 && (
-        <TouchableOpacity
-          className="relative p-2"
-          onPress={() => markBeforeRead()}
-        >
+        <TouchableOpacity className="relative p-2" onPress={() => markBeforeRead()}>
           <CheckCheck size={24} color={colors.foreground} strokeWidth={1} />
           {isSortAsc ? (
             <ArrowUp
               size={12}
               color={colors.foreground}
               strokeWidth={1}
-              style={{ position: "absolute", bottom: 2, right: 0 }}
+              style={{ position: 'absolute', bottom: 2, right: 0 }}
             />
           ) : (
             <ArrowDown
               size={12}
               color={colors.foreground}
               strokeWidth={1}
-              style={{ position: "absolute", bottom: 2, right: 0 }}
+              style={{ position: 'absolute', bottom: 2, right: 0 }}
             />
           )}
         </TouchableOpacity>
@@ -319,8 +288,7 @@ export default function NovelActionsBar({
               borderWidth: 1,
               borderColor: colors.foreground,
             }}
-            className="flex items-center justify-center border rounded-full"
-          >
+            className="flex items-center justify-center rounded-full border">
             <ArrowDown size={12} color={colors.foreground} strokeWidth={2} />
           </View>
         ) : (
