@@ -33,15 +33,14 @@ export default function HistoryCard({
     novelCustomImage,
     novelImage,
     downloaded,
+    isNovelRead,
   } = chapterHistory;
   const coverUri = novelCustomImage ?? novelImage;
   const date = format(readAt, 'hh:mm a');
 
   const isRead = chapterProgress === 100;
 
-  const isCompleted = isRead && nextChapterNumber === null;
-
-  const isReading = chapterProgress > 0 && !isRead && !isCompleted;
+  const isReading = chapterProgress > 0 && !isRead && !isNovelRead;
 
   function handlePress() {
     if (!isOnline && !downloaded) {
@@ -79,23 +78,23 @@ export default function HistoryCard({
       </View>
 
       <View className="flex flex-1 flex-col justify-center gap-2">
-        {isCompleted && <Text className="tracking-wide text-muted_foreground/75">Completed</Text>}
+        {isNovelRead && <Text className="tracking-wide text-muted_foreground/75">Completed</Text>}
         <Text className="text-lg font-medium text-muted_foreground/80" numberOfLines={3}>
           {novelTitle}
         </Text>
-        <View className="flex flex-row items-center gap-2">
+        <View className="flex flex-row items-center gap-2 ">
           <Text className="tracking-wide text-muted_foreground/75">Ch. {chapterNumber}</Text>
 
           {isReading && (
             <View className="flex flex-row items-center gap-2">
               <Text className="tracking-wide text-muted_foreground/75">•</Text>
-              <Text className=" text-muted_foreground/75">{chapterProgress}%</Text>
+              <Text className="text-muted_foreground/75">{chapterProgress}%</Text>
             </View>
           )}
 
-          {isRead && nextChapterNumber && (
+          {isRead && nextChapterNumber && !isNovelRead && (
             <View className="flex flex-row items-center gap-2">
-              <ChevronRight color={colors.muted_foreground} size={14} strokeWidth={1.4} />
+              <ChevronRight color={colors.muted_foreground} size={13} strokeWidth={1.4} />
               <Text className=" text-muted_foreground/75">Ch. {nextChapterNumber}</Text>
             </View>
           )}
@@ -104,7 +103,7 @@ export default function HistoryCard({
         </View>
       </View>
       <TouchableOpacity
-        className="mr-1 p-2"
+        className="-mr-2 p-2"
         onPress={() => openRemoveEntryDrawer({ novelTitle, chapterNumber })}>
         <Trash2 color={colors.muted_foreground} size={20} strokeWidth={1.4} />
       </TouchableOpacity>

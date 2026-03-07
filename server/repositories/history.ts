@@ -17,6 +17,13 @@ export const historyRepository = {
         chapterTitle: novelChapters.title,
         readAt: novelChapters.readAt,
         downloaded: novelChapters.downloaded,
+        isNovelRead: sql<boolean>`NOT EXISTS (
+          SELECT 1
+          FROM ${novelChapters} nc3
+          WHERE nc3.novel_title = ${novelChapters.novelTitle}
+          AND nc3.progress < 100
+        )`,
+
         nextChapterNumber: sql<number | null>`(
           SELECT MIN(nc2.number)
           FROM ${novelChapters} AS nc2
@@ -32,6 +39,7 @@ export const historyRepository = {
 
     const seen = new Set<string>();
     const latest: ChapterHistory[] = [];
+
     for (const r of rows) {
       if (!seen.has(r.novelTitle)) {
         seen.add(r.novelTitle);
@@ -46,6 +54,7 @@ export const historyRepository = {
           nextChapterNumber: r.nextChapterNumber ?? null,
           readAt: r.readAt!,
           downloaded: Boolean(r.downloaded),
+          isNovelRead: Boolean(r.isNovelRead),
         });
       }
     }
@@ -81,6 +90,7 @@ export const historyRepository = {
     return Array.from(map.values()).map<HistoryBatch>(({ readAt, chapters }) => ({
       readAt,
       chaptersHistory: chapters,
+      isNovelRead: chapters.every((c) => c.isNovelRead),
     }));
   },
 

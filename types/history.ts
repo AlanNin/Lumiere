@@ -9,6 +9,7 @@ export type ChapterHistory = {
   nextChapterNumber?: number | null;
   readAt: string;
   downloaded: boolean;
+  isNovelRead: boolean;
 };
 
 export type HistoryBatch = {
