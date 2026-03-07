@@ -26,6 +26,7 @@ import { extractContentFromHTML } from '@/lib/html';
 import { useDebouncedCallback } from '@/lib/debounce';
 import { useRouter } from 'expo-router';
 import { useIsOnline } from '@/providers/network';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 export default function ReaderComponent({
   chapter,
@@ -77,6 +78,7 @@ export default function ReaderComponent({
       speechSpeed: 0.7,
       voiceIdentifier: availableVoices[0]?.identifier,
       isTTSAutoNext: false,
+      isKeepAwakeOnTTS: false,
     }
   );
   const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
@@ -412,6 +414,23 @@ export default function ReaderComponent({
       handleTTS();
     }
   }, [isStartWithTTS]);
+
+  useEffect(() => {
+    if (!readerGeneralConfig.isKeepAwakeOnTTS) {
+      deactivateKeepAwake();
+      return;
+    }
+
+    if (isTTSReading) {
+      activateKeepAwakeAsync();
+    } else {
+      deactivateKeepAwake();
+    }
+
+    return () => {
+      deactivateKeepAwake();
+    };
+  }, [isTTSReading, readerGeneralConfig.isKeepAwakeOnTTS]);
 
   const saveProgressNow = useCallback(() => {
     if (incognitoMode) return;

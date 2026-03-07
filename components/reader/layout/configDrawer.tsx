@@ -63,6 +63,7 @@ export default function ReaderStyleConfigDrawer({
     speechSpeed: readerGeneralConfig.speechSpeed,
     voiceIdentifier: readerGeneralConfig.voiceIdentifier,
     isTTSAutoNext: readerGeneralConfig.isTTSAutoNext,
+    isKeepAwakeOnTTS: readerGeneralConfig.isKeepAwakeOnTTS,
   });
 
   const initialReaderStylesConfigStateRef = useRef<ReaderStyleConfig>(readerStylesConfigState);
@@ -226,6 +227,17 @@ export default function ReaderStyleConfigDrawer({
               />
             ))}
           </Picker>
+        </ConfigItem>
+        <ConfigItem label="TTS Keep Awake">
+          <BooleanSwitch
+            value={readerGeneralConfigState.isKeepAwakeOnTTS}
+            onChange={(value) =>
+              setReaderGeneralConfigState((prev) => ({
+                ...prev,
+                isKeepAwakeOnTTS: value,
+              }))
+            }
+          />
         </ConfigItem>
         <ConfigItem label="TTS Auto-Play Next">
           <BooleanSwitch

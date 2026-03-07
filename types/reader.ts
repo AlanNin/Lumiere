@@ -34,6 +34,7 @@ export type GeneralConfig = {
   speechSpeed: number;
   voiceIdentifier: string | undefined;
   isTTSAutoNext: boolean;
+  isKeepAwakeOnTTS: boolean;
 };
 
 export type VoiceIdentifier = {
