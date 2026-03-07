@@ -1,4 +1,4 @@
-export type TextAlgin = "left" | "center" | "right" | "justify";
+export type TextAlgin = 'left' | 'center' | 'right' | 'justify';
 
 export type StyleConfig = {
   body: {
@@ -33,6 +33,7 @@ export type GeneralConfig = {
   showProgressSeekBar: boolean;
   speechSpeed: number;
   voiceIdentifier: string | undefined;
+  isTTSAutoNext: boolean;
 };
 
 export type VoiceIdentifier = {

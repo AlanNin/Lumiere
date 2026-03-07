@@ -96,10 +96,10 @@ export default function NovelDetails({
           <View className="flex flex-row gap-x-1.5">
             {Array.from({ length: 5 }).map((_, i) => {
               const fullStars = Math.floor(rating);
-              const fraction = rating % 1;
+              const fraction = rating - fullStars;
 
               const isFull = i < fullStars;
-              const isHalf = i === fullStars && fraction >= 0.4 && fraction < 0.7;
+              const isHalf = i === fullStars && fraction >= 0.5;
               const color = isFull || isHalf ? colors.primary_dark : colors.muted_foreground;
               const fill = isFull || isHalf ? colors.primary_dark : undefined;
 

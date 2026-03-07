@@ -7,6 +7,7 @@ import {
   NativeSyntheticEvent,
   ScrollView,
   TextStyle,
+  ToastAndroid,
   View,
 } from 'react-native';
 import { colors } from '@/lib/constants';
@@ -23,15 +24,19 @@ import * as Speech from 'expo-speech';
 import { Text } from '../defaults';
 import { extractContentFromHTML } from '@/lib/html';
 import { useDebouncedCallback } from '@/lib/debounce';
+import { useRouter } from 'expo-router';
+import { useIsOnline } from '@/providers/network';
 
 export default function ReaderComponent({
   chapter,
   insets,
   isNovelSaved,
+  isStartWithTTS,
 }: {
   chapter: Chapter;
   insets: { top: number; bottom: number };
   isNovelSaved: boolean;
+  isStartWithTTS: boolean;
 }) {
   const [layoutVisible, setLayoutVisible] = useState(false);
   const touchStartRef = useRef<number>(0);
@@ -71,12 +76,15 @@ export default function ReaderComponent({
       showProgressSeekBar: false,
       speechSpeed: 0.7,
       voiceIdentifier: availableVoices[0]?.identifier,
+      isTTSAutoNext: false,
     }
   );
   const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
   const speechSpeedRef = useRef(readerGeneralConfig.speechSpeed);
   const speechVoiceRef = useRef(readerGeneralConfig.voiceIdentifier);
   const userScrolledRef = useRef(false);
+  const router = useRouter();
+  const isOnline = useIsOnline();
 
   const { mutate: updateNovelChapterProgress } = useMutation({
     mutationFn: (progress: number) =>
@@ -275,17 +283,82 @@ export default function ReaderComponent({
     [contentHeight, viewHeight, scrollY]
   );
 
+  function handleNextChapter({
+    enableTTS,
+    startWithTTS,
+  }: {
+    enableTTS?: boolean;
+    startWithTTS?: boolean;
+  }) {
+    if (!chapter.nextChapter) return;
+
+    if (!isOnline && !chapter.nextChapter.downloaded) {
+      ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
+      return;
+    }
+
+    updateNovelChapterProgress(100);
+    updateNovelChapterReadAt();
+
+    const goToNext = () => {
+      router.replace({
+        pathname: '/novel/reader',
+        params: {
+          novelTitle: chapter.novelTitle,
+          chapterNumber: chapter.nextChapter?.number,
+          downloaded: chapter.nextChapter?.downloaded ? 1 : 0,
+          isNovelSaved: isNovelSaved ? 1 : 0,
+          startWithTTS: startWithTTS ? 1 : 0,
+        },
+      });
+    };
+
+    if (enableTTS) {
+      const nextNumber = chapter.nextChapter?.number;
+      const nextTitle = chapter.nextChapter?.title;
+
+      const nextMessage = nextTitle
+        ? `Continuing to chapter number ${nextNumber}: ${nextTitle}`
+        : `Continuing to chapter number ${nextNumber}`;
+
+      Speech.speak(nextMessage, {
+        language: 'en-US',
+        rate: speechSpeedRef.current,
+        voice: speechVoiceRef.current,
+        onDone: goToNext,
+        onStopped: goToNext,
+        onError: goToNext,
+      });
+
+      return;
+    }
+
+    goToNext();
+  }
+
   const readNextParagraph = useCallback(
     (index: number) => {
       if (index >= paragraphs.length) {
         setIsTTSReading(false);
         setTtsIndex(null);
 
-        Speech.speak(`End of chapter ${chapter.number}`, {
+        const number = chapter.number;
+        const title = chapter.title;
+
+        const message = title
+          ? `End of chapter number ${number}: ${title}`
+          : `End of chapter number ${number}`;
+
+        Speech.speak(message, {
           language: 'en-US',
           rate: speechSpeedRef.current,
           voice: speechVoiceRef.current,
         });
+
+        if (readerGeneralConfig.isTTSAutoNext) {
+          handleNextChapter({ enableTTS: true, startWithTTS: true });
+        }
+
         return;
       }
 
@@ -313,7 +386,12 @@ export default function ReaderComponent({
         },
       });
     },
-    [paragraphs, scrollToParagraph, readerGeneralConfig.speechSpeed]
+    [
+      paragraphs,
+      scrollToParagraph,
+      readerGeneralConfig.speechSpeed,
+      readerGeneralConfig.isTTSAutoNext,
+    ]
   );
 
   const handleTTS = () => {
@@ -328,6 +406,12 @@ export default function ReaderComponent({
     setIsTTSReading(true);
     readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
   };
+
+  useEffect(() => {
+    if (isStartWithTTS) {
+      handleTTS();
+    }
+  }, [isStartWithTTS]);
 
   const saveProgressNow = useCallback(() => {
     if (incognitoMode) return;
@@ -520,13 +604,9 @@ export default function ReaderComponent({
         {renderContent}
         <ReaderFooter
           chapter={chapter}
-          isNovelSaved={isNovelSaved}
           styles={styles}
           insets={insets}
-          handleSetChapterRead={() => {
-            updateNovelChapterProgress(100);
-            updateNovelChapterReadAt();
-          }}
+          handleNextChapter={handleNextChapter}
         />
       </ScrollView>
     </ReaderLayout>

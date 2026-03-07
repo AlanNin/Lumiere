@@ -10,9 +10,16 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function NovelReaderScreen() {
   const router = useRouter();
-  const { novelTitle, chapterNumber, downloaded, isNovelSaved: isSaved } = useLocalSearchParams();
+  const {
+    novelTitle,
+    chapterNumber,
+    downloaded,
+    isNovelSaved: isSaved,
+    startWithTTS,
+  } = useLocalSearchParams();
   const isDownloaded = downloaded ? downloaded === '1' : false;
   const isNovelSaved = isSaved ? isSaved === '1' : false;
+  const isStartWithTTS = startWithTTS ? startWithTTS === '1' : false;
 
   const { top, bottom } = useSafeAreaInsets();
   const [staticInsets, setStaticInsets] = useState(() => ({
@@ -97,7 +104,12 @@ export default function NovelReaderScreen() {
       style={{
         backgroundColor: readerStyles.body.backgroundColor,
       }}>
-      <ReaderComponent chapter={novelChapter} insets={staticInsets} isNovelSaved={isNovelSaved} />
+      <ReaderComponent
+        chapter={novelChapter}
+        insets={staticInsets}
+        isNovelSaved={isNovelSaved}
+        isStartWithTTS={isStartWithTTS}
+      />
     </View>
   );
 }

@@ -20,6 +20,7 @@ import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
 import { TextAlgin, VoiceIdentifier } from '@/types/reader';
 import BooleanSwitch from '@/components/switch';
 import { Picker } from '@react-native-picker/picker';
+import { useConfig } from '@/providers/appConfig';
 
 export default function ReaderStyleConfigDrawer({
   drawerRef,
@@ -61,6 +62,7 @@ export default function ReaderStyleConfigDrawer({
     showProgressSeekBar: readerGeneralConfig.showProgressSeekBar,
     speechSpeed: readerGeneralConfig.speechSpeed,
     voiceIdentifier: readerGeneralConfig.voiceIdentifier,
+    isTTSAutoNext: readerGeneralConfig.isTTSAutoNext,
   });
 
   const initialReaderStylesConfigStateRef = useRef<ReaderStyleConfig>(readerStylesConfigState);
@@ -185,7 +187,7 @@ export default function ReaderStyleConfigDrawer({
             }
           />
         </ConfigItem>
-        <ConfigItem label="Speech Speed">
+        <ConfigItem label="TTS Speed">
           <SliderComponent
             minValue={0.7}
             maxValue={1.5}
@@ -199,7 +201,7 @@ export default function ReaderStyleConfigDrawer({
             }
           />
         </ConfigItem>
-        <ConfigItem label="Speech Voice">
+        <ConfigItem label="TTS Voice">
           <Picker
             selectedValue={readerGeneralConfigState.voiceIdentifier}
             onValueChange={(value) => {
@@ -225,6 +227,17 @@ export default function ReaderStyleConfigDrawer({
             ))}
           </Picker>
         </ConfigItem>
+        <ConfigItem label="TTS Auto-Play Next">
+          <BooleanSwitch
+            value={readerGeneralConfigState.isTTSAutoNext}
+            onChange={(value) =>
+              setReaderGeneralConfigState((prev) => ({
+                ...prev,
+                isTTSAutoNext: value,
+              }))
+            }
+          />
+        </ConfigItem>
       </View>
     </BottomDrawer>
   );
@@ -232,8 +245,8 @@ export default function ReaderStyleConfigDrawer({
 
 function ConfigItem({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <View className="flex flex-row items-center">
-      <Text className="w-32">{label}</Text>
+    <View className="flex  flex-row items-center">
+      <Text className="w-40">{label}</Text>
       {children}
     </View>
   );

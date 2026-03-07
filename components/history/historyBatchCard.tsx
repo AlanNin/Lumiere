@@ -1,12 +1,19 @@
 import { View } from 'react-native';
 import { Text } from '../defaults';
 import { HistoryBatch } from '@/types/history';
-import { parse, differenceInCalendarDays } from 'date-fns';
+import {
+  parse,
+  differenceInCalendarDays,
+  differenceInCalendarMonths,
+  differenceInCalendarYears,
+} from 'date-fns';
 import HistoryCard from './historyCard';
+import { cn } from '@/lib/cn';
 
 export default function HistoryBatchCard({
   history,
   openRemoveEntryDrawer,
+  isLast,
 }: {
   history: HistoryBatch;
   openRemoveEntryDrawer: ({
@@ -16,11 +23,12 @@ export default function HistoryBatchCard({
     novelTitle: string;
     chapterNumber: number;
   }) => void;
+  isLast: boolean;
 }) {
   const groupLabel = getGroupLabel(history.readAt);
 
   return (
-    <View className="mb-4 flex flex-col gap-y-4">
+    <View className={cn(' flex flex-col gap-y-4', !isLast && 'mb-7')}>
       <Text className="font-medium text-muted_foreground/80">{groupLabel}</Text>
       <View className="flex flex-col gap-y-5">
         {history.chaptersHistory.map((ch) => (
@@ -35,16 +43,20 @@ export default function HistoryBatchCard({
   );
 }
 
-function getGroupLabel(date: string) {
-  const parsedDate = parse(date, 'yyyy-MM-dd', new Date());
+function getGroupLabel(readAt: string): string {
+  const date = parse(readAt.slice(0, 10), 'yyyy-MM-dd', new Date());
+  const now = new Date();
+  const daysDiff = differenceInCalendarDays(now, date);
 
-  const daysDiff = differenceInCalendarDays(new Date(), parsedDate);
+  if (daysDiff === 0) return 'Today';
+  if (daysDiff < 7) return daysDiff === 1 ? '1 day ago' : `${daysDiff} days ago`;
 
-  if (daysDiff === 0) {
-    return 'Today';
-  } else if (daysDiff === 1) {
-    return 'Yesterday';
-  } else {
-    return `${daysDiff} days ago`;
-  }
+  const weeks = Math.floor(daysDiff / 7);
+  if (weeks <= 3) return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+
+  const months = differenceInCalendarMonths(now, date);
+  if (months < 12) return months === 1 ? '1 month ago' : `${months} months ago`;
+
+  const years = differenceInCalendarYears(now, date);
+  return years === 1 ? '1 year ago' : `${years} years ago`;
 }

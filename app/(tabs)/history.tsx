@@ -100,15 +100,21 @@ export default function HistoryScreen() {
             ) : (
               <AnimatedFlashList
                 data={searchQuery ? filteredHistory : history!}
-                renderItem={({ item }) => (
-                  <HistoryBatchCard
-                    history={item}
-                    openRemoveEntryDrawer={(entry) => {
-                      setEntryToRemove(entry);
-                      removeHistoryEntriesDrawerRef.current?.present();
-                    }}
-                  />
-                )}
+                renderItem={({ item, index }) => {
+                  const length = searchQuery ? filteredHistory.length : history!.length;
+                  const isLast = index === length - 1;
+
+                  return (
+                    <HistoryBatchCard
+                      history={item}
+                      openRemoveEntryDrawer={(entry) => {
+                        setEntryToRemove(entry);
+                        removeHistoryEntriesDrawerRef.current?.present();
+                      }}
+                      isLast={isLast}
+                    />
+                  );
+                }}
                 contentContainerStyle={{
                   padding: 16,
                 }}

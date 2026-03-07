@@ -1,14 +1,14 @@
-import { Globe, Heart } from "lucide-react-native";
-import { Linking, TouchableOpacity, View } from "react-native";
-import { colors } from "@/lib/constants";
-import { Text } from "@/components/defaults";
-import { useMutation } from "@tanstack/react-query";
-import { novelController } from "@/server/controllers/novel";
-import { cn } from "@/lib/cn";
-import { invalidateQueries } from "@/providers/reactQuery";
-import { getNovelUrl } from "@/lib/novel";
-import { Category } from "@/types/category";
-import { useState } from "react";
+import { Globe, Heart } from 'lucide-react-native';
+import { Linking, TouchableOpacity, View } from 'react-native';
+import { colors } from '@/lib/constants';
+import { Text } from '@/components/defaults';
+import { useMutation } from '@tanstack/react-query';
+import { novelController } from '@/server/controllers/novel';
+import { cn } from '@/lib/cn';
+import { invalidateQueries } from '@/providers/reactQuery';
+import { getNovelUrl } from '@/lib/novel';
+import { Category } from '@/types/category';
+import { useEffect, useState } from 'react';
 
 export default function NovelTopButtons({
   novelTitle,
@@ -29,31 +29,23 @@ export default function NovelTopButtons({
     Linking.openURL(novelUrl);
   }
 
-  const {
-    mutate: setLibraryStatus,
-    isPending: isPendingLibraryStatus,
-  } = useMutation({
-    mutationFn: () =>
+  const { mutate: setLibraryStatus, isPending: isPendingLibraryStatus } = useMutation({
+    mutationFn: (newSaved: boolean) =>
       novelController.setLibraryStatus({
         title: novelTitle,
-        saved: !novelIsSaved,
+        saved: newSaved,
       }),
-    onMutate: () => {
-      setNovelIsSaved(!novelIsSaved);
-
-      if (!novelIsSaved && categories && categories.length > 0) {
+    onMutate: (newSaved) => {
+      setNovelIsSaved(newSaved);
+      if (newSaved && categories && categories.length > 0) {
         handleOpenCategoryDrawer();
       }
     },
     onSuccess: () => {
-      invalidateQueries(
-        "library",
-        ["novel-info", novelTitle],
-        ["explore-novels"]
-      );
+      invalidateQueries('library', ['novel-info', novelTitle], ['explore-novels']);
     },
-    onError: () => {
-      setNovelIsSaved(dbNovelIsSaved);
+    onError: (_, newSaved) => {
+      setNovelIsSaved(!newSaved);
       handleCloseCategoryDrawer();
     },
   });
@@ -61,30 +53,21 @@ export default function NovelTopButtons({
   return (
     <View className="flex flex-row items-center justify-center gap-x-20 px-4">
       <TouchableOpacity
-        className="flex flex-col items-center gap-y-2.5 w-28"
-        onPress={() => setLibraryStatus()}
+        className="flex w-28 flex-col items-center gap-y-2.5"
+        onPress={() => setLibraryStatus(!novelIsSaved)}
         onLongPress={handleOpenCategoryDrawer}
-        disabled={isPendingLibraryStatus}
-      >
+        disabled={isPendingLibraryStatus}>
         <Heart
           color={novelIsSaved ? colors.primary : colors.grayscale}
-          fill={novelIsSaved ? colors.primary : "transparent"}
+          fill={novelIsSaved ? colors.primary : 'transparent'}
           size={20}
           strokeWidth={1.6}
         />
-        <Text
-          className={cn(
-            "text-sm",
-            novelIsSaved ? "text-primary" : "text-grayscale"
-          )}
-        >
-          {novelIsSaved ? "In Library" : "Add to Library"}
+        <Text className={cn('text-sm', novelIsSaved ? 'text-primary' : 'text-grayscale')}>
+          {novelIsSaved ? 'In Library' : 'Add to Library'}
         </Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        className="flex flex-col items-center gap-y-2 w-28"
-        onPress={openInBrowser}
-      >
+      <TouchableOpacity className="flex w-28 flex-col items-center gap-y-2" onPress={openInBrowser}>
         <Globe color={colors.grayscale} size={20} strokeWidth={1.6} />
         <Text className="text-sm text-grayscale">Open in Browser</Text>
       </TouchableOpacity>

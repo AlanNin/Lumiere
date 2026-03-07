@@ -13,9 +13,16 @@ export const historyRepository = {
         isNovelSaved: novels.isSaved,
         novelCustomImage: novels.customImageUri,
         chapterNumber: novelChapters.number,
+        chapterProgress: novelChapters.progress,
         chapterTitle: novelChapters.title,
         readAt: novelChapters.readAt,
         downloaded: novelChapters.downloaded,
+        nextChapterNumber: sql<number | null>`(
+          SELECT MIN(nc2.number)
+          FROM ${novelChapters} AS nc2
+          WHERE nc2.novel_title = ${novelChapters.novelTitle}
+            AND nc2.number > ${novelChapters.number}
+        )`,
       })
       .from(novelChapters)
       .leftJoin(novels, eq(novelChapters.novelTitle, novels.title))
@@ -35,24 +42,45 @@ export const historyRepository = {
           isNovelSaved: Boolean(r.isNovelSaved),
           novelCustomImage: r.novelCustomImage,
           chapterNumber: r.chapterNumber,
+          chapterProgress: r.chapterProgress,
+          nextChapterNumber: r.nextChapterNumber ?? null,
           readAt: r.readAt!,
           downloaded: Boolean(r.downloaded),
         });
       }
     }
 
-    const map = new Map<string, ChapterHistory[]>();
-    for (const h of latest) {
-      const day = h.readAt.slice(0, 10);
-      const arr = map.get(day) ?? [];
-      arr.push(h);
-      map.set(day, arr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    function getBucketKey(readAt: string): string {
+      const date = new Date(readAt.slice(0, 10));
+      date.setHours(0, 0, 0, 0);
+      const daysDiff = Math.round((today.getTime() - date.getTime()) / (86400 * 1000));
+
+      if (daysDiff === 0) return 'today';
+      if (daysDiff < 7) return `${daysDiff}d`;
+
+      const weeks = Math.floor(daysDiff / 7);
+      if (weeks <= 3) return `${weeks}w`;
+
+      const months =
+        (today.getFullYear() - date.getFullYear()) * 12 + (today.getMonth() - date.getMonth());
+      if (months < 12) return `${months}mo`;
+
+      return `${today.getFullYear() - date.getFullYear()}y`;
     }
 
-    const sortedDays = Array.from(map.keys()).sort((a, b) => (a > b ? -1 : 1));
-    return sortedDays.map<HistoryBatch>((day) => ({
-      readAt: day,
-      chaptersHistory: map.get(day)!,
+    const map = new Map<string, { readAt: string; chapters: ChapterHistory[] }>();
+    for (const h of latest) {
+      const key = getBucketKey(h.readAt);
+      if (!map.has(key)) map.set(key, { readAt: h.readAt, chapters: [] });
+      map.get(key)!.chapters.push(h);
+    }
+
+    return Array.from(map.values()).map<HistoryBatch>(({ readAt, chapters }) => ({
+      readAt,
+      chaptersHistory: chapters,
     }));
   },
 
