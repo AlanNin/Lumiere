@@ -6,7 +6,10 @@ export type ChapterHistory = {
   novelCustomImage?: string | null;
   chapterNumber: number;
   chapterProgress: number;
-  nextChapterNumber?: number | null;
+  nextChapter?: {
+    number: number;
+    downloaded: boolean;
+  } | null;
   readAt: string;
   downloaded: boolean;
   isNovelRead: boolean;

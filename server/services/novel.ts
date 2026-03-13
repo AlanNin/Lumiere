@@ -502,13 +502,11 @@ export const novelService = {
     }
   },
 
-  async getLastRead(): Promise<Chapter & { isNovelSaved: boolean }> {
+  async getLastRead(): Promise<(Chapter & { isNovelSaved: boolean }) | null> {
     try {
       const lastRead = await novelRepository.getLastRead();
 
-      if (!lastRead) {
-        throw new Error('Failed to get last read novel');
-      }
+      if (!lastRead) return null;
 
       return lastRead;
     } catch (error) {

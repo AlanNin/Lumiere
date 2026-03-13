@@ -27,7 +27,7 @@ export default function HistoryCard({
     novelTitle,
     chapterNumber,
     chapterProgress,
-    nextChapterNumber,
+    nextChapter,
     isNovelSaved,
     readAt,
     novelCustomImage,
@@ -42,8 +42,12 @@ export default function HistoryCard({
 
   const isReading = chapterProgress > 0 && !isRead && !isNovelRead;
 
+  const isNext = isRead && nextChapter && !isNovelRead;
+
+  const isOffline = !isOnline && !downloaded && isNext && !nextChapter?.downloaded;
+
   function handlePress() {
-    if (!isOnline && !downloaded) {
+    if (isOffline) {
       ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
@@ -52,7 +56,7 @@ export default function HistoryCard({
       pathname: '/novel/reader',
       params: {
         novelTitle,
-        chapterNumber: isRead && nextChapterNumber ? nextChapterNumber : chapterNumber,
+        chapterNumber: isRead && nextChapter ? nextChapter.number : chapterNumber,
         downloaded: downloaded ? 1 : 0,
         isNovelSaved: isNovelSaved ? 1 : 0,
       },
@@ -70,7 +74,7 @@ export default function HistoryCard({
           contentFit="cover"
         />
 
-        {!isOnline && !downloaded && (
+        {isOffline && (
           <View className="absolute inset-0 flex items-center justify-center bg-black/60">
             <WifiOff color={colors.grayscale_foreground} size={24} strokeWidth={1.3} />
           </View>
@@ -92,10 +96,10 @@ export default function HistoryCard({
             </View>
           )}
 
-          {isRead && nextChapterNumber && !isNovelRead && (
+          {isNext && (
             <View className="flex flex-row items-center gap-2">
               <ChevronRight color={colors.muted_foreground} size={13} strokeWidth={1.4} />
-              <Text className=" text-muted_foreground/75">Ch. {nextChapterNumber}</Text>
+              <Text className=" text-muted_foreground/75">Ch. {nextChapter.number}</Text>
             </View>
           )}
           <Text className="tracking-wide text-muted_foreground/75">•</Text>

@@ -23,15 +23,19 @@ export default function NovelRemoveDownloadDrawer({
         chapters,
       }),
     onSuccess: (_data, variables) => {
-      for (const chapter of variables) {
-        invalidateQueries(
-          ['novel-info', chapter.novelTitle],
-          ['novel-chapter', chapter.novelTitle, chapter.chapterNumber]
-        );
+      const novelTitle = variables[0].novelTitle;
+      const isNovelSaved = variables.some((c) => c.isNovelSaved);
 
-        if (chapter.isNovelSaved) {
-          invalidateQueries(['library']);
-        }
+      for (const chapter of variables) {
+        invalidateQueries(['novel-chapter', chapter.novelTitle, chapter.chapterNumber]);
+      }
+
+      invalidateQueries(['novel-info', novelTitle]);
+
+      invalidateQueries(['history']);
+
+      if (isNovelSaved) {
+        invalidateQueries(['library']);
       }
     },
   });

@@ -149,6 +149,8 @@ export default function NovelDownloadChaptersDrawer({
     onSuccess: () => {
       invalidateQueries(['novel-info', novelTitle], ['novel-chapter', novelTitle]);
 
+      invalidateQueries(['history']);
+
       if (isNovelSaved) {
         invalidateQueries(['library']);
       }

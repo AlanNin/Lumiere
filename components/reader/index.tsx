@@ -100,7 +100,8 @@ export default function ReaderComponent({
       invalidateQueries(
         ['novel-info', chapter.novelTitle],
         ['novel-chapter', chapter.novelTitle, chapter.number],
-        ['lastRead']
+        ['lastRead'],
+        ['history']
       );
 
       if (isNovelSaved) {

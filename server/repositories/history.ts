@@ -18,18 +18,29 @@ export const historyRepository = {
         readAt: novelChapters.readAt,
         downloaded: novelChapters.downloaded,
         isNovelRead: sql<boolean>`NOT EXISTS (
-          SELECT 1
-          FROM ${novelChapters} nc3
-          WHERE nc3.novel_title = ${novelChapters.novelTitle}
-          AND nc3.progress < 100
-        )`,
-
+        SELECT 1
+        FROM ${novelChapters} nc3
+        WHERE nc3.novel_title = ${novelChapters.novelTitle}
+        AND nc3.progress < 100
+      )`,
         nextChapterNumber: sql<number | null>`(
-          SELECT MIN(nc2.number)
-          FROM ${novelChapters} AS nc2
-          WHERE nc2.novel_title = ${novelChapters.novelTitle}
-            AND nc2.number > ${novelChapters.number}
-        )`,
+        SELECT MIN(nc2.number)
+        FROM ${novelChapters} AS nc2
+        WHERE nc2.novel_title = ${novelChapters.novelTitle}
+          AND nc2.number > ${novelChapters.number}
+      )`,
+        nextChapterDownloaded: sql<boolean | null>`(
+        SELECT nc2.downloaded
+        FROM ${novelChapters} AS nc2
+        WHERE nc2.novel_title = ${novelChapters.novelTitle}
+          AND nc2.number = (
+            SELECT MIN(nc3.number)
+            FROM ${novelChapters} AS nc3
+            WHERE nc3.novel_title = ${novelChapters.novelTitle}
+              AND nc3.number > ${novelChapters.number}
+          )
+        LIMIT 1
+      )`,
       })
       .from(novelChapters)
       .leftJoin(novels, eq(novelChapters.novelTitle, novels.title))
@@ -38,8 +49,8 @@ export const historyRepository = {
       .all();
 
     const seen = new Set<string>();
-    const latest: ChapterHistory[] = [];
 
+    const latest: ChapterHistory[] = [];
     for (const r of rows) {
       if (!seen.has(r.novelTitle)) {
         seen.add(r.novelTitle);
@@ -51,7 +62,10 @@ export const historyRepository = {
           novelCustomImage: r.novelCustomImage,
           chapterNumber: r.chapterNumber,
           chapterProgress: r.chapterProgress,
-          nextChapterNumber: r.nextChapterNumber ?? null,
+          nextChapter:
+            r.nextChapterNumber != null
+              ? { number: r.nextChapterNumber, downloaded: Boolean(r.nextChapterDownloaded) }
+              : null,
           readAt: r.readAt!,
           downloaded: Boolean(r.downloaded),
           isNovelRead: Boolean(r.isNovelRead),

@@ -223,7 +223,13 @@ export default function NovelScreen() {
     isDownloading: boolean;
   }) {
     if (isDownloading) return;
+
     if (!isDownloaded) {
+      if (!isOnline) {
+        ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
+        return;
+      }
+
       enqueueDownload([chapter]);
     } else {
       handleOpenDeleteChaptersDrawer([chapter]);

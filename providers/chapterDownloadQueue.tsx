@@ -82,6 +82,7 @@ const invalidateNovelQueries = ({
   isNovelSaved?: boolean;
 }) => {
   invalidateQueries(['novel-info', novelTitle], ['novel-chapter', novelTitle, chapterNumber]);
+  invalidateQueries(['history']);
 
   if (isNovelSaved) {
     invalidateQueries(['library']);
