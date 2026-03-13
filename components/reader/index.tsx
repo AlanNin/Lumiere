@@ -27,6 +27,9 @@ import { useDebouncedCallback } from '@/lib/debounce';
 import { useRouter } from 'expo-router';
 import { useIsOnline } from '@/providers/network';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
+
+const silentPlayer = useAudioPlayer(require('@/assets/silent.mp3'));
 
 export default function ReaderComponent({
   chapter,
@@ -397,7 +400,22 @@ export default function ReaderComponent({
     ]
   );
 
-  const handleTTS = () => {
+  const primeAudioFocus = useCallback(async () => {
+    try {
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
+        interruptionMode: 'duckOthers',
+      });
+      silentPlayer.play();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      silentPlayer.pause();
+    } catch (e) {
+      console.error('primeAudioFocus error', e);
+    }
+  }, [silentPlayer]);
+
+  const handleTTS = async () => {
     if (isTTSReading) {
       stopRequestedRef.current = true;
       Speech.stop();
@@ -406,6 +424,7 @@ export default function ReaderComponent({
     }
 
     stopRequestedRef.current = false;
+    await primeAudioFocus();
     setIsTTSReading(true);
     readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
   };

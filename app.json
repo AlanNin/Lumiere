@@ -43,6 +43,12 @@
       "expo-sqlite",
       "expo-background-task",
       ["expo-image-picker"],
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true
+        }
+      ],
       "./plugins/withAndroidDisplayCutout"
     ],
     "scheme": "lumiere-scheme",
