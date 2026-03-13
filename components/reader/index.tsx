@@ -29,8 +29,6 @@ import { useIsOnline } from '@/providers/network';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 
-const silentPlayer = useAudioPlayer(require('@/assets/silent.mp3'));
-
 export default function ReaderComponent({
   chapter,
   insets,
@@ -42,6 +40,7 @@ export default function ReaderComponent({
   isNovelSaved: boolean;
   isStartWithTTS: boolean;
 }) {
+  const silentPlayer = useAudioPlayer(require('@/assets/silent.mp3'));
   const [layoutVisible, setLayoutVisible] = useState(false);
   const touchStartRef = useRef<number>(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -414,6 +413,10 @@ export default function ReaderComponent({
       console.error('primeAudioFocus error', e);
     }
   }, [silentPlayer]);
+
+  useEffect(() => {
+    primeAudioFocus();
+  }, []);
 
   const handleTTS = async () => {
     if (isTTSReading) {
