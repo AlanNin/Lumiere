@@ -399,23 +399,28 @@ export default function ReaderComponent({
     ]
   );
 
-  const primeAudioFocus = useCallback(async () => {
-    try {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        shouldPlayInBackground: true,
-        interruptionMode: 'duckOthers',
-      });
-      silentPlayer.play();
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      silentPlayer.pause();
-    } catch (e) {
-      console.error('primeAudioFocus error', e);
-    }
-  }, [silentPlayer]);
+  const primeAudioFocus = useCallback(
+    async (startup: boolean) => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: 'duckOthers',
+        });
+        silentPlayer.play();
+        if (startup) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        silentPlayer.pause();
+      } catch (e) {
+        // ignore
+      }
+    },
+    [silentPlayer]
+  );
 
   useEffect(() => {
-    primeAudioFocus();
+    primeAudioFocus(true);
   }, []);
 
   const handleTTS = async () => {
@@ -427,7 +432,7 @@ export default function ReaderComponent({
     }
 
     stopRequestedRef.current = false;
-    await primeAudioFocus();
+    await primeAudioFocus(false);
     setIsTTSReading(true);
     readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
   };
