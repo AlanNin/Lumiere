@@ -20,14 +20,32 @@ import { useMutation } from '@tanstack/react-query';
 import { novelController } from '@/server/controllers/novel';
 import { invalidateQueries } from '@/providers/reactQuery';
 import ReaderFooter from './footer';
-import * as Speech from 'expo-speech';
 import { Text } from '../defaults';
 import { extractContentFromHTML } from '@/lib/html';
 import { useDebouncedCallback } from '@/lib/debounce';
 import { useRouter } from 'expo-router';
 import { useIsOnline } from '@/providers/network';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import TTSSynthesizer, { TTSVoice } from './tts-synthesizer';
+
+// ─── Cache ────────────────────────────────────────────────────────────────────
+const synthCache = new Map<string, string>();
+
+function cacheKey(text: string, voice: string | undefined, rate: number): string {
+  return `${voice ?? 'default'}|${rate}|${text.length}|${text.slice(0, 60)}`;
+}
+
+async function synth(text: string, voice: string | undefined, rate: number): Promise<string> {
+  if (!text.trim()) return '';
+  const key = cacheKey(text, voice, rate);
+  if (synthCache.has(key)) return synthCache.get(key)!;
+  const uri = await TTSSynthesizer.synthesize(text, { language: 'en-US', voice, rate });
+  synthCache.set(key, uri);
+  return uri;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ReaderComponent({
   chapter,
@@ -40,14 +58,50 @@ export default function ReaderComponent({
   isNovelSaved: boolean;
   isStartWithTTS: boolean;
 }) {
-  const silentPlayer = useAudioPlayer(require('@/assets/silent.mp3'));
+  const ttsPlayer = useAudioPlayer(null);
+  const ttsStatus = useAudioPlayerStatus(ttsPlayer);
+
+  const isPlayerLoadedRef = useRef(false);
+  const isAdvancingRef = useRef(false);
+  const announcementCbRef = useRef<(() => void) | null>(null);
+  const isTTSHandlingRef = useRef(false);
+
+  const isMountedRef = useRef(true);
+
+  const playerPlay = useCallback(() => {
+    if (!isMountedRef.current) return;
+    try {
+      ttsPlayer.play();
+    } catch {}
+  }, [ttsPlayer]);
+
+  const playerPause = useCallback(() => {
+    if (!isMountedRef.current) return;
+    try {
+      ttsPlayer.pause();
+    } catch {
+      /* released */
+    }
+  }, [ttsPlayer]);
+
+  const playerReplace = useCallback(
+    (uri: string) => {
+      if (!isMountedRef.current) return;
+      try {
+        ttsPlayer.replace({ uri });
+      } catch {
+        /* released */
+      }
+    },
+    [ttsPlayer]
+  );
+
+  // ── Layout / scroll state ──────────────────────────────────────────────────
   const [layoutVisible, setLayoutVisible] = useState(false);
   const touchStartRef = useRef<number>(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const paragraphPositions = useRef<{
-    [key: number]: { y: number; height: number };
-  }>({});
+  const paragraphPositions = useRef<{ [k: number]: { y: number; height: number } }>({});
   const { styles, setReaderStylesConfig } = getReaderStyles({ insets });
   const [holdHide, setHoldHide] = useState(false);
   const [scrollY, setScrollY] = useState(0);
@@ -63,29 +117,34 @@ export default function ReaderComponent({
     return Number.isNaN(p) ? 0 : Math.round(p);
   })();
   const hasInititalSeekedRef = useRef(false);
+
   const [incognitoMode] = useConfig<boolean>('incognitoMode', false);
   const [ttsIndex, setTtsIndex] = useState<number | null>(null);
   const [isTTSReading, setIsTTSReading] = useState(false);
   const lastIndexRef = useRef<number>(0);
   const stopRequestedRef = useRef<boolean>(false);
   const parragraphLongPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const content = useMemo(() => extractContentFromHTML(chapter.content ?? ''), [chapter.content]);
   const title = content.title;
   const paragraphs = content.paragraphs;
+
   const [availableVoices, setAvailableVoices] = useState<VoiceIdentifier[]>([]);
+  const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
+
   const [readerGeneralConfig, setReaderGeneralConfig] = useConfig<ReaderGeneralConfig>(
     'readerGeneralConfig',
     {
       showProgressSeekBar: false,
-      speechSpeed: 0.7,
-      voiceIdentifier: availableVoices[0]?.identifier,
+      speechSpeed: 1.0,
+      voiceIdentifier: undefined,
       isTTSAutoNext: false,
       isKeepAwakeOnTTS: false,
     }
   );
-  const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
+
   const speechSpeedRef = useRef(readerGeneralConfig.speechSpeed);
-  const speechVoiceRef = useRef(readerGeneralConfig.voiceIdentifier);
+  const speechVoiceRef = useRef<string | undefined>(readerGeneralConfig.voiceIdentifier);
   const userScrolledRef = useRef(false);
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -105,10 +164,7 @@ export default function ReaderComponent({
         ['lastRead'],
         ['history']
       );
-
-      if (isNovelSaved) {
-        invalidateQueries(['library']);
-      }
+      if (isNovelSaved) invalidateQueries(['library']);
     },
   });
 
@@ -118,22 +174,17 @@ export default function ReaderComponent({
         novelTitle: chapter.novelTitle,
         chapterNumber: chapter.number,
       }),
-    onSuccess: () => {
-      invalidateQueries('history');
-    },
+    onSuccess: () => invalidateQueries('history'),
   });
 
   const scrollToParagraph = useCallback(
     (paragraphIndex: number) => {
-      const paragraphPosition = paragraphPositions.current[paragraphIndex];
-      if (paragraphPosition && scrollViewRef.current) {
-        const targetPosition =
-          paragraphPosition.y - viewHeight * 0.5 + paragraphPosition.height / 2;
+      const pos = paragraphPositions.current[paragraphIndex];
+      if (pos && scrollViewRef.current) {
+        const target = pos.y - viewHeight * 0.5 + pos.height / 2;
         const maxScrollY = Math.max(0, contentHeight - viewHeight);
-        const scrollToY = Math.max(0, Math.min(targetPosition, maxScrollY));
-
         scrollViewRef.current.scrollTo({
-          y: scrollToY,
+          y: Math.max(0, Math.min(target, maxScrollY)),
           animated: true,
         });
       }
@@ -141,12 +192,10 @@ export default function ReaderComponent({
     [viewHeight, contentHeight]
   );
 
+  // ── Rendered content ───────────────────────────────────────────────────────
   const renderContent = useMemo(
     () => (
-      <View
-        style={{
-          paddingTop: styles.body.paddingTop,
-        }}>
+      <View style={{ paddingTop: styles.body.paddingTop }}>
         <Text
           selectable
           style={{
@@ -162,11 +211,11 @@ export default function ReaderComponent({
         </Text>
         {paragraphs.map((text: string, idx: number) => {
           const shouldHighlight = ttsIndex === idx && isTTSReading;
-
           return (
             <View
-              onLayout={(event) => {
-                const { y, height } = event.nativeEvent.layout;
+              key={idx}
+              onLayout={(e) => {
+                const { y, height } = e.nativeEvent.layout;
                 paragraphPositions.current[idx] = { y, height };
               }}
               style={{
@@ -174,16 +223,17 @@ export default function ReaderComponent({
                 paddingVertical: 6,
                 marginTop: -6,
                 marginBottom: styles.p.marginBottom - 6,
-                backgroundColor:
-                  shouldHighlight && ttsIndex === idx ? colors.primary_dark + 35 : 'transparent',
+                backgroundColor: shouldHighlight ? colors.primary_dark + 35 : 'transparent',
               }}
-              key={idx}
               onTouchStart={() => {
                 if (!isTTSReading) return;
-
                 parragraphLongPressTimeoutRef.current = setTimeout(() => {
-                  Speech.stop();
+                  stopRequestedRef.current = true;
+                  isPlayerLoadedRef.current = false;
+                  playerPause();
                   setTimeout(() => {
+                    stopRequestedRef.current = false;
+                    isAdvancingRef.current = false;
                     setIsTTSReading(true);
                     readNextParagraph(idx);
                   }, 100);
@@ -219,23 +269,18 @@ export default function ReaderComponent({
     [styles, paragraphs, ttsIndex, isTTSReading]
   );
 
+  // ── UI bar helpers ─────────────────────────────────────────────────────────
   const handleTouchStart = () => {
     postponeHide();
     touchStartRef.current = Date.now();
   };
-
   const handleTouchEndCapture = () => {
-    const delta = Date.now() - touchStartRef.current;
-    if (delta <= 300) {
-      toggleBars();
-    }
+    if (Date.now() - touchStartRef.current <= 300) toggleBars();
   };
 
   const postponeHide = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(async () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
       setLayoutVisible(false);
       timeoutRef.current = null;
     }, 3000);
@@ -246,48 +291,45 @@ export default function ReaderComponent({
       setLayoutVisible(true);
       postponeHide();
     }
-
-    setHoldHide(!holdHide);
+    setHoldHide((h) => !h);
   }
 
-  const toggleBars = useCallback(async () => {
-    const next = !layoutVisible;
-    setLayoutVisible(next);
+  const toggleBars = useCallback(() => {
+    setLayoutVisible((v) => !v);
     postponeHide();
   }, [layoutVisible, postponeHide]);
 
-  const scrollToTop = useCallback(() => {
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
-
-  const scrollToBottom = useCallback(() => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, []);
+  const scrollToTop = useCallback(
+    () => scrollViewRef.current?.scrollTo({ y: 0, animated: true }),
+    []
+  );
+  const scrollToBottom = useCallback(
+    () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+    []
+  );
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!userScrolledRef.current) userScrolledRef.current = true;
     setScrollY(e.nativeEvent.contentOffset.y);
   }, []);
 
-  const onContentSizeChange = useCallback((_: number, h: number) => {
-    setContentHeight(h);
-  }, []);
-
-  const onLayout = useCallback((e: LayoutChangeEvent) => {
-    setViewHeight(e.nativeEvent.layout.height);
-  }, []);
+  const onContentSizeChange = useCallback((_: number, h: number) => setContentHeight(h), []);
+  const onLayout = useCallback(
+    (e: LayoutChangeEvent) => setViewHeight(e.nativeEvent.layout.height),
+    []
+  );
 
   const seekTo = useCallback(
-    (percent: number, smoothScroll = false) => {
-      const p = Math.max(0, Math.min(100, percent)) / 100;
-      const maxOffset = Math.max(0, contentHeight - viewHeight);
-      const targetY = maxOffset * p;
+    (p: number, smoothScroll = false) => {
+      const clamped = Math.max(0, Math.min(100, p)) / 100;
+      const targetY = Math.max(0, contentHeight - viewHeight) * clamped;
       if (Math.abs(targetY - scrollY) < 1) return;
       scrollViewRef.current?.scrollTo({ y: targetY, animated: smoothScroll });
     },
     [contentHeight, viewHeight, scrollY]
   );
 
+  // ── Next chapter ───────────────────────────────────────────────────────────
   function handleNextChapter({
     enableTTS,
     startWithTTS,
@@ -296,16 +338,14 @@ export default function ReaderComponent({
     startWithTTS?: boolean;
   }) {
     if (!chapter.nextChapter) return;
-
     if (!isOnline && !chapter.nextChapter.downloaded) {
       ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
       return;
     }
-
     updateNovelChapterProgress(100);
     updateNovelChapterReadAt();
 
-    const goToNext = () => {
+    const goToNext = () =>
       router.replace({
         pathname: '/novel/reader',
         params: {
@@ -316,180 +356,203 @@ export default function ReaderComponent({
           startWithTTS: startWithTTS ? 1 : 0,
         },
       });
-    };
 
     if (enableTTS) {
-      const nextNumber = chapter.nextChapter?.number;
-      const nextTitle = chapter.nextChapter?.title;
-
-      const nextMessage = nextTitle
-        ? `Continuing to chapter number ${nextNumber}: ${nextTitle}`
-        : `Continuing to chapter number ${nextNumber}`;
-
-      Speech.speak(nextMessage, {
-        language: 'en-US',
-        rate: speechSpeedRef.current,
-        voice: speechVoiceRef.current,
-        onDone: goToNext,
-        onStopped: goToNext,
-        onError: goToNext,
-      });
-
+      const n = chapter.nextChapter?.number;
+      const t = chapter.nextChapter?.title;
+      const msg = t
+        ? `Continuing to chapter number ${n}: ${t}`
+        : `Continuing to chapter number ${n}`;
+      announcementCbRef.current = goToNext;
+      synth(msg, speechVoiceRef.current, speechSpeedRef.current)
+        .then((uri) => {
+          isPlayerLoadedRef.current = true;
+          playerReplace(uri);
+          playerPlay();
+        })
+        .catch(goToNext);
       return;
     }
-
     goToNext();
   }
 
+  // ── Core TTS loop ──────────────────────────────────────────────────────────
   const readNextParagraph = useCallback(
-    (index: number) => {
+    async (index: number) => {
       if (index >= paragraphs.length) {
+        if (!isMountedRef.current) return;
         setIsTTSReading(false);
         setTtsIndex(null);
-
-        const number = chapter.number;
-        const title = chapter.title;
-
-        const message = title
-          ? `End of chapter number ${number}: ${title}`
-          : `End of chapter number ${number}`;
-
-        Speech.speak(message, {
-          language: 'en-US',
-          rate: speechSpeedRef.current,
-          voice: speechVoiceRef.current,
-        });
-
-        if (readerGeneralConfig.isTTSAutoNext) {
-          handleNextChapter({ enableTTS: true, startWithTTS: true });
+        const msg = chapter.title
+          ? `End of chapter number ${chapter.number}: ${chapter.title}`
+          : `End of chapter number ${chapter.number}`;
+        announcementCbRef.current = readerGeneralConfig.isTTSAutoNext
+          ? () => handleNextChapter({ enableTTS: true, startWithTTS: true })
+          : null;
+        try {
+          const uri = await synth(msg, speechVoiceRef.current, speechSpeedRef.current);
+          if (!isMountedRef.current) return;
+          isPlayerLoadedRef.current = true;
+          playerReplace(uri);
+          playerPlay();
+        } catch {
+          announcementCbRef.current?.();
+          announcementCbRef.current = null;
         }
-
         return;
       }
 
+      if (!isMountedRef.current) return;
       setTtsIndex(index);
       lastIndexRef.current = index;
+      setTimeout(() => scrollToParagraph(index), 80);
 
-      setTimeout(() => {
-        scrollToParagraph(index);
-      }, 100);
+      try {
+        const uri = await synth(paragraphs[index], speechVoiceRef.current, speechSpeedRef.current);
 
-      Speech.speak(paragraphs[index], {
-        language: 'en-US',
-        rate: speechSpeedRef.current,
-        voice: speechVoiceRef.current,
-        onDone: () => {
-          readNextParagraph(index + 1);
-        },
-        onStopped: () => {
-          if (!stopRequestedRef.current) {
-            setIsTTSReading(false);
-          }
-        },
-        onError: () => {
-          setIsTTSReading(false);
-        },
-      });
+        if (stopRequestedRef.current || !isMountedRef.current) return;
+
+        isPlayerLoadedRef.current = false;
+        playerReplace(uri);
+        isPlayerLoadedRef.current = true;
+        playerPlay();
+
+        // Pre-warm next paragraph
+        if (index + 1 < paragraphs.length) {
+          synth(paragraphs[index + 1], speechVoiceRef.current, speechSpeedRef.current).catch(
+            () => {}
+          );
+        }
+      } catch (e) {
+        console.error('[TTS] synth error:', e);
+        if (isMountedRef.current) setIsTTSReading(false);
+      }
     },
     [
       paragraphs,
       scrollToParagraph,
-      readerGeneralConfig.speechSpeed,
+      playerReplace,
+      playerPlay,
+      chapter,
       readerGeneralConfig.isTTSAutoNext,
     ]
   );
 
-  const primeAudioFocus = useCallback(
-    async (startup: boolean) => {
-      try {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          shouldPlayInBackground: true,
-          interruptionMode: 'duckOthers',
-        });
-        silentPlayer.play();
-        if (startup) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
-        silentPlayer.pause();
-      } catch (e) {
-        // ignore
-      }
-    },
-    [silentPlayer]
-  );
-
-  useEffect(() => {
-    primeAudioFocus(true);
+  // ── Audio session prime ────────────────────────────────────────────────────
+  const primeAudioFocus = useCallback(async () => {
+    try {
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
+        interruptionMode: 'duckOthers',
+      });
+    } catch {
+      /* ignore */
+    }
   }, []);
 
-  const handleTTS = async () => {
-    if (isTTSReading) {
-      stopRequestedRef.current = true;
-      Speech.stop();
-      setIsTTSReading(false);
+  useEffect(() => {
+    primeAudioFocus();
+  }, []);
+
+  // ── didJustFinish: only advance when a real clip was loaded ───────────────
+  useEffect(() => {
+    if (!ttsStatus.didJustFinish) return;
+    if (!isPlayerLoadedRef.current) return;
+
+    if (announcementCbRef.current) {
+      isPlayerLoadedRef.current = false;
+      const cb = announcementCbRef.current;
+      announcementCbRef.current = null;
+      cb();
       return;
     }
 
-    stopRequestedRef.current = false;
-    await primeAudioFocus(false);
-    setIsTTSReading(true);
-    readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
+    if (!isTTSReading || isAdvancingRef.current || stopRequestedRef.current) return;
+
+    isPlayerLoadedRef.current = false;
+    isAdvancingRef.current = true;
+    readNextParagraph(lastIndexRef.current + 1).finally(() => {
+      isAdvancingRef.current = false;
+    });
+  }, [ttsStatus.didJustFinish]);
+
+  // ── Start / stop TTS ──────────────────────────────────────────────────────
+  const handleTTS = async () => {
+    if (isTTSHandlingRef.current) return;
+    isTTSHandlingRef.current = true;
+    try {
+      if (isTTSReading) {
+        stopRequestedRef.current = true;
+        isPlayerLoadedRef.current = false;
+        playerPause();
+        setIsTTSReading(false);
+        TTSSynthesizer.stopForegroundService().catch(() => {});
+        return;
+      }
+      stopRequestedRef.current = false;
+      isAdvancingRef.current = false;
+      await TTSSynthesizer.startForegroundService().catch(() => {});
+      setIsTTSReading(true);
+      readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
+    } finally {
+      isTTSHandlingRef.current = false;
+    }
   };
 
-  useEffect(() => {
-    if (isStartWithTTS) {
-      handleTTS();
-    }
-  }, [isStartWithTTS]);
-
-  useEffect(() => {
-    if (!readerGeneralConfig.isKeepAwakeOnTTS) {
-      deactivateKeepAwake();
-      return;
-    }
-
-    if (isTTSReading) {
-      activateKeepAwakeAsync();
-    } else {
-      deactivateKeepAwake();
-    }
-
-    return () => {
-      deactivateKeepAwake();
-    };
-  }, [isTTSReading, readerGeneralConfig.isKeepAwakeOnTTS]);
-
-  const saveProgressNow = useCallback(() => {
-    if (incognitoMode) return;
-
-    const latestPercent = percentRef.current;
-
-    if ((chapter.progress ?? 0) < 100) {
-      updateNovelChapterProgress(latestPercent);
-    }
-    updateNovelChapterReadAt();
-  }, [incognitoMode, percentRef, chapter.progress]);
-
-  const debouncedSaveProgressNow = useDebouncedCallback(saveProgressNow, 300);
-
-  useEffect(() => {
-    percentRef.current = percent;
-  }, [percent]);
-
+  // ── Sync speed & voice refs ────────────────────────────────────────────────
   useEffect(() => {
     speechSpeedRef.current = readerGeneralConfig.speechSpeed;
     speechVoiceRef.current = readerGeneralConfig.voiceIdentifier;
   }, [readerGeneralConfig.speechSpeed, readerGeneralConfig.voiceIdentifier]);
 
   useEffect(() => {
+    if (isStartWithTTS) handleTTS();
+  }, [isStartWithTTS]);
+
+  // ── Keep-awake ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!readerGeneralConfig.isKeepAwakeOnTTS) {
+      deactivateKeepAwake();
+      return;
+    }
+    if (isTTSReading) activateKeepAwakeAsync();
+    else deactivateKeepAwake();
     return () => {
-      Speech.stop();
+      deactivateKeepAwake();
+    };
+  }, [isTTSReading, readerGeneralConfig.isKeepAwakeOnTTS]);
+
+  // ── Progress saving ────────────────────────────────────────────────────────
+  const saveProgressNow = useCallback(() => {
+    if (incognitoMode) return;
+    if ((chapter.progress ?? 0) < 100) updateNovelChapterProgress(percentRef.current);
+    updateNovelChapterReadAt();
+  }, [incognitoMode, chapter.progress]);
+
+  const debouncedSaveProgressNow = useDebouncedCallback(saveProgressNow, 300);
+  useEffect(() => {
+    percentRef.current = percent;
+  }, [percent]);
+
+  // ── Cleanup ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
       stopRequestedRef.current = true;
+      isPlayerLoadedRef.current = false;
+      try {
+        ttsPlayer.pause();
+      } catch {
+        /* released */
+      }
+      TTSSynthesizer.stopForegroundService().catch(() => {});
       setIsTTSReading(false);
     };
   }, []);
 
+  // ── Status bars ────────────────────────────────────────────────────────────
   useEffect(() => {
     NavigationBar.setVisibilityAsync('hidden');
     StatusBar.setStatusBarHidden(true);
@@ -501,23 +564,17 @@ export default function ReaderComponent({
   }, []);
 
   useEffect(() => {
-    async function setBars() {
-      if (holdHide) {
-        return;
-      }
-
-      if (layoutVisible) {
-        await NavigationBar.setVisibilityAsync('visible');
-        await StatusBar.setStatusBarHidden(false);
-      } else {
-        await NavigationBar.setVisibilityAsync('hidden');
-        await StatusBar.setStatusBarHidden(true);
-      }
+    if (holdHide) return;
+    if (layoutVisible) {
+      NavigationBar.setVisibilityAsync('visible');
+      StatusBar.setStatusBarHidden(false);
+    } else {
+      NavigationBar.setVisibilityAsync('hidden');
+      StatusBar.setStatusBarHidden(true);
     }
-
-    setBars();
   }, [layoutVisible]);
 
+  // ── Initial seek ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (
       !hasInititalSeekedRef.current &&
@@ -531,10 +588,10 @@ export default function ReaderComponent({
     }
   }, [chapter.progress, contentHeight, viewHeight, seekTo]);
 
+  // ── Sync TTS index from progress (initial load) ────────────────────────────
   useEffect(() => {
     if (
       ttsIndex === null &&
-      paragraphPositions.current &&
       Object.keys(paragraphPositions.current).length > 0 &&
       contentHeight > 0 &&
       viewHeight > 0 &&
@@ -542,70 +599,71 @@ export default function ReaderComponent({
       chapter.progress < 100
     ) {
       const scrollYTarget = (chapter.progress / 100) * (contentHeight - viewHeight);
-
-      let closestIndex = 0;
-      let closestDistance = Infinity;
-
-      Object.entries(paragraphPositions.current).forEach(([indexStr, pos]) => {
-        const index = parseInt(indexStr, 10);
-        const centerY = pos.y + pos.height / 2;
-        const distance = Math.abs(centerY - scrollYTarget);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
+      let closest = 0;
+      let minDist = Infinity;
+      Object.entries(paragraphPositions.current).forEach(([i, pos]) => {
+        const d = Math.abs(pos.y + pos.height / 2 - scrollYTarget);
+        if (d < minDist) {
+          minDist = d;
+          closest = parseInt(i, 10);
         }
       });
-
-      setTtsIndex(closestIndex);
-      lastIndexRef.current = closestIndex;
+      setTtsIndex(closest);
+      lastIndexRef.current = closest;
     }
-  }, [chapter.progress, contentHeight, viewHeight, paragraphPositions.current, ttsIndex]);
+  }, [chapter.progress, contentHeight, viewHeight, ttsIndex]);
 
+  // ── Track paragraph under viewport center while scrolling ─────────────────
   useEffect(() => {
-    if (!userScrolledRef.current) return;
-    if (isTTSReading) return;
-
-    if (
-      paragraphPositions.current &&
-      Object.keys(paragraphPositions.current).length > 0 &&
-      contentHeight > 0 &&
-      viewHeight > 0
-    ) {
-      const viewportCenterY = scrollY + viewHeight / 2;
-
-      let closestIndex = lastIndexRef.current ?? 0;
-      let closestDistance = Infinity;
-
-      Object.entries(paragraphPositions.current).forEach(([indexStr, pos]) => {
-        const index = parseInt(indexStr, 10);
-        const centerY = pos.y + pos.height / 2;
-        const distance = Math.abs(centerY - viewportCenterY);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      if (scrollY <= 0 || isAtTop) {
-        closestIndex = 0;
+    if (!userScrolledRef.current || isTTSReading) return;
+    if (Object.keys(paragraphPositions.current).length === 0) return;
+    if (contentHeight === 0 || viewHeight === 0) return;
+    const center = scrollY + viewHeight / 2;
+    let closest = lastIndexRef.current ?? 0;
+    let minDist = Infinity;
+    Object.entries(paragraphPositions.current).forEach(([i, pos]) => {
+      const d = Math.abs(pos.y + pos.height / 2 - center);
+      if (d < minDist) {
+        minDist = d;
+        closest = parseInt(i, 10);
       }
-
-      if (closestIndex !== lastIndexRef.current) {
-        setTtsIndex(closestIndex);
-        lastIndexRef.current = closestIndex;
-      }
+    });
+    if (isAtTop) closest = 0;
+    if (closest !== lastIndexRef.current) {
+      setTtsIndex(closest);
+      lastIndexRef.current = closest;
     }
-  }, [scrollY, contentHeight, viewHeight, paragraphPositions.current, isAtTop]);
+  }, [scrollY, contentHeight, viewHeight, isAtTop, isTTSReading]);
 
+  // ── Load voices ────────────────────────────────────────────────────────────
   useEffect(() => {
-    async function getVoices() {
-      const voices = await Speech.getAvailableVoicesAsync();
-      const englishVoices = voices.filter((v) => v.language === 'en-US');
-      setAvailableVoices(englishVoices);
-    }
-    getVoices();
+    TTSSynthesizer.getAvailableVoices('en-US')
+      .then((voices: TTSVoice[]) =>
+        setAvailableVoices(voices.map((v) => ({ ...v, quality: 'Default' })))
+      )
+      .catch(() => {});
   }, []);
 
+  // ── Pre-warm: silently synthesise the first N paragraphs on mount ──────────
+  useEffect(() => {
+    if (!paragraphs.length) return;
+    const PREWARM_COUNT = 3;
+    let cancelled = false;
+
+    (async () => {
+      for (let i = 0; i < Math.min(PREWARM_COUNT, paragraphs.length); i++) {
+        if (cancelled || !isMountedRef.current) break;
+        await synth(paragraphs[i], speechVoiceRef.current, speechSpeedRef.current).catch(() => {});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter.novelTitle, chapter.number]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <ReaderLayout
       layoutVisible={layoutVisible || holdHide}
@@ -629,9 +687,7 @@ export default function ReaderComponent({
       availableVoices={availableVoices}>
       <ScrollView
         ref={scrollViewRef}
-        style={{
-          flex: 1,
-        }}
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={onScroll}
@@ -642,10 +698,7 @@ export default function ReaderComponent({
           postponeHide();
           debouncedSaveProgressNow();
         }}
-        contentContainerStyle={{
-          paddingBottom: insets.bottom,
-          paddingTop: insets.top,
-        }}
+        contentContainerStyle={{ paddingBottom: insets.bottom, paddingTop: insets.top }}
         onTouchStart={handleTouchStart}
         onTouchEndCapture={handleTouchEndCapture}>
         {renderContent}
@@ -660,7 +713,7 @@ export default function ReaderComponent({
   );
 }
 
-// handles reader styles, including default styles and user-defined styles (these are stored in the app config)
+// ─── Reader styles ────────────────────────────────────────────────────────────
 export function getReaderStyles({ insets }: { insets: { top: number; bottom: number } }): {
   styles: Style;
   setReaderStylesConfig: (styles: ReaderStyleConfig) => void;
@@ -672,9 +725,7 @@ export function getReaderStyles({ insets }: { insets: { top: number; bottom: num
       textAlign: 'left',
       lineHeight: 24,
     },
-    h4: {
-      fontSize: 20,
-    },
+    h4: { fontSize: 20 },
     p: { fontSize: 16 },
   };
 
@@ -683,27 +734,19 @@ export function getReaderStyles({ insets }: { insets: { top: number; bottom: num
     defaultReaderStyle
   );
 
-  const styles: Style = useMemo(() => {
-    return {
+  const styles: Style = useMemo(
+    () => ({
       body: {
         ...defaultReaderStyle.body,
         ...readerStyleConfig.body,
         paddingHorizontal: 20,
         paddingTop: insets.top,
       },
-      h4: {
-        ...defaultReaderStyle.h4,
-        ...readerStyleConfig.h4,
-        fontWeight: 700,
-        marginBottom: 16,
-      },
-      p: {
-        ...defaultReaderStyle.p,
-        ...readerStyleConfig.p,
-        marginBottom: 16,
-      },
-    };
-  }, [readerStyleConfig, insets.top, insets.bottom]);
+      h4: { ...defaultReaderStyle.h4, ...readerStyleConfig.h4, fontWeight: 700, marginBottom: 16 },
+      p: { ...defaultReaderStyle.p, ...readerStyleConfig.p, marginBottom: 16 },
+    }),
+    [readerStyleConfig, insets.top, insets.bottom]
+  );
 
   return { styles, setReaderStylesConfig };
 }

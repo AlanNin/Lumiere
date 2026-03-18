@@ -95,7 +95,7 @@ export default function ReaderBottomBar({
         className="flex flex-row items-center justify-between gap-x-6"
         style={{
           padding: 20,
-          paddingBottom: insets.bottom + 20,
+          paddingBottom: insets.bottom + 24,
         }}>
         <TouchableOpacity
           disabled={!chapter.previousChapter}
