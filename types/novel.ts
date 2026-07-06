@@ -20,6 +20,10 @@ export type Chapter = {
   };
 };
 
+export type ScrapedChapter = Chapter & {
+  url: string;
+};
+
 export type Novel = {
   title: string;
   imageUrl: string;

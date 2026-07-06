@@ -1,9 +1,9 @@
-import { ReactNode, useState } from "react";
-import { QueryClient } from "@tanstack/react-query";
-import { useReactQueryDevTools } from "@dev-plugins/react-query";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { ReactNode, useState } from 'react';
+import { QueryClient } from '@tanstack/react-query';
+import { useReactQueryDevTools } from '@dev-plugins/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,7 +16,7 @@ export const queryClient = new QueryClient({
 
 const asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: "REACT_QUERY_CACHE",
+  key: 'REACT_QUERY_CACHE',
 });
 
 export function invalidateQueries(...keys: Array<string | readonly unknown[]>) {
@@ -26,7 +26,7 @@ export function invalidateQueries(...keys: Array<string | readonly unknown[]>) {
 
   return Promise.all(
     keys.map((key) => {
-      const queryKey = typeof key === "string" ? [key] : key;
+      const queryKey = typeof key === 'string' ? [key] : key;
       return queryClient.invalidateQueries({ queryKey });
     })
   );
@@ -38,9 +38,7 @@ export function resetCache() {
 
 export async function getReactQueryCacheSizeInMB(): Promise<number> {
   const allKeys = await AsyncStorage.getAllKeys();
-  const queryKeys = allKeys.filter((key) =>
-    key.startsWith("REACT_QUERY_CACHE")
-  );
+  const queryKeys = allKeys.filter((key) => key.startsWith('REACT_QUERY_CACHE'));
 
   const items = await AsyncStorage.multiGet(queryKeys);
   const totalBytes = items.reduce((sum, [, value]) => {
@@ -54,11 +52,7 @@ export async function getReactQueryCacheSizeInMB(): Promise<number> {
   return Number(totalMB.toFixed(2));
 }
 
-export default function ReactQueryProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function ReactQueryProvider({ children }: { children: ReactNode }) {
   const [, _setClient] = useState<QueryClient>(queryClient);
 
   useReactQueryDevTools(queryClient);
@@ -73,8 +67,7 @@ export default function ReactQueryProvider({
             return query.meta?.persist !== false;
           },
         },
-      }}
-    >
+      }}>
       {children}
     </PersistQueryClientProvider>
   );

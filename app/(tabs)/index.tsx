@@ -260,7 +260,7 @@ export default function HomeScreen() {
         onIndexChange={setIndex}
         initialLayout={{ width: width }}
         renderTabBar={renderTabBar}
-        key={libraryCategories.length}
+        key={sortedCategories.map((c) => c.id).join('-')}
       />
     );
   };

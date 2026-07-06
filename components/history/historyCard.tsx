@@ -7,6 +7,8 @@ import { colors } from '@/lib/constants';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { useIsOnline } from '@/providers/network';
+import { useCachedImage } from '@/hooks/useCachedImage';
+import { useState } from 'react';
 
 export default function HistoryCard({
   chapterHistory,
@@ -46,6 +48,12 @@ export default function HistoryCard({
 
   const isOffline = !isOnline && !downloaded && isNext && !nextChapter?.downloaded;
 
+  const [imageError, setImageError] = useState(false);
+
+  const { localUri, status } = useCachedImage(coverUri, isNovelSaved);
+
+  const showPlaceholder = imageError || status === 'error';
+
   function handlePress() {
     if (isOffline) {
       ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
@@ -67,11 +75,16 @@ export default function HistoryCard({
     <TouchableOpacity className="flex flex-row items-center gap-6" onPress={handlePress}>
       <View className="relative overflow-hidden rounded-md">
         <Image
-          cachePolicy="memory-disk"
+          cachePolicy="none"
           alt={`Cover of ${novelTitle}`}
-          source={coverUri}
+          source={
+            showPlaceholder
+              ? require('@/assets/placeholders/novel.png')
+              : { uri: localUri ?? undefined }
+          }
           style={{ aspectRatio: 1 / 1.5, height: 120 }}
           contentFit="cover"
+          onError={() => setImageError(true)}
         />
 
         {isOffline && (

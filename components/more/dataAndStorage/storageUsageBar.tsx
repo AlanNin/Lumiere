@@ -1,8 +1,8 @@
-import { Text } from "@/components/defaults";
-import { colors } from "@/lib/constants";
-import * as FileSystem from "expo-file-system";
-import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Text } from '@/components/defaults';
+import { colors } from '@/lib/constants';
+import * as FileSystem from 'expo-file-system';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 type StorageInfo = {
   appUsed: number;
@@ -36,7 +36,7 @@ export default function StorageUsageBar() {
 
         if (itemInfo.exists) {
           if (itemInfo.isDirectory) {
-            totalSize += await getDirectorySize(itemPath + "/");
+            totalSize += await getDirectorySize(itemPath + '/');
           } else {
             totalSize += itemInfo.size || 0;
           }
@@ -56,20 +56,11 @@ export default function StorageUsageBar() {
 
       try {
         if (FileSystem.documentDirectory) {
-          const docDirSize = await getDirectorySize(
-            FileSystem.documentDirectory
-          );
-          totalSize += docDirSize;
+          totalSize += await getDirectorySize(FileSystem.documentDirectory);
         }
 
         if (FileSystem.cacheDirectory) {
-          const cacheDirInfo = await FileSystem.getInfoAsync(
-            FileSystem.cacheDirectory,
-            { size: true }
-          );
-          if (cacheDirInfo.exists && cacheDirInfo.size) {
-            totalSize += cacheDirInfo.size;
-          }
+          totalSize += await getDirectorySize(FileSystem.cacheDirectory);
         }
       } catch (error) {
         //
@@ -98,7 +89,7 @@ export default function StorageUsageBar() {
         setStorageInfo((prev) => ({
           ...prev,
           loading: false,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: error instanceof Error ? error.message : 'Unknown error',
         }));
       }
     };
@@ -118,53 +109,47 @@ export default function StorageUsageBar() {
 
   return (
     <View className="flex flex-col gap-y-4">
-      <View className="h-4 rounded-md overflow-hidden relative bg-muted">
+      <View className="relative h-4 overflow-hidden rounded-md bg-muted">
         <View
           style={[
             {
-              width: `${
-                (storageInfo.deviceUsed / storageInfo.deviceTotal) * 100
-              }%`,
+              width: `${(storageInfo.deviceUsed / storageInfo.deviceTotal) * 100}%`,
               backgroundColor: colors.secondary,
               zIndex: 1,
             },
           ]}
-          className="h-full absolute top-0 bottom-0 left-0"
+          className="absolute bottom-0 left-0 top-0 h-full"
         />
         <View
           style={[
             {
-              width: `${
-                (storageInfo.appUsed / storageInfo.deviceTotal) * 100
-              }%`,
+              width: `${(storageInfo.appUsed / storageInfo.deviceTotal) * 100}%`,
               backgroundColor: colors.primary,
               zIndex: 2,
             },
           ]}
-          className="h-full absolute top-0 bottom-0 left-0"
+          className="absolute bottom-0 left-0 top-0 h-full"
         />
       </View>
       <View className="flex flex-row flex-wrap gap-4">
-        <View className="flex flex-row gap-x-2 items-center">
-          <View className="size-4 bg-primary rounded-sm" />
+        <View className="flex flex-row items-center gap-x-2">
+          <View className="size-4 rounded-sm bg-primary" />
           <Text>
-            <Text className="font-medium">Lumiere Usage:</Text>{" "}
-            {formatStorage(storageInfo.appUsed)}
+            <Text className="font-medium">Lumiere Usage:</Text> {formatStorage(storageInfo.appUsed)}
           </Text>
         </View>
-        <View className="flex flex-row gap-x-2 items-center">
-          <View className="size-4 bg-secondary rounded-sm" />
+        <View className="flex flex-row items-center gap-x-2">
+          <View className="size-4 rounded-sm bg-secondary" />
           <Text>
-            <Text className="font-medium">Device Usage:</Text>{" "}
+            <Text className="font-medium">Device Usage:</Text>{' '}
             {formatStorage(storageInfo.deviceUsed)}
           </Text>
         </View>
-        <View className="flex flex-row gap-x-2 items-center">
-          <View className="size-4 bg-muted rounded-sm" />
+        <View className="flex flex-row items-center gap-x-2">
+          <View className="size-4 rounded-sm bg-muted" />
           <Text>
-            <Text className="font-medium">Device Free:</Text>{" "}
-            {formatStorage(storageInfo.deviceFree)} out of{" "}
-            {formatStorage(storageInfo.deviceTotal)}
+            <Text className="font-medium">Device Free:</Text>{' '}
+            {formatStorage(storageInfo.deviceFree)} out of {formatStorage(storageInfo.deviceTotal)}
           </Text>
         </View>
       </View>

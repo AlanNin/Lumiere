@@ -1,20 +1,15 @@
-import { cn } from "@/lib/cn";
-import {
-  StyleProp,
-  ToastAndroid,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from "react-native";
-import { LinearGradient } from "react-native-linear-gradient";
-import { useRouter } from "expo-router";
-import { Text } from "@/components/defaults";
-import { Image } from "expo-image";
-import { useState } from "react";
-import { BookMarked } from "lucide-react-native";
-import { colors } from "@/lib/constants";
-import { useIsOnline } from "@/providers/network";
-import { novelController } from "@/server/controllers/novel";
+import { cn } from '@/lib/cn';
+import { StyleProp, ToastAndroid, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { LinearGradient } from 'react-native-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Text } from '@/components/defaults';
+import { Image } from 'expo-image';
+import { useState } from 'react';
+import { BookMarked } from 'lucide-react-native';
+import { colors } from '@/lib/constants';
+import { useIsOnline } from '@/providers/network';
+import { novelController } from '@/server/controllers/novel';
+import { useCachedImage } from '@/hooks/useCachedImage';
 
 export default function NovelCard({
   title,
@@ -44,10 +39,10 @@ export default function NovelCard({
   const [imageError, setImageError] = useState(false);
   const isOnline = useIsOnline();
   const hasUnreadChapters = unreadChapters !== undefined && unreadChapters > 0;
-  const hasDownloadedChapters =
-    downloadedChapters !== undefined && downloadedChapters > 0;
-  const hasUnreadOrDownloadedChapters =
-    hasUnreadChapters || hasDownloadedChapters;
+  const hasDownloadedChapters = downloadedChapters !== undefined && downloadedChapters > 0;
+  const hasUnreadOrDownloadedChapters = hasUnreadChapters || hasDownloadedChapters;
+  const { localUri, status } = useCachedImage(imageUri, isStored);
+  const showPlaceholder = imageError || status === 'error';
 
   async function handlePress() {
     if (!isOnline && !isStored) {
@@ -56,7 +51,7 @@ export default function NovelCard({
       });
 
       if (!isStoredCheck) {
-        ToastAndroid.show("No internet connection", ToastAndroid.SHORT);
+        ToastAndroid.show('No internet connection', ToastAndroid.SHORT);
         return;
       }
     }
@@ -70,47 +65,45 @@ export default function NovelCard({
   }
   function getGradientColors() {
     if (showSavedBadge) {
-      return ["rgba(0, 0, 0, 0.6)", "rgba(0, 0, 0, 0.6)", "rgba(0, 0, 0, 0.6)"];
+      return ['rgba(0, 0, 0, 0.6)', 'rgba(0, 0, 0, 0.6)', 'rgba(0, 0, 0, 0.6)'];
     }
 
     return [
-      "rgba(0, 0, 0, 0)",
-      "rgba(0, 0, 0, 0.2)",
-      "rgba(0, 0, 0, 0.4)",
-      "rgba(0, 0, 0, 0.7)",
-      "rgba(0, 0, 0, 0.9)",
+      'rgba(0, 0, 0, 0)',
+      'rgba(0, 0, 0, 0.2)',
+      'rgba(0, 0, 0, 0.4)',
+      'rgba(0, 0, 0, 0.7)',
+      'rgba(0, 0, 0, 0.9)',
     ];
   }
 
   return (
     <TouchableOpacity
-      className={cn(
-        "flex-1 rounded-lg relative overflow-hidden",
-        containerClassName
-      )}
+      className={cn('relative flex-1 overflow-hidden rounded-lg', containerClassName)}
       style={[
         {
           aspectRatio: 1 / 1.5,
         },
         containerStyle,
       ]}
-      onPress={handlePress}
-    >
+      onPress={handlePress}>
       <Image
-        cachePolicy="memory-disk"
+        cachePolicy="none"
         alt={`Cover of ${title}`}
         source={
-          imageError ? require("@/assets/placeholders/novel.png") : imageUri
+          showPlaceholder
+            ? require('@/assets/placeholders/novel.png')
+            : { uri: localUri ?? undefined }
         }
         style={{ flex: 1 }}
-        contentFit={imageError ? "contain" : "cover"}
+        contentFit={showPlaceholder ? 'contain' : 'cover'}
         onError={() => setImageError(true)}
       />
 
       <LinearGradient
         colors={getGradientColors()}
         style={{
-          position: "absolute",
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
@@ -118,14 +111,14 @@ export default function NovelCard({
         }}
       />
       {hasUnreadOrDownloadedChapters && (
-        <View className="absolute top-3 left-3 flex flex-row rounded-md overflow-hidden">
+        <View className="absolute left-3 top-3 flex flex-row overflow-hidden rounded-md">
           {hasDownloadedChapters && (
-            <View className="bg-secondary py-1 px-1.5">
+            <View className="bg-secondary px-1.5 py-1">
               <Text className="text-sm leading-4">{downloadedChapters}</Text>
             </View>
           )}
           {hasUnreadChapters && (
-            <View className="bg-primary py-1 px-1.5">
+            <View className="bg-primary px-1.5 py-1">
               <Text className="text-sm leading-4">{unreadChapters}</Text>
             </View>
           )}
@@ -133,12 +126,8 @@ export default function NovelCard({
       )}
 
       {showSavedBadge && (
-        <View className="absolute top-3 left-3 bg-primary rounded-md p-1">
-          <BookMarked
-            color={colors.primary_foreground}
-            size={14}
-            strokeWidth={1.6}
-          />
+        <View className="absolute left-3 top-3 rounded-md bg-primary p-1">
+          <BookMarked color={colors.primary_foreground} size={14} strokeWidth={1.6} />
         </View>
       )}
 

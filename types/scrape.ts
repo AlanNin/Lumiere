@@ -8,7 +8,7 @@ export type ScrapeNovelsSearch = {
 
 export type ScrapeNovelInfo = {
   novelInfoUrl: string;
-  novelChaptersAjaxUrl: string;
+  novelChaptersAjaxUrl?: string | null;
   novelChaptersMainSourceUrl: string;
 };
 
