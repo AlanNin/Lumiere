@@ -32,14 +32,6 @@ export type Style = StyleConfig & {
 export type GeneralConfig = {
   showProgressSeekBar: boolean;
   speechSpeed: number;
-  voiceIdentifier: string | undefined;
   isTTSAutoNext: boolean;
   isKeepAwakeOnTTS: boolean;
-};
-
-export type VoiceIdentifier = {
-  identifier: string;
-  language: string;
-  name: string;
-  quality: string;
 };

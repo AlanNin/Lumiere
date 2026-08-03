@@ -10,15 +10,13 @@ import { invalidateQueries } from '@/providers/reactQuery';
 import { categoryController } from '@/server/controllers/category';
 import { Category } from '@/types/category';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { FlashList, FlashListProps } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowDownAZ, Tags } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { Dimensions, TouchableOpacity, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const AnimatedFlashList = Animated.createAnimatedComponent<FlashListProps<Category>>(FlashList);
 
 function SortAZModalButton({ onPress }: { onPress: () => void }) {
   return (
@@ -43,12 +41,6 @@ export default function CategoriesScreen() {
   const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoryController.getCategories(),
-  });
-
-  const scrollYHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
   });
 
   function handleUpdateCategory(category: Category) {
@@ -99,7 +91,7 @@ export default function CategoriesScreen() {
 
       <View className="flex-1">
         {categories && categories?.length > 0 ? (
-          <AnimatedFlashList
+          <FlashList
             data={categories}
             renderItem={({ item, index }) => {
               const firstItem = index === 0;
@@ -124,9 +116,10 @@ export default function CategoriesScreen() {
             }}
             keyExtractor={(item) => `${item.id.toString()}-${item.sortOrder.toString()}`}
             showsVerticalScrollIndicator={false}
-            estimatedItemSize={80}
             onContentSizeChange={(_, height) => setContentHeight(height)}
-            onScroll={scrollYHandler}
+            onScroll={(e) => {
+              scrollY.value = e.nativeEvent.contentOffset.y;
+            }}
             scrollEventThrottle={16}
           />
         ) : (

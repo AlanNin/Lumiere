@@ -4,7 +4,34 @@ import { DomUtils } from 'htmlparser2';
 export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNumber: number) {
   let pCounter = 0;
 
-  const cleanHtml = dirtyHtml
+  // 0. Normalize every quote-like character/entity (straight, curly, decimal, hex) into
+  //    one canonical form per quote type, so the rest of the pipeline only has to reason
+  //    about: literal ' for single quotes/apostrophes, &quot; for straight double quotes,
+  //    and &#x201C; / &#x201D; for curly double quotes. Only text nodes are touched —
+  //    tag attributes are left untouched.
+  function normalizeQuoteChars(html: string): string {
+    return html
+      .split(/(<[^>]+>)/g)
+      .map((segment) => {
+        if (/^<[^>]+>$/.test(segment)) return segment; // leave tags/attributes alone
+        return segment
+          .replace(/&#8220;|&#x201c;/gi, '&#x201C;')
+          .replace(/&#8221;|&#x201d;/gi, '&#x201D;')
+          .replace(/\u201C/g, '&#x201C;')
+          .replace(/\u201D/g, '&#x201D;')
+          .replace(/&#8216;|&#x2018;/gi, "'")
+          .replace(/&#8217;|&#x2019;|&apos;|&#39;/gi, "'")
+          .replace(/\u2018/g, "'")
+          .replace(/\u2019/g, "'")
+          .replace(/&#34;/g, '&quot;')
+          .replace(/"/g, '&quot;');
+      })
+      .join('');
+  }
+
+  const normalizedHtml = normalizeQuoteChars(dirtyHtml);
+
+  const structurallyCleaned = normalizedHtml
     // 1. Remove all <script>…</script> blocks to prevent embedded JavaScript.
     .replace(/<script[\s\S]*?<\/script>/gi, '')
 
@@ -105,8 +132,62 @@ export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNum
         }
         return match;
       }
-    )
+    );
 
+  // 18.5. Merge adjacent <p> pairs where a scraper split one continuous quote
+  //       mid-sentence: paragraph A opens a quote it never closes, paragraph B
+  //       doesn't open a new quote but does contain the real closing quote.
+  //       Must run before the unmatched-quote "fix" passes below, otherwise
+  //       those passes wrongly close paragraph A on their own.
+  function mergeSplitDialogueParagraphs(html: string): string {
+    const pairRe = /(<p\b[^>]*>)([\s\S]*?)(<\/p>)(\s*)(<p\b[^>]*>)([\s\S]*?)(<\/p>)/gi;
+
+    function countToken(str: string, token: string): number {
+      const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const matches = str.match(new RegExp(esc, 'gi'));
+      return matches ? matches.length : 0;
+    }
+
+    function openEndedToken(content: string): string | null {
+      const trimmed = content.trim();
+      if (/^&#x201C;/i.test(trimmed)) {
+        return /&#x201D;/i.test(trimmed) ? null : '&#x201C;';
+      }
+      if (/^&quot;/i.test(trimmed)) {
+        return countToken(trimmed, '&quot;') < 2 ? '&quot;' : null;
+      }
+      return null;
+    }
+
+    let result = html;
+    let changed = true;
+    let guard = 0;
+
+    while (changed && guard < 20) {
+      changed = false;
+      guard++;
+      result = result.replace(pairRe, (match, openA, contentA, _closeA, _gap, _openB, contentB) => {
+        const openToken = openEndedToken(contentA);
+        if (!openToken) return match;
+
+        const trimmedB = contentB.trim();
+        if (/^(&quot;|&#x201C;)/i.test(trimmedB)) return match;
+
+        const closingToken = openToken === '&#x201C;' ? '&#x201D;' : '&quot;';
+        const closingRe = new RegExp(closingToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        if (!closingRe.test(contentB)) return match;
+
+        changed = true;
+        return `${openA}${contentA.trim()} ${trimmedB}</p>`;
+      });
+    }
+
+    return result;
+  }
+
+  const mergedHtml = mergeSplitDialogueParagraphs(structurallyCleaned);
+
+  const cleanHtml = mergedHtml
     // 19. Fix paragraphs that start with an opening curly double quote (&#x201C;) but lack a matching closing quote.
     .replace(/<p>([\s\S]*?)<\/p>/gi, (match) => {
       if (/^<p>\s*&#x201C;/.test(match)) {
@@ -132,6 +213,14 @@ export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNum
       }
       return match;
     })
+
+    // 20.5. Fix paragraphs that open dialogue with a straight apostrophe/single quote but
+    //       were mistakenly closed with a double quote (a common scrape/OCR mismatch),
+    //       e.g. 'What the hell is this?" -> 'What the hell is this?'
+    .replace(
+      /(<p[^>]*>\s*)'((?:[^'"<]|'(?=[A-Za-z]))*)(&quot;|&#x201D;)(\s*<\/p>)/gi,
+      (_match, open, content, _closeTok, close) => `${open}'${content}'${close}`
+    )
 
     // 21. Normalize any run of 4+ dots into exactly three ellipsis.
     .replace(/\.{4,}/g, '...');
@@ -167,10 +256,10 @@ export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNum
 
   // 24. Improvements applied in adjustSpacingAndQuotes
   function adjustSpacingAndQuotes(html: string): string {
-    const QUOTE_TOKEN_RE = /(&quot;|&#x201C;|&#x201D;|["“”])/g;
+    const QUOTE_TOKEN_RE = /(&quot;|&#x201C;|&#x201D;|["""])/g;
 
     function closingFor(open: string): string {
-      if (open === '&#x201C;' || open === '“') return '&#x201D;';
+      if (open === '&#x201C;' || open === '"') return '&#x201D;';
       // &quot; and straight " both close with the same token in your HTML
       return open;
     }
@@ -264,17 +353,17 @@ export function sanitizeHtml(dirtyHtml: string, chapterTitle: string, chapterNum
         t = t.replace(/([^ \t\r\n])(&#x201C;)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
 
         t = t.replace(/,(&#x201D;)/g, '$1,');
-        t = t.replace(/,([\"”])/g, '$1,');
+        t = t.replace(/,(["""])/g, '$1,');
         t = t.replace(/,(&quot;)/gi, '$1,');
 
-        t = t.replace(/([^ \t\r\n])([\"“])(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
+        t = t.replace(/([^ \t\r\n])(["""])(?=[A-Za-zÀ-ÖØ-öø-ÿ])/g, '$1 $2');
         t = t.replace(/([^ \t\r\n])(&quot;)(?=[A-Za-zÀ-ÖØ-öø-ÿ])/gi, '$1 $2');
 
         t = t.replace(/(\S)=(\S)/g, '$1 = $2');
         t = t.replace(/(\S)=\s/g, '$1 = ');
         t = t.replace(/\s=(\S)/g, ' = $1');
 
-        // ✅ New: stateful quote correction (fixes both of your examples)
+        // Stateful quote correction (fixes both of your examples)
         t = fixQuotesStatefully(t);
 
         return t;

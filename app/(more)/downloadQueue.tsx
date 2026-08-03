@@ -6,15 +6,12 @@ import TabHeader from '@/components/tabHeader';
 import { QueueDownloadItem, useChapterDownloadQueue } from '@/providers/chapterDownloadQueue';
 import { colors } from '@/lib/constants';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { FlashList, FlashListProps } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { ArrowBigDownDash, ArrowDownToLine, Pause, Shredder } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const AnimatedFlashList =
-  Animated.createAnimatedComponent<FlashListProps<QueueDownloadItem>>(FlashList);
 
 export default function DownloadQueueScreen() {
   const insets = useSafeAreaInsets();
@@ -37,12 +34,6 @@ export default function DownloadQueueScreen() {
     cancelNovelDownloads,
     cancelAllDownloads,
   } = useChapterDownloadQueue();
-
-  const scrollYHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   function ToggleQueuePauseButton() {
     return (
@@ -93,7 +84,7 @@ export default function DownloadQueueScreen() {
 
       <View className="flex-1">
         {queueDownload && queueDownload?.length > 0 ? (
-          <AnimatedFlashList
+          <FlashList
             data={queueDownload}
             renderItem={({ item }) => {
               return <QueueCard item={item} openItemOptionsDrawer={openItemOptionsDrawer} />;
@@ -106,8 +97,9 @@ export default function DownloadQueueScreen() {
               `${item.id?.toString()}-${item.novelTitle.toString()}-${item.chapterNumber.toString()}`
             }
             showsVerticalScrollIndicator={false}
-            estimatedItemSize={80}
-            onScroll={scrollYHandler}
+            onScroll={(e) => {
+              scrollY.value = e.nativeEvent.contentOffset.y;
+            }}
             scrollEventThrottle={16}
           />
         ) : (

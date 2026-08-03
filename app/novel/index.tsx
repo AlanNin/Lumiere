@@ -1,4 +1,3 @@
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
 import { novelController } from '@/server/controllers/novel';
 import { useLocalSearchParams } from 'expo-router';
@@ -15,7 +14,6 @@ import NovelDescription from '@/components/novel/novelDescription';
 import NovelGenres from '@/components/novel/novelGenres';
 import NovelHeader from '@/components/novel/novelHeader';
 import NovelReadButton from '@/components/novel/novelReadButton';
-import { FlashList, FlashListProps } from '@shopify/flash-list';
 import Loading from '@/components/statics/loading';
 import Error from '@/components/statics/error';
 import { useChapterDownloadQueue } from '@/providers/chapterDownloadQueue';
@@ -37,8 +35,8 @@ import NovelCategoryDrawer from '@/components/novel/novelCategoryDrawer';
 import { categoryController } from '@/server/controllers/category';
 import ModeIndicator from '@/components/modeIndicator';
 import { useIsOnline } from '@/providers/network';
-
-const AnimatedFlashList = Animated.createAnimatedComponent<FlashListProps<Chapter>>(FlashList);
+import { useSharedValue } from 'react-native-reanimated';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 
 export default function NovelScreen() {
   const router = useRouter();
@@ -49,7 +47,7 @@ export default function NovelScreen() {
 
   // States
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlashList<Chapter>>(null);
+  const listRef = useRef<FlashListRef<Chapter>>(null);
   const scrollY = useSharedValue(0);
   const [listLoaded, setListLoaded] = useState(false);
   const [selectedChapters, setSelectedChapters] = useState<Chapter[]>([]);
@@ -121,12 +119,6 @@ export default function NovelScreen() {
     () => new Set(queueDownload.map((c) => `${c.novelTitle}-${c.chapterNumber}`)),
     [queueDownload]
   );
-
-  const scrollYHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   const allChaptersCompleted = useMemo(() => {
     const chapters = novelInfo?.chapters;
@@ -451,21 +443,21 @@ export default function NovelScreen() {
         />
 
         <View className="flex-1">
-          <AnimatedFlashList
+          <FlashList
             ref={listRef}
             ListHeaderComponent={ListHeader}
             data={novelChapters}
             extraData={extraDeps}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            estimatedItemSize={44}
-            onScroll={scrollYHandler}
+            onScroll={(e) => {
+              scrollY.value = e.nativeEvent.contentOffset.y;
+            }}
             scrollEventThrottle={16}
             contentContainerStyle={{
               paddingBottom:
                 insets.bottom + (allChaptersCompleted || novelChapters.length === 0 ? 12 : 84),
             }}
-            removeClippedSubviews={true}
             onLoad={() => setListLoaded(true)}
             refreshControl={
               <RefreshControl

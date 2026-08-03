@@ -2,7 +2,6 @@ import { Explore } from '@/types/explore';
 import { Chapter, Novel, NovelInfo } from '@/types/novel';
 import { ExploreSection } from '../controllers/novel';
 import {
-  scrapNovelIdAjax,
   scrapeNovelChapter,
   scrapeNovelInfo,
   scrapeNovelsExplore,
@@ -73,12 +72,10 @@ export const novelService = {
       }
 
       const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
-      const novelChaptersAjaxUrl = await getNovelChaptersAjaxUrl(novelTitleSlug);
       const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(novelTitleSlug);
 
       info = await scrapeNovelInfo({
         novelInfoUrl,
-        novelChaptersAjaxUrl,
         novelChaptersMainSourceUrl,
       });
 
@@ -181,12 +178,10 @@ export const novelService = {
       const novelTitleSlug = slugify(title);
 
       const novelInfoUrl = getNovelInfoUrl(novelTitleSlug);
-      const novelChaptersAjaxUrl = await getNovelChaptersAjaxUrl(novelTitleSlug);
       const novelChaptersMainSourceUrl = getNovelChaptersMainSourceUrl(novelTitleSlug);
 
       const info = await scrapeNovelInfo({
         novelInfoUrl,
-        novelChaptersAjaxUrl,
         novelChaptersMainSourceUrl,
       });
 
@@ -541,19 +536,6 @@ function getNovelSearchUrl(searchQuery: string) {
 
 function getNovelInfoUrl(novelTitleSlug: string) {
   return `${String(process.env.EXPO_PUBLIC_SCRAPE_SITE_URL)}/book/${novelTitleSlug}`;
-}
-
-async function getNovelChaptersAjaxUrl(novelTitleSlug: string) {
-  let novelId: string;
-
-  try {
-    novelId = await scrapNovelIdAjax(novelTitleSlug);
-  } catch (err) {
-    console.warn('Ajax scraping not found, proceding to use main source as fallback, reason:', err);
-    return null;
-  }
-
-  return `${String(process.env.EXPO_PUBLIC_SCRAPE_NOVEL_AJAX_SOURCE_URL)}/ajax-chapter-option?novelId=${novelId}`;
 }
 
 function getNovelChaptersMainSourceUrl(novelTitleSlug: string) {

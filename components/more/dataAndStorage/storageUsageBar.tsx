@@ -1,6 +1,6 @@
 import { Text } from '@/components/defaults';
 import { colors } from '@/lib/constants';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
@@ -30,9 +30,7 @@ export default function StorageUsageBar() {
 
       for (const item of items) {
         const itemPath = `${dirPath}${item}`;
-        const itemInfo = await FileSystem.getInfoAsync(itemPath, {
-          size: true,
-        });
+        const itemInfo = await FileSystem.getInfoAsync(itemPath);
 
         if (itemInfo.exists) {
           if (itemInfo.isDirectory) {

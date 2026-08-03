@@ -17,10 +17,8 @@ import {
   Plus,
 } from 'lucide-react-native';
 import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
-import { TextAlgin, VoiceIdentifier } from '@/types/reader';
+import { TextAlgin } from '@/types/reader';
 import BooleanSwitch from '@/components/switch';
-import { Picker } from '@react-native-picker/picker';
-import { useConfig } from '@/providers/appConfig';
 
 export default function ReaderStyleConfigDrawer({
   drawerRef,
@@ -31,7 +29,6 @@ export default function ReaderStyleConfigDrawer({
   readerGeneralConfig,
   setReaderGeneralConfig,
   pointerEvents,
-  availableVoices,
 }: {
   drawerRef: RefObject<BottomSheetModal | null>;
   insets: { top: number; bottom: number };
@@ -41,7 +38,6 @@ export default function ReaderStyleConfigDrawer({
   readerGeneralConfig: ReaderGeneralConfig;
   setReaderGeneralConfig: (config: ReaderGeneralConfig) => void;
   pointerEvents: 'auto' | 'none';
-  availableVoices: VoiceIdentifier[];
 }) {
   const [readerStylesConfigState, setReaderStylesConfigState] = useState<ReaderStyleConfig>({
     body: {
@@ -61,7 +57,6 @@ export default function ReaderStyleConfigDrawer({
   const [readerGeneralConfigState, setReaderGeneralConfigState] = useState<ReaderGeneralConfig>({
     showProgressSeekBar: readerGeneralConfig.showProgressSeekBar,
     speechSpeed: readerGeneralConfig.speechSpeed,
-    voiceIdentifier: readerGeneralConfig.voiceIdentifier,
     isTTSAutoNext: readerGeneralConfig.isTTSAutoNext,
     isKeepAwakeOnTTS: readerGeneralConfig.isKeepAwakeOnTTS,
   });
@@ -201,32 +196,6 @@ export default function ReaderStyleConfigDrawer({
               }))
             }
           />
-        </ConfigItem>
-        <ConfigItem label="TTS Voice">
-          <Picker
-            selectedValue={readerGeneralConfigState.voiceIdentifier}
-            onValueChange={(value) => {
-              setReaderGeneralConfigState((prev) => ({
-                ...prev,
-                voiceIdentifier: value,
-              }));
-            }}
-            style={{
-              width: 200,
-              backgroundColor: colors.muted_foreground + '25',
-            }}
-            enabled={availableVoices.length > 1}>
-            {availableVoices.map((voice, idx) => (
-              <Picker.Item
-                key={voice.identifier}
-                label={`Voice - ${idx + 1}`}
-                value={voice.identifier}
-                style={{
-                  color: colors.foreground,
-                }}
-              />
-            ))}
-          </Picker>
         </ConfigItem>
         <ConfigItem label="TTS Keep Awake">
           <BooleanSwitch

@@ -8,14 +8,12 @@ import { colors } from '@/lib/constants';
 import { historyController } from '@/server/controllers/history';
 import type { HistoryBatch } from '@/types/history';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { FlashList, FlashListProps } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Shredder, Search } from 'lucide-react-native';
 import { useState, useMemo, useRef } from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
-
-const AnimatedFlashList = Animated.createAnimatedComponent<FlashListProps<HistoryBatch>>(FlashList);
+import { useSharedValue } from 'react-native-reanimated';
 
 export default function HistoryScreen() {
   const scrollY = useSharedValue(0);
@@ -50,12 +48,6 @@ export default function HistoryScreen() {
       })
       .filter((b): b is HistoryBatch => b !== null);
   }, [history, searchQuery]);
-
-  const scrollYHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
 
   function renderRemoveAllEntriesButton() {
     const list = searchQuery ? filteredHistory : history;
@@ -98,7 +90,7 @@ export default function HistoryScreen() {
                 />
               </View>
             ) : (
-              <AnimatedFlashList
+              <FlashList
                 data={searchQuery ? filteredHistory : history!}
                 renderItem={({ item, index }) => {
                   const length = searchQuery ? filteredHistory.length : history!.length;
@@ -119,9 +111,10 @@ export default function HistoryScreen() {
                   padding: 16,
                 }}
                 keyExtractor={(item) => `${item.readAt}-${item.chaptersHistory[0].readAt}`}
-                removeClippedSubviews={false}
-                onScroll={scrollYHandler}
-                estimatedItemSize={153}
+                onScroll={(e) => {
+                  scrollY.value = e.nativeEvent.contentOffset.y;
+                }}
+                scrollEventThrottle={16}
                 showsVerticalScrollIndicator={false}
               />
             )}

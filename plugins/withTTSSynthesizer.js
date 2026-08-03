@@ -15,7 +15,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.speech.tts.TextToSpeech
@@ -73,7 +72,8 @@ class TTSSynthesizerModule(private val reactContext: ReactApplicationContext) :
       .emit(name, params)
   }
 
-  // ── Foreground service ────────────────────────────────────────────────────
+  // ── Background service (no foreground notification — expo-audio already ───
+  // ── owns the lock-screen / status-bar media notification) ─────────────────
 
   @ReactMethod
   fun startForegroundService(promise: Promise) {
@@ -81,14 +81,7 @@ class TTSSynthesizerModule(private val reactContext: ReactApplicationContext) :
     if (isServiceBound && boundService != null) { promise.resolve(null); return }
 
     try {
-      val intent = Intent(reactContext, TTSSynthesizerService::class.java).apply {
-        action = TTSSynthesizerService.ACTION_START
-      }
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        reactContext.startForegroundService(intent)
-      } else {
-        reactContext.startService(intent)
-      }
+      val intent = Intent(reactContext, TTSSynthesizerService::class.java)
 
       // Wrap the async bind in a one-shot connection that resolves the promise
       // only after onServiceConnected fires, then hands off to the persistent
@@ -101,12 +94,12 @@ class TTSSynthesizerModule(private val reactContext: ReactApplicationContext) :
           promise.resolve(null)
         }
         override fun onServiceDisconnected(name: ComponentName?) {
-          promise.reject("FG_SERVICE_ERROR", "Service disconnected before binding completed")
+          promise.reject("SERVICE_ERROR", "Service disconnected before binding completed")
         }
       }
       reactContext.bindService(intent, bootstrapConnection, Context.BIND_AUTO_CREATE)
     } catch (e: Exception) {
-      promise.reject("FG_SERVICE_ERROR", e.message, e)
+      promise.reject("SERVICE_ERROR", e.message, e)
     }
   }
 
@@ -118,10 +111,7 @@ class TTSSynthesizerModule(private val reactContext: ReactApplicationContext) :
         isServiceBound = false
         boundService = null
       }
-      val intent = Intent(reactContext, TTSSynthesizerService::class.java).apply {
-        action = TTSSynthesizerService.ACTION_STOP
-      }
-      reactContext.startService(intent)
+      reactContext.stopService(Intent(reactContext, TTSSynthesizerService::class.java))
       promise.resolve(null)
     } catch (e: Exception) {
       promise.resolve(null)
@@ -292,22 +282,21 @@ class TTSSynthesizerPackage : ReactPackage {
 function buildServiceKt(packageName) {
   return `package ${packageName}
 
-import android.app.*
+import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 
+// Plain bound service — no foreground notification. Background execution is
+// covered by expo-audio's own media session / notification, so we don't need
+// (and don't want) a second, redundant notification from this module.
 class TTSSynthesizerService : Service() {
 
   companion object {
-    const val CHANNEL_ID      = "tts_playback_channel"
-    const val NOTIFICATION_ID = 7788
-    const val ACTION_START    = "TTS_START"
-    const val ACTION_STOP     = "TTS_STOP"
+    const val ACTION_START = "TTS_START"
+    const val ACTION_STOP  = "TTS_STOP"
   }
 
   inner class LocalBinder : Binder() {
@@ -321,19 +310,12 @@ class TTSSynthesizerService : Service() {
 
   override fun onBind(intent: Intent?): IBinder = binder
 
-  override fun onCreate() {
-    super.onCreate()
-    createNotificationChannel()
-  }
-
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     if (intent?.action == ACTION_STOP) {
       stopPlayback()
-      stopForeground(STOP_FOREGROUND_REMOVE)
       stopSelf()
       return START_NOT_STICKY
     }
-    startForeground(NOTIFICATION_ID, buildNotification())
     return START_STICKY
   }
 
@@ -372,36 +354,6 @@ class TTSSynthesizerService : Service() {
   }
 
   val isPlaying: Boolean get() = mediaPlayer?.isPlaying == true
-
-  private fun buildNotification(): Notification {
-    val openIntent = packageManager
-      .getLaunchIntentForPackage(packageName)
-      ?.apply { flags = Intent.FLAG_ACTIVITY_SINGLE_TOP }
-    val pending = PendingIntent.getActivity(
-      this, 0, openIntent ?: Intent(),
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-    return NotificationCompat.Builder(this, CHANNEL_ID)
-      .setContentTitle("Reading aloud")
-      .setContentText("Tap to return to the app")
-      .setSmallIcon(android.R.drawable.ic_media_play)
-      .setContentIntent(pending)
-      .setOngoing(true)
-      .setSilent(true)
-      .build()
-  }
-
-  private fun createNotificationChannel() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val channel = NotificationChannel(
-        CHANNEL_ID, "TTS Playback", NotificationManager.IMPORTANCE_LOW
-      ).apply {
-        description = "Keeps text-to-speech running while the screen is off"
-        setShowBadge(false)
-      }
-      getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-  }
 }
 `;
 }
@@ -449,12 +401,9 @@ const withTTSSynthesizerManifest = (config) =>
 
     if (!manifest['uses-permission']) manifest['uses-permission'] = [];
 
-    const neededPermissions = [
-      'android.permission.FOREGROUND_SERVICE',
-      'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
-      'android.permission.WAKE_LOCK',
-      'android.permission.POST_NOTIFICATIONS',
-    ];
+    // No FOREGROUND_SERVICE / FOREGROUND_SERVICE_MEDIA_PLAYBACK / POST_NOTIFICATIONS —
+    // this is a plain bound service now, no notification of its own.
+    const neededPermissions = ['android.permission.WAKE_LOCK'];
 
     for (const perm of neededPermissions) {
       const already = manifest['uses-permission'].some((p) => p.$?.['android:name'] === perm);
@@ -475,10 +424,16 @@ const withTTSSynthesizerManifest = (config) =>
       app.service.push({
         $: {
           'android:name': serviceName,
-          'android:foregroundServiceType': 'mediaPlayback',
           'android:exported': 'false',
         },
       });
+    } else {
+      // Clean up a stale foregroundServiceType attribute if it was left over
+      // from a previous version of this plugin.
+      const existing = app.service.find((s) => s.$?.['android:name'] === serviceName);
+      if (existing?.$?.['android:foregroundServiceType']) {
+        delete existing.$['android:foregroundServiceType'];
+      }
     }
 
     return cfg;
@@ -491,15 +446,28 @@ const withTTSSynthesizerMainApp = (config) =>
     let src = cfg.modResults.contents;
     const packageName = cfg.android?.package ?? cfg.applicationId ?? 'com.example.app';
     const importLine = `import ${packageName}.TTSSynthesizerPackage`;
-    const registerLine = `            packages.add(TTSSynthesizerPackage())`;
 
     if (!src.includes(importLine)) {
-      src = src.replace(/(import expo\.modules\.ReactNativeHostWrapper\n)/, `$1${importLine}\n`);
-    }
-    if (!src.includes('TTSSynthesizerPackage()')) {
-      src = src.replace(/(val packages = PackageList\(this\)\.packages\n)/, `$1${registerLine}\n`);
+      src = src.replace(/(import com\.facebook\.react\.PackageList\n)/, `$1${importLine}\n`);
     }
 
+    if (!src.includes('TTSSynthesizerPackage()')) {
+      if (/PackageList\(this\)\.packages\.apply \{\n/.test(src)) {
+        src = src.replace(
+          /(PackageList\(this\)\.packages\.apply \{\n)/,
+          `$1            add(TTSSynthesizerPackage())\n`
+        );
+      } else if (/val packages = PackageList\(this\)\.packages\n/.test(src)) {
+        src = src.replace(
+          /(val packages = PackageList\(this\)\.packages\n)/,
+          `$1            packages.add(TTSSynthesizerPackage())\n`
+        );
+      } else {
+        console.warn(
+          '[withTTSSynthesizer] Could not find a known PackageList pattern in MainApplication.kt — TTSSynthesizerPackage was NOT registered. Add it manually.'
+        );
+      }
+    }
     cfg.modResults.contents = src;
     return cfg;
   });

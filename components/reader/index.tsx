@@ -14,7 +14,7 @@ import { colors } from '@/lib/constants';
 import { Chapter } from '@/types/novel';
 import { useConfig } from '@/providers/appConfig';
 import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
-import { Style, VoiceIdentifier } from '@/types/reader';
+import { Style } from '@/types/reader';
 import ReaderLayout from './layout';
 import { useMutation } from '@tanstack/react-query';
 import { novelController } from '@/server/controllers/novel';
@@ -27,25 +27,23 @@ import { useRouter } from 'expo-router';
 import { useIsOnline } from '@/providers/network';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import TTSSynthesizer, { TTSVoice } from './tts-synthesizer';
+import TTSSynthesizer from './tts-synthesizer';
 
 // ─── Cache ────────────────────────────────────────────────────────────────────
 const synthCache = new Map<string, string>();
 
-function cacheKey(text: string, voice: string | undefined, rate: number): string {
-  return `${voice ?? 'default'}|${rate}|${text.length}|${text.slice(0, 60)}`;
+function cacheKey(text: string, rate: number): string {
+  return `${'default'}|${rate}|${text.length}|${text.slice(0, 60)}`;
 }
 
-async function synth(text: string, voice: string | undefined, rate: number): Promise<string> {
+async function synth(text: string, rate: number): Promise<string> {
   if (!text.trim()) return '';
-  const key = cacheKey(text, voice, rate);
+  const key = cacheKey(text, rate);
   if (synthCache.has(key)) return synthCache.get(key)!;
-  const uri = await TTSSynthesizer.synthesize(text, { language: 'en-US', voice, rate });
+  const uri = await TTSSynthesizer.synthesize(text, { language: 'en-US', rate });
   synthCache.set(key, uri);
   return uri;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ReaderComponent({
   chapter,
@@ -60,23 +58,29 @@ export default function ReaderComponent({
 }) {
   const ttsPlayer = useAudioPlayer(null);
   const ttsStatus = useAudioPlayerStatus(ttsPlayer);
+  const keepAlivePlayer = useAudioPlayer(require('@/assets/silent.mp3'));
 
   const isPlayerLoadedRef = useRef(false);
   const isAdvancingRef = useRef(false);
   const announcementCbRef = useRef<(() => void) | null>(null);
   const isTTSHandlingRef = useRef(false);
-
   const isMountedRef = useRef(true);
+
+  const pendingPlayStateRef = useRef<'play' | 'pause' | null>(null);
 
   const playerPlay = useCallback(() => {
     if (!isMountedRef.current) return;
+    pendingPlayStateRef.current = 'play';
     try {
       ttsPlayer.play();
-    } catch {}
+    } catch {
+      /* released */
+    }
   }, [ttsPlayer]);
 
   const playerPause = useCallback(() => {
     if (!isMountedRef.current) return;
+    pendingPlayStateRef.current = 'pause';
     try {
       ttsPlayer.pause();
     } catch {
@@ -129,7 +133,6 @@ export default function ReaderComponent({
   const title = content.title;
   const paragraphs = content.paragraphs;
 
-  const [availableVoices, setAvailableVoices] = useState<VoiceIdentifier[]>([]);
   const [removeDownloadOnRead] = useConfig<boolean>('removeDownloadOnRead', false);
 
   const [readerGeneralConfig, setReaderGeneralConfig] = useConfig<ReaderGeneralConfig>(
@@ -137,14 +140,12 @@ export default function ReaderComponent({
     {
       showProgressSeekBar: false,
       speechSpeed: 1.0,
-      voiceIdentifier: undefined,
       isTTSAutoNext: false,
       isKeepAwakeOnTTS: false,
     }
   );
 
   const speechSpeedRef = useRef(readerGeneralConfig.speechSpeed);
-  const speechVoiceRef = useRef<string | undefined>(readerGeneralConfig.voiceIdentifier);
   const userScrolledRef = useRef(false);
   const router = useRouter();
   const isOnline = useIsOnline();
@@ -364,7 +365,7 @@ export default function ReaderComponent({
         ? `Continuing to chapter number ${n}: ${t}`
         : `Continuing to chapter number ${n}`;
       announcementCbRef.current = goToNext;
-      synth(msg, speechVoiceRef.current, speechSpeedRef.current)
+      synth(msg, speechSpeedRef.current)
         .then((uri) => {
           isPlayerLoadedRef.current = true;
           playerReplace(uri);
@@ -376,7 +377,6 @@ export default function ReaderComponent({
     goToNext();
   }
 
-  // ── Core TTS loop ──────────────────────────────────────────────────────────
   const readNextParagraph = useCallback(
     async (index: number) => {
       if (index >= paragraphs.length) {
@@ -390,7 +390,7 @@ export default function ReaderComponent({
           ? () => handleNextChapter({ enableTTS: true, startWithTTS: true })
           : null;
         try {
-          const uri = await synth(msg, speechVoiceRef.current, speechSpeedRef.current);
+          const uri = await synth(msg, speechSpeedRef.current);
           if (!isMountedRef.current) return;
           isPlayerLoadedRef.current = true;
           playerReplace(uri);
@@ -408,7 +408,7 @@ export default function ReaderComponent({
       setTimeout(() => scrollToParagraph(index), 80);
 
       try {
-        const uri = await synth(paragraphs[index], speechVoiceRef.current, speechSpeedRef.current);
+        const uri = await synth(paragraphs[index], speechSpeedRef.current);
 
         if (stopRequestedRef.current || !isMountedRef.current) return;
 
@@ -417,11 +417,8 @@ export default function ReaderComponent({
         isPlayerLoadedRef.current = true;
         playerPlay();
 
-        // Pre-warm next paragraph
         if (index + 1 < paragraphs.length) {
-          synth(paragraphs[index + 1], speechVoiceRef.current, speechSpeedRef.current).catch(
-            () => {}
-          );
+          synth(paragraphs[index + 1], speechSpeedRef.current).catch(() => {});
         }
       } catch (e) {
         console.error('[TTS] synth error:', e);
@@ -438,13 +435,24 @@ export default function ReaderComponent({
     ]
   );
 
-  // ── Audio session prime ────────────────────────────────────────────────────
+  const updateLockScreenInfo = useCallback(() => {
+    try {
+      ttsPlayer.setActiveForLockScreen(
+        true,
+        { title: chapter.title || `Chapter ${chapter.number}`, artist: chapter.novelTitle },
+        { showSeekBackward: false, showSeekForward: false }
+      );
+    } catch {
+      /* API not available on this expo-audio version, or player released */
+    }
+  }, [ttsPlayer, chapter.title, chapter.number, chapter.novelTitle]);
+
   const primeAudioFocus = useCallback(async () => {
     try {
       await setAudioModeAsync({
         playsInSilentMode: true,
         shouldPlayInBackground: true,
-        interruptionMode: 'duckOthers',
+        interruptionMode: 'doNotMix',
       });
     } catch {
       /* ignore */
@@ -455,7 +463,6 @@ export default function ReaderComponent({
     primeAudioFocus();
   }, []);
 
-  // ── didJustFinish: only advance when a real clip was loaded ───────────────
   useEffect(() => {
     if (!ttsStatus.didJustFinish) return;
     if (!isPlayerLoadedRef.current) return;
@@ -477,6 +484,32 @@ export default function ReaderComponent({
     });
   }, [ttsStatus.didJustFinish]);
 
+  useEffect(() => {
+    const expected = pendingPlayStateRef.current;
+    if (expected === 'play' && ttsStatus.playing) {
+      pendingPlayStateRef.current = null;
+      return;
+    }
+    if (expected === 'pause' && !ttsStatus.playing) {
+      pendingPlayStateRef.current = null;
+      return;
+    }
+    if (ttsStatus.didJustFinish) return;
+
+    if (!ttsStatus.playing) {
+      if (isTTSReading) {
+        stopRequestedRef.current = true;
+        isAdvancingRef.current = false;
+        setIsTTSReading(false);
+        TTSSynthesizer.stopForegroundService().catch(() => {});
+      }
+    } else if (!isTTSReading && isPlayerLoadedRef.current) {
+      stopRequestedRef.current = false;
+      setIsTTSReading(true);
+      TTSSynthesizer.startForegroundService().catch(() => {});
+    }
+  }, [ttsStatus.playing]);
+
   // ── Start / stop TTS ──────────────────────────────────────────────────────
   const handleTTS = async () => {
     if (isTTSHandlingRef.current) return;
@@ -488,11 +521,19 @@ export default function ReaderComponent({
         playerPause();
         setIsTTSReading(false);
         TTSSynthesizer.stopForegroundService().catch(() => {});
+        saveProgressNow();
         return;
       }
       stopRequestedRef.current = false;
       isAdvancingRef.current = false;
+      updateLockScreenInfo();
       await TTSSynthesizer.startForegroundService().catch(() => {});
+
+      try {
+        keepAlivePlayer.play();
+      } catch {}
+      await new Promise((r) => setTimeout(r, 150));
+
       setIsTTSReading(true);
       readNextParagraph(ttsIndex ?? lastIndexRef.current ?? 0);
     } finally {
@@ -503,8 +544,7 @@ export default function ReaderComponent({
   // ── Sync speed & voice refs ────────────────────────────────────────────────
   useEffect(() => {
     speechSpeedRef.current = readerGeneralConfig.speechSpeed;
-    speechVoiceRef.current = readerGeneralConfig.voiceIdentifier;
-  }, [readerGeneralConfig.speechSpeed, readerGeneralConfig.voiceIdentifier]);
+  }, [readerGeneralConfig.speechSpeed]);
 
   useEffect(() => {
     if (isStartWithTTS) handleTTS();
@@ -531,9 +571,16 @@ export default function ReaderComponent({
   }, [incognitoMode, chapter.progress]);
 
   const debouncedSaveProgressNow = useDebouncedCallback(saveProgressNow, 300);
+
   useEffect(() => {
     percentRef.current = percent;
+    debouncedSaveProgressNow();
   }, [percent]);
+
+  const saveProgressNowRef = useRef(saveProgressNow);
+  useEffect(() => {
+    saveProgressNowRef.current = saveProgressNow;
+  }, [saveProgressNow]);
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -544,11 +591,16 @@ export default function ReaderComponent({
       isPlayerLoadedRef.current = false;
       try {
         ttsPlayer.pause();
-      } catch {
-        /* released */
-      }
+      } catch {}
+      try {
+        keepAlivePlayer.pause();
+      } catch {}
+      try {
+        ttsPlayer.clearLockScreenControls();
+      } catch {}
       TTSSynthesizer.stopForegroundService().catch(() => {});
       setIsTTSReading(false);
+      saveProgressNowRef.current?.();
     };
   }, []);
 
@@ -637,15 +689,6 @@ export default function ReaderComponent({
 
   // ── Load voices ────────────────────────────────────────────────────────────
   useEffect(() => {
-    TTSSynthesizer.getAvailableVoices('en-US')
-      .then((voices: TTSVoice[]) =>
-        setAvailableVoices(voices.map((v) => ({ ...v, quality: 'Default' })))
-      )
-      .catch(() => {});
-  }, []);
-
-  // ── Pre-warm: silently synthesise the first N paragraphs on mount ──────────
-  useEffect(() => {
     if (!paragraphs.length) return;
     const PREWARM_COUNT = 3;
     let cancelled = false;
@@ -653,7 +696,7 @@ export default function ReaderComponent({
     (async () => {
       for (let i = 0; i < Math.min(PREWARM_COUNT, paragraphs.length); i++) {
         if (cancelled || !isMountedRef.current) break;
-        await synth(paragraphs[i], speechVoiceRef.current, speechSpeedRef.current).catch(() => {});
+        await synth(paragraphs[i], speechSpeedRef.current).catch(() => {});
       }
     })();
 
@@ -662,6 +705,30 @@ export default function ReaderComponent({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapter.novelTitle, chapter.number]);
+
+  // ── Warmup TTS ─────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    try {
+      keepAlivePlayer.loop = true;
+      keepAlivePlayer.volume = 0.02;
+    } catch {
+      /* released */
+    }
+  }, [keepAlivePlayer]);
+
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+    try {
+      if (isTTSReading) {
+        keepAlivePlayer.play();
+      } else {
+        keepAlivePlayer.pause();
+      }
+    } catch {
+      /* released */
+    }
+  }, [isTTSReading, keepAlivePlayer]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -683,8 +750,7 @@ export default function ReaderComponent({
       handleTTS={handleTTS}
       isTTSReading={isTTSReading}
       readerGeneralConfig={readerGeneralConfig}
-      setReaderGeneralConfig={setReaderGeneralConfig}
-      availableVoices={availableVoices}>
+      setReaderGeneralConfig={setReaderGeneralConfig}>
       <ScrollView
         ref={scrollViewRef}
         style={{ flex: 1 }}
@@ -694,10 +760,7 @@ export default function ReaderComponent({
         onContentSizeChange={onContentSizeChange}
         onLayout={onLayout}
         onScrollBeginDrag={postponeHide}
-        onScrollEndDrag={() => {
-          postponeHide();
-          debouncedSaveProgressNow();
-        }}
+        onScrollEndDrag={postponeHide}
         contentContainerStyle={{ paddingBottom: insets.bottom, paddingTop: insets.top }}
         onTouchStart={handleTouchStart}
         onTouchEndCapture={handleTouchEndCapture}>

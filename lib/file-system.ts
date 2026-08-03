@@ -1,9 +1,9 @@
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from 'expo-file-system/legacy';
 
 export async function saveImage({
   sourceUri,
-  folderName = "images",
-  fileName = "default",
+  folderName = 'images',
+  fileName = 'default',
 }: {
   sourceUri: string;
   folderName?: string;
@@ -17,11 +17,8 @@ export async function saveImage({
   const destUri = `${dir}${destFilename}`;
 
   let finalUri: string;
-  if (sourceUri.startsWith("http")) {
-    const { uri: localUri } = await FileSystem.downloadAsync(
-      sourceUri,
-      destUri
-    );
+  if (sourceUri.startsWith('http')) {
+    const { uri: localUri } = await FileSystem.downloadAsync(sourceUri, destUri);
     finalUri = localUri;
   } else {
     await FileSystem.copyAsync({ from: sourceUri, to: destUri });
@@ -31,11 +28,7 @@ export async function saveImage({
   return { uri: finalUri, fileName: destFilename };
 }
 
-export async function deleteImage({
-  sourceUri,
-}: {
-  sourceUri: string;
-}): Promise<boolean> {
+export async function deleteImage({ sourceUri }: { sourceUri: string }): Promise<boolean> {
   try {
     const info = await FileSystem.getInfoAsync(sourceUri);
     if (info.exists) {
@@ -44,7 +37,7 @@ export async function deleteImage({
     }
     return false;
   } catch (error) {
-    console.error("Error deleting image:", error);
+    console.error('Error deleting image:', error);
     return false;
   }
 }
@@ -55,16 +48,16 @@ async function resolveExtension(uri: string): Promise<string> {
     return pathMatch[1].toLowerCase();
   }
 
-  if (uri.startsWith("http")) {
+  if (uri.startsWith('http')) {
     try {
-      const res = await fetch(uri, { method: "HEAD" });
-      const contentType = res.headers.get("content-type") || "";
-      const mimeExt = contentType.split("/").pop();
+      const res = await fetch(uri, { method: 'HEAD' });
+      const contentType = res.headers.get('content-type') || '';
+      const mimeExt = contentType.split('/').pop();
       if (mimeExt) {
-        return mimeExt.replace(/[^a-z0-9]/gi, "").toLowerCase();
+        return mimeExt.replace(/[^a-z0-9]/gi, '').toLowerCase();
       }
     } catch {}
   }
 
-  return "jpg";
+  return 'jpg';
 }

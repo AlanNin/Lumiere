@@ -2,7 +2,7 @@
   "expo": {
     "name": "Lumiere",
     "slug": "Lumiere",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -50,7 +50,8 @@
         }
       ],
       "./plugins/withAndroidDisplayCutout",
-      "./plugins/withTTSSynthesizer"
+      "./plugins/withTTSSynthesizer",
+      "expo-asset"
     ],
     "scheme": "lumiere-scheme",
     "orientation": "portrait",

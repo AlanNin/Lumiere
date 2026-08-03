@@ -7,7 +7,6 @@ import { ReaderGeneralConfig, ReaderStyleConfig } from '@/types/appConfig';
 import ReaderTopBar from './topBar';
 import ReaderBottomBar from './bottomBar';
 import ProgressSeekBar from './progressSeekBar';
-import { VoiceIdentifier } from '@/types/reader';
 
 export default function ReaderLayout({
   children,
@@ -29,7 +28,6 @@ export default function ReaderLayout({
   isTTSReading,
   readerGeneralConfig,
   setReaderGeneralConfig,
-  availableVoices,
 }: {
   children: ReactNode;
   layoutVisible: boolean;
@@ -50,7 +48,6 @@ export default function ReaderLayout({
   isTTSReading: boolean;
   readerGeneralConfig: ReaderGeneralConfig;
   setReaderGeneralConfig: (config: ReaderGeneralConfig) => void;
-  availableVoices: VoiceIdentifier[];
 }) {
   const bottomDrawerConfigRef = useRef<BottomSheetModal>(null);
 
@@ -108,7 +105,6 @@ export default function ReaderLayout({
         readerGeneralConfig={readerGeneralConfig}
         setReaderGeneralConfig={setReaderGeneralConfig}
         pointerEvents={layoutVisible ? 'auto' : 'none'}
-        availableVoices={availableVoices}
       />
     </View>
   );

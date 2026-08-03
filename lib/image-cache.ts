@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const MEMORY_CACHE_DIR = `${FileSystem.cacheDirectory}covers/`;
 const PERSISTENT_CACHE_DIR = `${FileSystem.documentDirectory}covers/`;
@@ -60,7 +60,7 @@ async function getDirSizeRecursive(dir: string): Promise<number> {
 
   for (const entry of entries) {
     const entryPath = `${dir}${entry}`;
-    const entryInfo = await FileSystem.getInfoAsync(entryPath, { size: true });
+    const entryInfo = await FileSystem.getInfoAsync(entryPath);
 
     if (!entryInfo.exists) continue;
 
